@@ -35,7 +35,14 @@ Clone aSDX.
 
     $ cd ~  
     $ git clone https://github.com/nsg-ethz/supercharged_sdx.git asdx/ 
-    $ chmod 755 ~/asdx/xrs/client.py ~/asdx/xrs/route_server.py ~/asdx/examples/simple/mininet/sdx_mininext.py  
+    
+Set file permissions
+    
+    $ chmod 755 ~/asdx/xrs/client.py ~/asdx/xrs/route_server.py ~/asdx/examples/simple/mininet/sdx_mininext.py
+
+Create directory for RIBs
+
+    $ mkdir ~/asdx/xrs/ribs
 
 __ExaBGP__ (tested with version 3.4.10)  
 
