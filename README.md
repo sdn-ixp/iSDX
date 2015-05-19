@@ -1,6 +1,6 @@
 # Supercharged SDX
 ## Installation
-_Mininet VM_
+__Mininet VM__
 
 Download the [official Mininet VM](https://github.com/mininet/mininet/wiki/Mininet-VM-Images "Mininet VM Images"). Make sure you have Mininet version 2.1.0. 
 
@@ -8,11 +8,11 @@ Prepare VM
 
     $ sudo apt-get install python-dev python-pip screen
     
-_Quagga_  
+__Quagga__
 
     $ sudo apt-get install quagga
     
-_MiniNExT_
+__MiniNExT__
 
 Make sure that Mininext’s dependencies are installed.  
 
@@ -25,11 +25,11 @@ Clone miniNExT and install it.
     $ git checkout 1.4.0  
     $ sudo make install  
 
-_Requests_  
+__Requests__  
 
     $ sudo pip install requests
 
-_aSDX_
+__aSDX__
 
 Clone aSDX.  
 
@@ -37,11 +37,11 @@ Clone aSDX.
     $ git clone https://github.com/nsg-ethz/supercharged_sdx.git asdx/ 
     $ chmod 755 ~/asdx/xrs/client.py ~/asdx/xrs/route_server.py ~/asdx/examples/simple/mininet/sdx_mininext.py  
 
-_ExaBGP_ (tested with version 3.4.10)  
+__ExaBGP__ (tested with version 3.4.10)  
 
     $ sudo pip install -U exabgp  
 
-_Ryu_
+__Ryu__
 
 Clone Ryu  
 
@@ -62,7 +62,7 @@ Dependencies
     $ sudo pip install eventlet  
 
 ## Usage
-Mininet  
+__Mininet__ 
 
     $ cd ~/asdx/examples/simple/mininet/  
     $ sudo ./sdx_mininext.py  
@@ -71,20 +71,20 @@ Make OVS use OpenFlow 1.3
 
     $ sudo ovs-vsctl set bridge s1 protocols=OpenFlow13
 
-Start Ryu - The Controller  
+Start __Ryu__ - The Controller  
 
     $ ryu-manager ~/asdx/ctrl/asdx.py --asdx-dir simple
 
-Start the Route Server  
+Start the __Route Server__  
 
     $ cd ~/asdx/xrs/
     $ sudo ./route_server.py simple
 
-Start ExaBGP  
+Start __ExaBGP__  
 
     $ exabgp /home/mininet/asdx/examples/test/controller/sdx_config/bgp.conf
 
-Remove old RIBs  
+After using it, make sure to __remove__ old RIBs  
 
     $ rm ~/asdx/xrs/ribs/172.0.0.* 
     
@@ -99,6 +99,7 @@ Check if the route server has correctly advertised the routes
     172.0.0.0       0.0.0.0         255.255.0.0     U     0      0        0 a1-eth0  
 
 Testing the Policies
+
 The participants have specified the following policies:  
 
 _Participant A - outbound:_
