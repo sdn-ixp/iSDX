@@ -93,7 +93,8 @@
 	140.0.0.0       172.0.1.3       255.255.255.0   UG    0      0        0 a1-eth0  
 	150.0.0.0       172.0.1.4       255.255.255.0   UG    0      0        0 a1-eth0  
 	172.0.0.0       0.0.0.0         255.255.0.0     U     0      0        0 a1-eth0  
-	```  
+	```
+	
 2. Testing the Policies
   * The participants have specified the following policies:  
       * _Participant A - outbound:_
