@@ -89,7 +89,7 @@ Start the __Route Server__
 
 Start __ExaBGP__  
 
-    $ exabgp /home/mininet/asdx/examples/test/controller/sdx_config/bgp.conf
+    $ exabgp /home/mininet/asdx/examples/simple/controller/sdx_config/bgp.conf
 
 After using it, make sure to __remove__ old RIBs  
 
