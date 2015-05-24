@@ -10,12 +10,14 @@ from lib import vmac, vmac_best_path
 
 ETH_BROADCAST = 'ff:ff:ff:ff:ff:ff'
 ETH_TYPE_ARP = 0x0806
-LOG = True
+LOG = False
 
 class arp_proxy():
     
     def __init__(self, xrs):
         self.xrs = xrs
+        
+        self.run = True
         
         # open socket
         self.host = socket.gethostbyname(socket.gethostname())
@@ -23,6 +25,7 @@ class arp_proxy():
         try:
             self.raw_socket = socket.socket( socket.AF_PACKET , socket.SOCK_RAW , socket.ntohs(ETH_TYPE_ARP))
             self.raw_socket.bind(('exabgp-eth0', 0))
+            self.raw_socket.settimeout(1.0)
         except socket.error as msg:
             print 'Failed to create socket. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
             sys.exit()
@@ -31,36 +34,44 @@ class arp_proxy():
         eth_length = 14
         arp_length = 28
     
-        while True:
+        while self.run:
             # receive arp requests
-            packet = self.raw_socket.recvfrom(65565)
-            packet = packet[0]
-            
-            eth_frame = self.parse_eth_frame(packet[0:eth_length])
-            arp_packet = self.parse_arp_packet(packet[eth_length:(eth_length+arp_length)])
-            
-            arp_type = struct.unpack("!h", arp_packet["oper"])[0]
-            if LOG:
-                print "ARP-PROXY: received ARP-" + ("REQUEST" if (arp_type == 1) else "REPLY") +" SRC: "+eth_frame["src_mac"]+" / "+arp_packet["src_ip"]+" "+"DST: "+eth_frame["dst_mac"]+" / "+arp_packet["dst_ip"]
-            
-            if arp_type == 1:
-                # check if the arp request stems from one of the participants
-                if eth_frame["src_mac"] in self.xrs.portmac_2_participant:
-                    # then craft reply using VNH to VMAC mapping
-                    print "Crafting REPLY for received Request"
-                    vmac_addr = vmac(arp_packet["dst_ip"], self.xrs.portmac_2_participant[eth_frame["src_mac"]], self.xrs)
+            try:
+                packet = self.raw_socket.recvfrom(65565)
+
+                packet = packet[0]
                 
-                    # only send arp request if a vmac exists
-                    if vmac_addr <> "":
-                        if LOG:
-                            print "ARP-PROXY: reply with VMAC "+vmac_addr
+                eth_frame = self.parse_eth_frame(packet[0:eth_length])
+                arp_packet = self.parse_arp_packet(packet[eth_length:(eth_length+arp_length)])
 
-                        data = self.craft_arp_packet(arp_packet, vmac_addr)
-                        eth_packet = self.craft_eth_frame(eth_frame, vmac_addr, data)
-                        
-                        self.raw_socket.send(''.join(eth_packet))
+                arp_type = struct.unpack("!h", arp_packet["oper"])[0]
+                if LOG:
+                    print "ARP-PROXY: received ARP-" + ("REQUEST" if (arp_type == 1) else "REPLY") +" SRC: "+eth_frame["src_mac"]+" / "+arp_packet["src_ip"]+" "+"DST: "+eth_frame["dst_mac"]+" / "+arp_packet["dst_ip"]
 
-        raw_socket.close()
+                if arp_type == 1:
+                    # check if the arp request stems from one of the participants
+                    if eth_frame["src_mac"] in self.xrs.portmac_2_participant:
+                        # then craft reply using VNH to VMAC mapping
+                        print "Crafting REPLY for received Request"
+                        vmac_addr = vmac(arp_packet["dst_ip"], self.xrs.portmac_2_participant[eth_frame["src_mac"]], self.xrs)
+
+                        # only send arp request if a vmac exists
+                        if vmac_addr <> "":
+                            if LOG:
+                                print "ARP-PROXY: reply with VMAC "+vmac_addr
+
+                            data = self.craft_arp_packet(arp_packet, vmac_addr)
+                            eth_packet = self.craft_eth_frame(eth_frame, vmac_addr, data)
+
+                            self.raw_socket.send(''.join(eth_packet))
+                            
+            except socket.timeout:
+                if LOG:
+                    print 'Socket Timeout Occured'
+
+    def stop(self):
+        self.run = False
+        self.raw_socket.close()
             
     
     def parse_eth_frame(self, frame):
@@ -88,7 +99,6 @@ class arp_proxy():
         return arp_packet
         
     def craft_arp_packet(self, packet, dst_mac):
-
         arp_packet = [
             packet["htype"],
             packet["ptype"],
@@ -103,7 +113,6 @@ class arp_proxy():
         return arp_packet  
 
     def craft_eth_frame(self, frame, dst_mac, data):
-    
         eth_frame = [
             binascii.unhexlify(frame["src_mac"].replace(':', '')),
             binascii.unhexlify(dst_mac.replace(':', '')),
