@@ -66,17 +66,17 @@ class aSDX(app_manager.RyuApp):
         self.mac_to_port = {}
         self.datapath = None
         
-        self.metadata_mask = 4095     #'0x{num:0{width}x}'.format(num=2**12-1, width=3)
-        self.cookie_mask = 15         #'0x{num:{width}x}'.format(num=2**3-1, width=3)
+        self.metadata_mask = 4095
+        self.cookie_mask = 15
         
         # parse aSDX config
         CONF = cfg.CONF
         dir = CONF['asdx']['dir']
-        base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",dir,"controller","sdx_config"))
-        config_file = os.path.join(base_path, "sdx_global.cfg")
-        policy_file = os.path.join(base_path, "sdx_policies.cfg")
+        base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",dir,"controller"))
+        config_file = os.path.join(base_path, "sdx_config", "sdx_global.cfg")
+        policy_file = os.path.join(base_path, "sdx_config", "sdx_policies.cfg")
         
-        self.sdx = parse_config(config_file, policy_file)
+        self.sdx = parse_config(base_path, config_file, policy_file)
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):

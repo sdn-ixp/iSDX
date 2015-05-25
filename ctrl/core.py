@@ -1,5 +1,7 @@
 ## RouteServer-specific imports
 import json
+import os
+
 from netaddr import *
 from collections import defaultdict
 
@@ -28,7 +30,7 @@ class SDX():
 ### Extended Route Server primary functions
 ###
 
-def parse_config(config_file, policy_file):
+def parse_config(base_path, config_file, policy_file):
     
     # loading config file
     config = json.load(open(config_file, 'r'))
@@ -42,7 +44,8 @@ def parse_config(config_file, policy_file):
     for participant_name in config:        
         participant = config[participant_name]
         
-        participant_policies = validate_policies(json.load(open(policies[participant_name], 'r')))
+        file_path = os.path.join(base_path, "participant_policies", policies[participant_name])
+        participant_policies = validate_policies(json.load(open(file_path, 'r')))
         
         if ("outbound" in participant_policies):
             for policy in participant_policies["outbound"]:
