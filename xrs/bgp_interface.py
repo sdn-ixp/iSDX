@@ -131,14 +131,6 @@ def bgp_routes_are_equal(route1, route2):
         return False
     if (route1['as_path'] != route2['as_path']):
         return False
-    #if (route1['communities'] != route2['communities']):
-    #    return False
-    #if (route1['origin'] != route2['origin']):
-    #    return False
-    #if (route1['med'] != route2['med']):
-    #    return False
-    #if (route1['atomic_aggregate'] != route2['atomic_aggregate']):
-    #    return False
     return True
         
 def announce_route(neighbor, prefix, next_hop, as_path):

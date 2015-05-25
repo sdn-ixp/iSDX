@@ -94,12 +94,4 @@ def parse_config(config_file):
         # create peer and add it to the route server environment
         xrs.participants[int(participant_name)] = Peer(asn, ports, peers_in, peers_out[int(participant_name)])
     
-    #print xrs.port_2_participant
-    #print xrs.participant_2_port
-    #print xrs.portip_2_participant
-    #print xrs.participant_2_portip
-    #print xrs.asn_2_participant
-    #print xrs.participant_2_asn
-    #print xrs.participants
-    
     return xrs

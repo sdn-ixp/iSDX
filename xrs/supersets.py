@@ -13,9 +13,11 @@ def update_supersets(updates, xrs):
             # get set of all participants advertising that prefix
             basic_set = get_all_participants_advertising(prefix, xrs.participants)
             
-            # check if this set is a subset of one of the supersets
+            # check if this set is a subset of one of the existing supersets
             if not is_subset_of_superset(basic_set, xrs.supersets):
-                # if possible extend one of the supersets by adding the missing participants
+                # since it is not a subset, we have to either extend an existing superset (if possible)
+                # or add a new subset
+                
                 diffs = [len(basic_set.difference(set(superset))) for superset in xrs.supersets]
                 unions  = [len(basic_set.union(set(superset))) for superset in xrs.supersets]
                 sorted_diff = sorted(diffs)
@@ -23,6 +25,9 @@ def update_supersets(updates, xrs):
                 new_members = None
                 superset_index = None
                 add_superset = True
+                
+                # check to which superset the minimal number of participants has to be added while 
+                # staying within the maximum size
                 for i in range(0, len(sorted_diff)):
                     index = diffs.index(sorted_diff[i])
                     if (unions[index] <= xrs.max_superset_size):
@@ -32,16 +37,18 @@ def update_supersets(updates, xrs):
                         superset_index = index
                         break
                         
-                # if no superset can be extend, add a new superset
+                # if it is not possible to extend a superset, a new superset has to be created
                 if add_superset:
                     xrs.supersets.append(list(basic_set))
                     superset_index = len(xrs.supersets) - 1
                     for participant in xrs.supersets[-1]:
+                        # changes in the superset are prepared to be sent to the controller
                         sdx_msgs["changes"].append({"participant_id": participant,
                                                    "superset": superset_index,
                                                    "position": xrs.supersets[superset_index].index(participant)})
                 else:
                     for participant in new_members:
+                        # changes in the superset are prepared to be sent to the controller
                         sdx_msgs["changes"].append({"participant_id": participant,
                                                    "superset": superset_index,
                                                    "position": xrs.supersets[superset_index].index(participant)})
@@ -79,6 +86,7 @@ def recompute_all_supersets(xrs):
     # start combining sets to supersets
     supersets = []
 
+    # start building the supersets by combining the sets with the largest intersections
     for tmp_set in peer_sets:
         peer_sets.remove(tmp_set)
         superset = tmp_set

@@ -102,8 +102,9 @@ def update_sdx_controller(changes, url):
     payload = changes
     r = requests.post(url, data=json.dumps(payload))
     
-    if (r.status_code == requests.codes.ok):
-        print "XRS->SDX: Superset Update Succeeded - "+str(r.status_code)
-    else:
-        print "XRS->SDX: Superset Update Failed - "+str(r.status_code)
+    if LOG:
+        if (r.status_code == requests.codes.ok):
+            print "XRS->SDX: Superset Update Succeeded - "+str(r.status_code)
+        else:
+            print "XRS->SDX: Superset Update Failed - "+str(r.status_code)
     
