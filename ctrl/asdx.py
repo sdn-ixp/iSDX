@@ -1,3 +1,6 @@
+#  Author:
+#  Rudiger Birkner (Networked Systems Group ETH Zurich)
+
 import os
 
 from ryu.base import app_manager

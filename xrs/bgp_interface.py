@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+#  Author:
+#  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 def get_all_participants_advertising(prefix, participants):
     participant_set = set()

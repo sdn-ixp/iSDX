@@ -1,4 +1,8 @@
+#  Author:
+#  Rudiger Birkner (Networked Systems Group ETH Zurich)
+
 import httplib
+
 import json
 from webob import Response
 

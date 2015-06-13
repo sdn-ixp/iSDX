@@ -1,3 +1,6 @@
+#  Author:
+#  Rudiger Birkner (Networked Systems Group ETH Zurich)
+
 ## RouteServer-specific imports
 import json
 import os

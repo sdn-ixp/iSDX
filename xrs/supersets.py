@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+#  Author:
+#  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 LOG = False
 
