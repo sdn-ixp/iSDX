@@ -1,7 +1,7 @@
 # Ryu based SDX Controller
 
-## Installation
-__Vagrant Setup__
+## Installation: Vagrant Setup
+
 
 ####Prerequisite
 
