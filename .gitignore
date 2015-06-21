@@ -1,0 +1,12 @@
+*.pyc
+*.json
+*.bak
+*.DS_Store
+.vagrant
+*.pdf
+*.bbl
+*.brf
+*.blg
+*.aux
+*.out
+*.log
