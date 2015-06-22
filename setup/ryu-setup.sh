@@ -11,6 +11,6 @@ sudo pip install eventlet
 #  Ryu install
 cd ~
 git clone git://github.com/osrg/ryu.git
-sudo cp /vagrant/ryu-flags.py ~/ryu/ryu/flags.py
+sudo cp /vagrant/setup/ryu-flags.py ~/ryu/ryu/flags.py
 cd ryu
 sudo python ./setup.py install
