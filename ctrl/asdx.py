@@ -263,7 +263,9 @@ class aSDX(app_manager.RyuApp):
                                              actions)]
         else:
             inst = []
-        inst.extend(instructions)
+
+        if instructions is not None:
+            inst.extend(instructions)
         
         cookie_mask = 0
         if (cookie <> 0):
