@@ -79,7 +79,7 @@ def bgp_update_peers(updates, xrs):
         
         elif ('withdraw' in update):
             as_sets = {}
-            prefix = update['announce']['prefix']
+            prefix = update['withdraw']['prefix']
             
             # get the as path from every participant that advertised this prefix
             for participant_name in xrs.participants:
@@ -94,7 +94,8 @@ def bgp_update_peers(updates, xrs):
                 if prev_route: 
                     as_set = set()
                     for peer in xrs.participants[participant_name].peers_out:
-                        as_set.update(set(as_sets[peer].split()))
+                        if peer in as_sets:
+                            as_set.update(set(as_sets[peer].split()))
                         
                     # withdraw if no one advertises that route, else update reachability
                     if as_set:
