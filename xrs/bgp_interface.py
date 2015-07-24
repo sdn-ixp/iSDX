@@ -120,7 +120,7 @@ def bgp_update_peers(updates, xrs):
                             for neighbor in xrs.participant_2_portip[participant_name]:
                                 xrs.server.sender_queue.put(announce_route(neighbor, prefix, route["next_hop"], route["as_path"]))
                     else:
-                        delete_route("output", prefix)
+                        xrs.participants[participant_name].delete_route("output", prefix)
                         for neighbor in xrs.participant_2_portip[participant_name]:
                             xrs.server.sender_queue.put(withdraw_route(neighbor, prefix, xrs.prefix_2_VNH[prefix]))
     return changes
