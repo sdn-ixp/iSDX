@@ -5,12 +5,14 @@
 
 import json
 import sqlite3
+
 from rib import rib
+from decision_process import decision_process
 
 class peer():
 
-    def __init__(self, asn, ports, peers_in, peers_out):
-
+    def __init__(self, id, asn, ports, peers_in, peers_out):
+        self.id = id
         self.asn = asn
         self.ports = ports
 
@@ -26,6 +28,57 @@ class peer():
         self.peers_in = peers_in
         # peers that the participant can send its traffic to and gets advertisements from
         self.peers_out = peers_out
+
+    def decision_process_local(self, update):
+        return decision_process(update)
+
+    def bgp_update_peers(self, updates, vnhs, portips):
+        changes = []
+        announcements = []
+        for update in updates:
+            prefix = update['announce']['prefix']
+            as_path = update['announce']['as_path']
+
+            # Craft a route announcement
+            route = {"next_hop": str(vnhs[prefix]),
+                         "origin": "",
+                         "as_path": ' '.join(map(str,as_path)),
+                         "communities": "",
+                         "med": "",
+                         "atomic_aggregate": ""}
+
+            prev_route = self.rib["output"][prefix]
+
+            if ('announce' in update):
+                # check if we have already announced that route
+                if not bgp_routes_are_equal(route, prev_route):
+                    # store announcement in output rib
+                        self.delete_route("output", prefix)
+                        self.add_route("output", prefix, route)
+
+                        if prev_route:
+                            changes.append({"participant": self.id,
+                                            "prefix": prefix,
+                                            "VNH": vnhs[prefix])
+
+                        # announce the route to each router of the participant
+                        for neighbor in portips:
+                            # TODO: Create a sender queue and import the announce_route function
+                            announcements.append(announce_route(neighbor, prefix, route["next_hop"], route["as_path"]))
+
+            elif ('withdraw' in update):
+                # only modify route advertisement if this route has been advertised to the participant
+                if prev_route:
+                    
+
+
+
+
+
+
+
+        return changes, announcements
+
 
     def update(self,route):
         updates = []
@@ -91,7 +144,6 @@ class peer():
                         deleted_route = self.rib["input"][prefix]
                         self.rib["input"].delete(prefix)
                         self.rib["input"].commit()
-
                         route_list.append({'withdraw': deleted_route})
 
         return route_list
