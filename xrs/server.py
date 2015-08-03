@@ -8,23 +8,23 @@ from multiprocessing.connection import Listener
 
 ''' bgp server '''
 class server():
-    
+
     def __init__(self):
         self.listener = Listener(('localhost', 6000), authkey='xrs')
-        
+
         self.sender_queue = Queue()
         self.receiver_queue = Queue()
-        
+
     def start(self):
         self.conn = self.listener.accept()
         print 'Connection accepted from', self.listener.last_accepted
-        
+
         self.sender = Thread(target=_sender, args=(self.conn,self.sender_queue))
         self.sender.start()
-        
+
         self.receiver = Thread(target=_receiver, args=(self.conn,self.receiver_queue))
         self.receiver.start()
-    
+
 ''' sender '''
 def _sender(conn,queue):
     while True:
@@ -33,7 +33,7 @@ def _sender(conn,queue):
             conn.send(line)
         except:
             pass
-        
+
 ''' receiver '''
 def _receiver(conn,queue):
     while True:
@@ -43,11 +43,10 @@ def _receiver(conn,queue):
         except:
             pass
 
-''' main '''	
+''' main '''
 if __name__ == '__main__':
     while True:
         server = server()
-    
         while True:
             try:
                 print server.receiver_queue.get()
@@ -55,4 +54,3 @@ if __name__ == '__main__':
             except:
                 print 'thread ended'
                 break
-        

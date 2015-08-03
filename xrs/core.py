@@ -8,7 +8,7 @@ from netaddr import *
 from peer import peer as Peer
 
 ###
-### Extended Route Server Object
+### I(X)P Route Server Object
 ###
 
 class XRS():

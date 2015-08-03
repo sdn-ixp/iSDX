@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 #  Author:
+#  Muhammad Shahbaz (muhammad.shahbaz@gatech.edu)
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
+#  Arpit Gupta (Princeton)
 
 import os
 import json
@@ -79,7 +81,7 @@ class route_server():
                     if changes:
                         for change in changes:
                             self.sdx_ap.send_gratuitous_arp(change)
-                            
+
             except Queue.Empty:
                 if LOG:
                     print "Empty Queue"
