@@ -30,55 +30,41 @@ class peer():
         self.peers_out = peers_out
 
     def decision_process_local(self, update):
-        return decision_process(update)
+        'Update the local rib with new best path'
+        if ('announce' in update):
+            announce_route = update['announce']
 
-    def bgp_update_peers(self, updates, vnhs, portips):
-        changes = []
-        announcements = []
-        for update in updates:
-            prefix = update['announce']['prefix']
-            as_path = update['announce']['as_path']
+            # TODO: Make sure this logic is sane.
+            '''Goal here is to get all the routes in participant's input
+            rib for this prefix. '''
+            routes = []
+            routes.extend(self.get_routes('input',announce_route['prefix']))
 
-            # Craft a route announcement
-            route = {"next_hop": str(vnhs[prefix]),
-                         "origin": "",
-                         "as_path": ' '.join(map(str,as_path)),
-                         "communities": "",
-                         "med": "",
-                         "atomic_aggregate": ""}
+            if routes:
+                best_route = best_path_selection(routes)
 
-            prev_route = self.rib["output"][prefix]
+                # TODO: can be optimized? check to see if current route == best_route?
+                self.delete_route("local",announce_route['prefix'])
+                self.add_route("local",best_route['prefix'],best_route)
 
-            if ('announce' in update):
-                # check if we have already announced that route
-                if not bgp_routes_are_equal(route, prev_route):
-                    # store announcement in output rib
-                        self.delete_route("output", prefix)
-                        self.add_route("output", prefix, route)
+        elif('withdraw' in update):
+            deleted_route = update['withdraw']
 
-                        if prev_route:
-                            changes.append({"participant": self.id,
-                                            "prefix": prefix,
-                                            "VNH": vnhs[prefix])
+            if (deleted_route is not None):
 
-                        # announce the route to each router of the participant
-                        for neighbor in portips:
-                            # TODO: Create a sender queue and import the announce_route function
-                            announcements.append(announce_route(neighbor, prefix, route["next_hop"], route["as_path"]))
+                # delete route if being used
+                if (self.get_routes('local',deleted_route['prefix'])):
+                    self.delete_route("local",deleted_route['prefix'])
 
-            elif ('withdraw' in update):
-                # only modify route advertisement if this route has been advertised to the participant
-                if prev_route:
-                    
+                    # TODO: Make sure this logic is sane.
+                    '''Goal here is to get all the routes in participant's input
+                    rib for this prefix. '''
+                    routes = []
+                    routes.extend(self.get_routes('input',deleted_route['prefix']))
 
-
-
-
-
-
-
-        return changes, announcements
-
+                    if routes:
+                        best_route = best_path_selection(routes)
+                        participants[participant_name].add_route("local",best_route['prefix'],best_route)
 
     def update(self,route):
         updates = []

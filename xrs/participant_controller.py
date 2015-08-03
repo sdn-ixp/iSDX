@@ -174,7 +174,7 @@ class ParticipantController():
             "Send sdn_ctrlr_msgs to participant's SDN controller as a network event"
             self.send_nw_event(sdn_ctrlr_msgs)
 
-        changes, announcements = self.bgp_instance.bgp_update_peers(updates)
+        changes, announcements = self.bgp_update_peers(updates)
 
         # Send gratuitous ARP responses
         for change in changes:
@@ -207,6 +207,51 @@ class ParticipantController():
             "Disjoint"
             # TODO: @Robert: Place your logic here for VNH assignment for VNH scheme
             if LOG: print "VNH assignment called for disjoint vmac_mode"
+
+    def bgp_update_peers(self, updates):
+        changes = []
+        announcements = []
+        for update in updates:
+
+
+            # Craft a route announcement
+            route = {"next_hop": str(vnhs[prefix]),
+                         "origin": "",
+                         "as_path": ' '.join(map(str,as_path)),
+                         "communities": "",
+                         "med": "",
+                         "atomic_aggregate": ""}
+
+            prev_route = self.rib["output"][prefix]
+
+            if ('announce' in update):
+                prefix = update['announce']['prefix']
+                as_path = update['announce']['as_path']
+                # check if we have already announced that route
+                if not bgp_routes_are_equal(route, prev_route):
+                    # store announcement in output rib
+                        self.delete_route("output", prefix)
+                        self.add_route("output", prefix, route)
+
+                        if prev_route:
+                            changes.append({"participant": self.id,
+                                            "prefix": prefix,
+                                            "VNH": vnhs[prefix])
+
+                        # announce the route to each router of the participant
+                        for neighbor in portips:
+                            # TODO: Create a sender queue and import the announce_route function
+                            announcements.append(announce_route(neighbor, prefix, route["next_hop"], route["as_path"]))
+
+            elif ('withdraw' in update):
+                prefix = update['withdraw']['prefix']
+                as_path = update['withdraw']['as_path']
+                # only modify route advertisement if this route has been advertised to the participant
+                if prev_route:
+
+
+        return changes, announcements
+
 
 
 if __name__ == '__main__':
