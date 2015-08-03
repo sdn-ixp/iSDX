@@ -134,9 +134,14 @@ class ParticipantController():
             conn_eh = self.listener_eh.accept()
             tmp = conn.recv()
             data = json.loads(tmp)
-            # TODO: Make sure that this receiver can process incoming network
-            # events in parallel
-            reply = process_event(data)
+
+            # Starting a thread for independently processing each incoming network event
+            event_processor_thread = Thread(target = process_event, args = [data])
+            event_processor_thread.daemon = True
+            event_processor_thread.start()
+
+            # Send a message back to the sender.
+            reply = "Event Received"
             conn_eh.send(tmp)
             conn_eh.close()
 
@@ -209,46 +214,59 @@ class ParticipantController():
             if LOG: print "VNH assignment called for disjoint vmac_mode"
 
     def bgp_update_peers(self, updates):
+        # TODO: Verify if the new logic makes sense
         changes = []
         announcements = []
         for update in updates:
-
-
-            # Craft a route announcement
-            route = {"next_hop": str(vnhs[prefix]),
-                         "origin": "",
-                         "as_path": ' '.join(map(str,as_path)),
-                         "communities": "",
-                         "med": "",
-                         "atomic_aggregate": ""}
-
+            if 'announce' in update:
+                prefix = update['announce']['prefix']
+            else:
+                prefix = update['withdraw']['prefix']
             prev_route = self.rib["output"][prefix]
+            best_route = self.rib["local"][prefix]
+            best_route["next_hop"] = str(self.prefix_2_VNH[prefix])
 
             if ('announce' in update):
-                prefix = update['announce']['prefix']
-                as_path = update['announce']['as_path']
-                # check if we have already announced that route
-                if not bgp_routes_are_equal(route, prev_route):
+                # Check if best path has changed for this prefix
+                if not bgp_routes_are_equal(best_route, prev_route):
                     # store announcement in output rib
-                        self.delete_route("output", prefix)
-                        self.add_route("output", prefix, route)
+                    self.delete_route("output", prefix)
+                    self.add_route("output", prefix, best_route)
 
+                    if prev_route:
+                        changes.append({"participant": self.id,
+                                        "prefix": prefix,
+                                        "VNH": self.prefix_2_VNH[prefix])
+
+                    # announce the route to each router of the participant
+                    for neighbor in self.participant_2_portip:
+                        # TODO: Create a sender queue and import the announce_route function
+                        announcements.append(announce_route(neighbor, prefix, route["next_hop"], route["as_path"]))
+
+            elif ('withdraw' in update):
+                # A new announcement is only needed if the best path has changed
+                if best_route:
+                    "There is a best path available for this prefix"
+                    if not bgp_routes_are_equal(best_route, prev_route):
+                        "There is a new best path available now"
+                        # store announcement in output rib
+                        self.delete_route("output", prefix)
+                        self.add_route("output", prefix, best_route)
                         if prev_route:
                             changes.append({"participant": self.id,
                                             "prefix": prefix,
-                                            "VNH": vnhs[prefix])
+                                            "VNH": self.prefix_2_VNH[prefix]})
+                        for neighbor in self.participant_2_portip:
+                                announcements.append(announce_route(neighbor, prefix, best_route["next_hop"], best_route["as_path"]))
 
-                        # announce the route to each router of the participant
-                        for neighbor in portips:
+                else:
+                    "Currently there is no best route to this prefix"
+                    if prev_route:
+                        # Clear this entry from the output rib
+                        self.delete_route("output", prefix)
+                        for neighbor in self.participant_2_portip:
                             # TODO: Create a sender queue and import the announce_route function
-                            announcements.append(announce_route(neighbor, prefix, route["next_hop"], route["as_path"]))
-
-            elif ('withdraw' in update):
-                prefix = update['withdraw']['prefix']
-                as_path = update['withdraw']['as_path']
-                # only modify route advertisement if this route has been advertised to the participant
-                if prev_route:
-
+                            announcements.append(withdraw_route(neighbor, prefix, self.prefix_2_VNH[prefix]))
 
         return changes, announcements
 
