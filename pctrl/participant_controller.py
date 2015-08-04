@@ -3,7 +3,7 @@
 
 import json
 from netaddr import *
-from peer import peer as Peer
+from peer import BGPPeer as BGPPeer
 from supersets import SuperSets
 from arp_proxy import arp_proxy
 
@@ -32,7 +32,7 @@ class ParticipantController():
         self.participant_2_portmac = {}
 
         # ExaBGP Peering Instance
-        self.exabgp_instance = None
+        self.bgp_instance = None
 
         '''Each controller will parse the config
         and initialize the local params'''
@@ -57,8 +57,22 @@ class ParticipantController():
             self.prefix_mds = []
             self.mds_old=[]
 
+        # Fetch information about Reference Monitor's Listener
+        # TODO: Read from a config file
+        # TODO: Figure out whether we'll need a socket or REST API to communicate with Reference Monitor
+        self.refmon_config = ('localhost', 5555)
         # Communication with the Reference Monitor
-        self.rest_api_url = 'http://localhost:8080/asdx/supersets'
+        self.refmon_url = 'http://localhost:8080/??'
+        # Keep track of flow rules pushed
+        self.dp_pushed = {}
+        # Keep track of flow rules scheduled for push
+        self.dp_queued = {}
+
+        # Fetch information about XRS Listener
+        #TODO: read from a config file
+        self.xrs_config = ('localhost', 5566)
+
+
 
     def start(self):
         # Start arp proxy
@@ -70,10 +84,22 @@ class ParticipantController():
         # Start the event Handler Module
         self.set_receiver_events()
 
-        # Send flow rules to the SDX's Reference Monitor
-        # (1) Send initial inbound policies
-        # (2) ...
-        # TODO: @Robert: Bring your logic of pushing inbound policies for each participant here
+        # Send flow rules for initial policies to the SDX's Reference Monitor
+        self.initialize_dataplane()
+        self.push_dp()
+
+    def initialize_dataplane(self):
+        "Read the config file and update the queued policy variable"
+        # TODO: @Robert: Bring your logic of pushing initial inbound policies for each participant here
+        return 0
+
+    def push_dp(self):
+        '''
+        (1) Check if there are any policies queued to be pushed
+        (2) Send the queued policies to reference monitor
+        '''
+        return 0
+
 
     def stop(self):
         "Stop the Participants' SDN Controller"
@@ -117,7 +143,7 @@ class ParticipantController():
                 self.participant_2_portip[self.id].append(participant["Ports"][i]['IP'])
                 self.participant_2_portmac[self.id].append(participant["Ports"][i]['MAC'])
 
-            self.exabgp_instance = Peer(asn, ports, peers_in, peers_out)
+            self.bgp_instance = BGPPeer(asn, ports, peers_in, peers_out)
 
 
     def set_receiver_events(self):
@@ -128,7 +154,7 @@ class ParticipantController():
         ps_thread.start()
 
     def start_eh(self):
-        ''' Socket listener for network events '''
+        '''Socket listener for network events '''
         print "Event Handler started for", self.id
         while True:
             conn_eh = self.listener_eh.accept()
@@ -150,12 +176,29 @@ class ParticipantController():
         reply = ''
         if 'bgp' in data:
             route = data['bgp']
+            # Process the incoming BGP updates from XRS
             self.process_bgp_route(route)
+        elif 'vmac' in data:
+            # Process the vmac related change events
+            self.process_vmac_events(data['vmac'])
+        elif 'policy_change' in data:
+            # Process the event requesting change of participants' policies
+            self.process_policy_changes(data['policy_change'])
 
         return reply
 
+    def process_vmac_events(self, data):
+        "Process the incoming vmac "
+        # TODO: Port the logic of superset_changed function to update the outbound policies
+        return 0
+
+    def process_policy_changes(self, data):
+        "Process the changes in participants' policies"
+        # TODO: Implement the logic of dynamically changing participants' outbound and inbound policy
+        return 0
+
     def process_bgp_route(self, route):
-        "Localy process each incoming BGP advertisement"
+        "Process each incoming BGP advertisement"
         reply = ''
         # Map to update for each prefix in the route advertisement.
         updates = self.bgp_instance.update(route)
@@ -177,7 +220,7 @@ class ParticipantController():
 
         if sdn_ctrlr_msgs:
             "Send sdn_ctrlr_msgs to participant's SDN controller as a network event"
-            self.send_nw_event(sdn_ctrlr_msgs)
+            self.send_nw_event(sdn_ctrlr_msgs, 'vmac')
 
         changes, announcements = self.bgp_update_peers(updates)
 
@@ -192,6 +235,19 @@ class ParticipantController():
 
 
         return reply
+
+    def send_nw_event(self, sdn_ctrlr_msgs, tag):
+        "Send the sdn_ctrlr_msgs back to event handler"
+        out = {}
+        out['vmac'] = msgs
+        # TODO: Add the logic to send this message to Participant's event handler
+
+
+
+
+    def send_announcements(self, announcement):
+        "Send the announcements to XRS"
+        print "Sending the announcements"
 
     def vnh_assignment(self, update):
         "Assign VNHs for the advertised prefixes"
