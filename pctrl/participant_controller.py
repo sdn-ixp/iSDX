@@ -37,6 +37,8 @@ class ParticipantController():
         '''Each controller will parse the config
         and initialize the local params'''
         self.parse_config(config_file)
+        # TODO: read the event handler socket info from the config itself
+        self.eh_socket = ('localhost', 5555)
 
         # VNHs related params
         self.num_VNHs_in_use = 0
@@ -82,7 +84,7 @@ class ParticipantController():
         self.ap_thread.start()
 
         # Start the event Handler Module
-        self.set_receiver_events()
+        self.set_event_handler()
 
         # Send flow rules for initial policies to the SDX's Reference Monitor
         self.initialize_dataplane()
@@ -146,9 +148,9 @@ class ParticipantController():
             self.bgp_instance = BGPPeer(asn, ports, peers_in, peers_out)
 
 
-    def set_receiver_events(self):
+    def set_event_handler(self):
         '''Start the listener socket for network events'''
-        self.listener_eh = Listener(('localhost', port), authkey=None)
+        self.listener_eh = Listener(self.eh_socket, authkey=None)
         ps_thread = Thread(target=self.start_eh)
         ps_thread.daemon = True
         ps_thread.start()
@@ -168,7 +170,7 @@ class ParticipantController():
 
             # Send a message back to the sender.
             reply = "Event Received"
-            conn_eh.send(tmp)
+            conn_eh.send(reply)
             conn_eh.close()
 
     def process_event(self, data):
