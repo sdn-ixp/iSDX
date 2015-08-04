@@ -9,7 +9,7 @@ import sqlite3
 from rib import rib
 from decision_process import decision_process
 
-class peer():
+class BGPPeer():
 
     def __init__(self, id, asn, ports, peers_in, peers_out):
         self.id = id
