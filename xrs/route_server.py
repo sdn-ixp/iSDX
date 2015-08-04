@@ -10,6 +10,8 @@ import sys
 import argparse
 import time
 
+from multiprocessing.connection import Listener, Client
+
 import Queue
 from threading import Thread,Event
 from server import server as Server
@@ -19,6 +21,8 @@ from lib import vnh_assignment, update_sdx_controller
 from supersets import update_supersets
 from bgp_interface import bgp_update_peers
 from arp_proxy import arp_proxy
+
+
 
 LOG = False
 
@@ -30,19 +34,18 @@ class route_server():
         # Init the Route Server
         ## Parse Config
         self.xrs = parse_config(config_file)
-
         self.xrs.server = Server()
         self.run = True
-
-        # Start arp proxy
-        self.sdx_ap = arp_proxy(self.xrs)
-        self.ap_thread = Thread(target=self.sdx_ap.start)
-        self.ap_thread.daemon = True
-        self.ap_thread.start()
 
     def start(self):
         print "Start Server"
         self.xrs.server.start()
+
+        """
+        Start the announcement Listener which will receive announcements
+        from participants's controller and put them in XRS's sender queue.
+        """
+        self.set_announcement_handler()
 
         while self.run:
             # get BGP messages from ExaBGP via stdin
@@ -50,41 +53,46 @@ class route_server():
                 route = self.xrs.server.receiver_queue.get(True, 1)
                 route = json.loads(route)
 
-                # process route advertisements - add/remove routes to/from rib of respective participant (neighbor)
-                updates = None
-
-                if ('neighbor' in route):
-                    if ('ip' in route['neighbor']):
-                        updates = self.xrs.participants[self.xrs.portip_2_participant[route['neighbor']['ip']]].update(route)
-                elif ('notification' in route):
-                    for participant in self.xrs.participants:
-                        self.xrs.participants[participant].process_notification(route)
-
-                if updates is not None:
-                    # update local ribs - select best route for each prefix
-                    for update in updates:
-                        decision_process(self.xrs.participants,update)
-
-                    # assign VNHs
-                    vnh_assignment(updates, self.xrs)
-
-                    # update supersets
-                    sdx_msgs = update_supersets(updates, self.xrs)
-
-                    # send supersets to SDX controller
-                    update_sdx_controller(sdx_msgs, self.xrs.rest_api_url)
-
-                    # BGP updates
-                    changes = bgp_update_peers(updates, self.xrs)
-
-                    # Send Gratuitous ARPs
-                    if changes:
-                        for change in changes:
-                            self.sdx_ap.send_gratuitous_arp(change)
+                # Received BGP route advertisement from ExaBGP
+                for id, peer in self.participants.iteritems():
+                    # Apply the filtering logic
+                    advertiser_ip = route['neighbor']
+                    advertise_id = self.portip_2_participant[advertiser_ip]
+                    if id in self.participants[advertise_id].peers_out and advertise_id in self.participants[id].peers_in:
+                        # Now send this route to participant `id`'s controller'
+                        self.send_update(id, route):
 
             except Queue.Empty:
                 if LOG:
                     print "Empty Queue"
+
+    def set_announcement_handler(self):
+        '''Start the listener socket for BGP Announcements'''
+        self.listener_eh = Listener(self.ah_socket, authkey=None)
+        ps_thread = Thread(target=self.start_ah)
+        ps_thread.daemon = True
+        ps_thread.start()
+
+    def start_ah(self):
+        '''Announcement Handler '''
+        print "Event Handler started for", self.id
+        while True:
+            conn_ah = self.listener_eh.accept()
+            tmp = conn.recv()
+            announcement = json.loads(tmp)
+            self.server.sender_queue.put(announcement)
+            reply = "Announcement processed"
+            conn_ah.send(reply)
+            conn_ah.close()
+
+    def send_update(self, id, route):
+        "Send this BGP route to participant id's controller"
+        conn = Client(self.participants[id].eh_socket, authkey = None)
+        data = {}
+        data['bgp'] = route
+        conn.send(json.dumps(data))
+        recv = conn.recv()
+        conn.close()
 
     def stop(self):
         self.run = False
