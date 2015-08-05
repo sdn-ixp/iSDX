@@ -9,7 +9,7 @@ from multiprocessing.connection import Listener
 
 LOG = False
 
-''' bgp server '''
+''' Server of Reference Monitor to Receive Flow Mods '''
 class Server():
 
     def __init__(self, refmon, address, port, key):

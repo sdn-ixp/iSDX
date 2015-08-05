@@ -49,6 +49,8 @@ class FlowMod():
     def validate_match(matches):
         validated_matches = {}
 
+            #TODO add in_port, out_port, eth_type
+
         for match, value in matches.iteritems():
             if match == "eth_dst":
                 if len(value) > 1:
