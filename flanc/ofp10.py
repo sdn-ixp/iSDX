@@ -1,8 +1,6 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-from ryu.ofproto import ofproto_v1_0
-
 class FlowMod():
     def __init__(self, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
@@ -92,9 +90,9 @@ class FlowMod():
         for action, value in actions.iteritems():
             if action == "fwd":
                 if value.isdigit():
-                    temp_actions.append(self.parser.OFPActionOutput(self.config.participant_2_port[int(value)]))
+                    temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["main"][int(value)]))
                 else:
-                    temp_actions.append(self.parser.OFPActionOutput(self.config.table_2_ports[self.rule_type][value]))
+                    temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][value]))
             elif action == "set_eth_src":
                 temp_actions.append(self.parser.OFPActionSetDlDst(value))
             elif action == "set_eth_dst":
@@ -120,15 +118,27 @@ class FlowMod():
 
         match = self.parser.OFPMatch(**self.matches)
 
-        datapath = self.config.name_2_datapath[rule_type]
+        datapath = self.config.datapaths[rule_type]
 
         actions = make_actions()
 
         if self.mod_type == "insert":
             instructions = make_instructions()
-            return parser.OFPFlowMod(datapath=datapath, match=match, cookie=self.cookie, command=ofproto_v1_0.OFPFC_ADD, priority=self.priority, actions=actions):
+            return self.parser.OFPFlowMod(datapath=datapath, 
+                                          match=match, 
+                                          cookie=self.cookie, 
+                                          command=self.config.ofproto.OFPFC_ADD, 
+                                          priority=self.priority, actions=actions):
         else:
-            return parser.OFPFlowMod(datapath=datapath, match=match, cookie=self.cookie, command=ofproto_v1_0.OFPFC_DELETE, out_group=ofproto_v1_3.OFPG_ANY, out_port=ofproto_v1_3.OFPP_ANY)
+            return self.parser.OFPFlowMod(datapath=datapath, 
+                                          match=match, 
+                                          cookie=self.cookie,
+                                          command=self.config.ofproto.OFPFC_DELETE, 
+                                          out_group=self.config.ofproto.OFPG_ANY, 
+                                          out_port=self.config.ofproto.OFPP_ANY)
+
+    def get_dst_dp():
+        return rule_type
 
 class FlowModValidationError(Exception):
     def __init__(self, flow_mod):

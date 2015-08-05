@@ -1,7 +1,7 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-from ryu.ofproto import ofproto_v1_3
+from ofp10.py import FlowModValidationError
 
 class FlowMod():
     def __init__(self, origin, flow_mod):
@@ -99,21 +99,21 @@ class FlowMod():
             if action == "fwd":
                 if self.config.tables:
                     if value.isdigit():
-                        temp_actions.append(self.parser.OFPActionOutput(self.config.participant_2_port[int(value)]))
+                        temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["main"][int(value)]))
                     else:
-                        temp_goto_instructions.append(self.parser.OFPInstructionGotoTable(name_2_table[value]))
+                        temp_goto_instructions.append(self.parser.OFPInstructionGotoTable(self.config.tables[value]))
                 else:
                     if value.isdigit():
-                        temp_actions.append(self.parser.OFPActionOutput(self.config.participant_2_port[int(value)]))
+                        temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["main"][int(value)]))
                     else:
-                        temp_actions.append(self.parser.OFPActionOutput(self.config.table_2_ports[self.rule_type][value]))
+                        temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][value]))
             elif action == "set_eth_src":
                 temp_actions.append(self.parser.OFPActionSetField(eth_src=value))
             elif action == "set_eth_dst":
                 temp_actions.append(self.parser.OFPActionSetField(eth_dst=value))
 
         if actions:
-            temp_instructions = [] = [self.parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
+            temp_instructions = [self.parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
 
         if len(temp_goto_instructions) > 0:
             temp_instructions.extend(temp_goto_instructions)
@@ -140,18 +140,26 @@ class FlowMod():
 
         if self.config.tables:
             table_id = name_2_table[rule_type]
-            datapath = self.config.name_2_datapath["main"]
+            datapath = self.config.datapaths["main"]
         else:
             table_id = 0
-            datapath = self.config.name_2_datapath[rule_type]
+            datapath = self.config.datapaths[rule_type]
         if self.mod_type == "insert":
             instructions = make_instructions()
-            return parser.OFPFlowMod(datapath=datapath, cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], table_id=table_id, command=ofproto_v1_3.OFPFC_ADD, priority=self.priority, match=match, instructions=instructions)
+            return self.parser.OFPFlowMod(datapath=datapath, 
+                                          cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], 
+                                          table_id=table_id, 
+                                          command=self.config.ofproto.OFPFC_ADD,
+                                          priority=self.priority, 
+                                          match=match, instructions=instructions)
         else:
-            return parser.OFPFlowMod(datapath=datapath, cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], table_id=table_id, command=ofproto_v1_3.OFPFC_DELETE, out_group=ofproto_v1_3.OFPG_ANY, out_port=ofproto_v1_3.OFPP_ANY, match=match)
+            return self.parser.OFPFlowMod(datapath=datapath, 
+                                          cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], 
+                                          table_id=table_id, 
+                                          command=self.config.ofproto.OFPFC_DELETE, 
+                                          out_group=self.config.ofproto.OFPG_ANY, 
+                                          out_port=self.config.ofproto.OFPP_ANY, 
+                                          match=match)
 
-class FlowModValidationError(Exception):
-    def __init__(self, flow_mod):
-        self.flow_mod = flow_mod
-    def __str__(self):
-        return repr(self.flow_mod) 
+    def get_dst_dp():
+        return rule_type
