@@ -10,31 +10,35 @@ from ryu.controller.handler import set_ev_cls
 from ryu.app.wsgi import WSGIApplication
 from ryu import cfg
 
-from lib import MultiSwitchController, MultiTableController, FlowMod
-from rest import RESTHandler
+from lib import MultiSwitchController, MultiTableController, Config, InvalidConfigError
+from ofp10 import FlowMod as OFP10FlowMod, FlowModValidationError
+from ofp13 import FlowMod as OFP13FlowMod
 
 LOG = False
 
 class RefMon(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION, ofproto_v1_3.OFP_VERSION]
-    _CONTEXTS = { 'wsgi': WSGIApplication }
 
     def __init__(self, *args, **kwargs):
         super(RefMon, self).__init__(*args, **kwargs)
 
-        # register REST API handler
-        wsgi = kwargs['wsgi']
-        wsgi.register(RESTHandler, self)
-
         # retrieve command line arguments
         CONF = cfg.CONF
-        mode = CONF['refmon']['mode']
-        controller = CONF['refmon']['instance']
+        config_file_path = CONF['refmon']['config']
 
-        if (mode == 0):
-            self.controller = MultiSwitchController()
-        elif (mode == 1):
-            self.controller = MultiTableController()
+        config_file = os.path.abspath(config_file_path)
+
+        # load config from file
+        try:
+            self.config = Config(config_file)
+        except InvalidConfigError as e:
+            print "Invalid Config:\n"+e
+
+        # start controller
+        if (self.config.mode == 0):
+            self.controller = MultiSwitchController(config)
+        elif (self.config.mode == 1):
+            self.config.controller = MultiTableController(config)
 
     @set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
     def dp_state_change_handler(self, ev):
@@ -60,7 +64,10 @@ class RefMon(app_manager.RyuApp):
             if "flow_mods" in msg:
                 for flow_mod in msg["flow_mods"]:
                     try:
-                        fm = FlowMod(origin, flow_mod)
+                        if self.config.ofv = "1.0":
+                            fm = OFP10FlowMod(origin, flow_mod)
+                        elif self.config.ofv = "1.3":
+                            fm = OFP13FlowMod(origin, flow_mod)
                     except FlowModValidationError as e:
                         return e
 
