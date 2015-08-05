@@ -14,6 +14,8 @@ from lib import MultiSwitchController, MultiTableController, Config, InvalidConf
 from ofp10 import FlowMod as OFP10FlowMod, FlowModValidationError
 from ofp13 import FlowMod as OFP13FlowMod
 
+from server import Server
+
 LOG = False
 
 class RefMon(app_manager.RyuApp):
@@ -39,6 +41,13 @@ class RefMon(app_manager.RyuApp):
             self.controller = MultiSwitchController(config)
         elif (self.config.mode == 1):
             self.config.controller = MultiTableController(config)
+
+        # start server receiving flowmod requests
+        self.server = Server(self, self.config.server["address"], self.config.server["port"], self.config.server["key"])
+        self.server.start()
+
+    def close(self):
+        self.server.stop()
 
     @set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
     def dp_state_change_handler(self, ev):

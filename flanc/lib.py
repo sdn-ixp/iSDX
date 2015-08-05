@@ -8,8 +8,10 @@ from ryu.ofproto import inet
 
 LOG = False
 
-class Config():
+class Config(object):
     def __init__(self, config_file):
+        self.server = None
+
         self.mode = None
         self.ofv = None
         self.tables = None
@@ -42,7 +44,12 @@ class Config():
                 self.ofv = config["fabric options"]["OF version"]
 
         if "fabric connections" in config:
-            self.datapath_ports = config["fabric connections"]["fabric connections"]
+            self.datapath_ports = config["fabric connections"]
+
+        if "server" in config:
+            self.server = config["server"]
+        else:
+            raise InvalidConfigError(config)
 
         # check if valid config
         if self.mode == 0:
@@ -72,7 +79,7 @@ class MultiTableController():
         # COOKIES
         self.NO_COOKIE = 0
 
-    def init_fabrc():    
+    def init_fabrc(self):    
         # install table-miss flow entry
         if LOG:
             self.logger.info("INIT: installing flow miss rules")
@@ -89,7 +96,7 @@ class MultiTableController():
                                                 match=match, instructions=instructions)
             self.config.datapaths["main"].send_msg(mod)
 
-    def switch_connect(dp):
+    def switch_connect(self, dp):
         self.config.datapaths["main"] = dp
         self.config.ofproto = dp.ofproto
         self.config.parser = dp.ofproto_parser
@@ -100,30 +107,33 @@ class MultiTableController():
             while not self.fm_queue.empty():
                 self.process_flow_mod(self.fm_queue.get())
 
-    def switch_disconnect(dp):
+    def switch_disconnect(self, dp):
+        if self.config.datapaths["main"] == dp:
+            print "main switch disconnected"
+            del self.config.datapaths["main"]
 
-    def process_flow_mod(fm):
+    def process_flow_mod(self, fm):
         if not is_ready():
             self.fm_queue.put(fm)
         else:
             mod = fm.get_flow_mod(self.config)
             self.config.datapaths["main"].send_msg(mod)
            
-    def packet_in():
+    def packet_in(self, ev):
         print "PACKET IN"
 
-    def is_ready():
+    def is_ready(self):
         if "main" in self.config.datapaths:
             return True
         return False
 
-class MultiSwitchController():
+class MultiSwitchController(object):
     def __init__(self):
         self.datapaths = {}
 
         self.config = config
 
-    def switch_connect(dp):
+    def switch_connect(self, dp):
         dp_name = self.config.dpid_2_name[dp.id]
 
         self.config.datapaths = dp
@@ -139,9 +149,14 @@ class MultiSwitchController():
             while not self.fm_queue.empty():
                 self.process_flow_mod(self.fm_queue.get())
 
-    def switch_disconnect():
+    def switch_disconnect(self, dp):
+        
+        if dp.id in self.config.dpid_2_name:
+            dp_name = self.config.dpid_2_name[dp.id]
+            print dp_name + " switch disconnected"
+            del self.config.datapaths[dp_name]
 
-    def init_fabric():
+    def init_fabric(self):
         # install table-miss flow entry
         if LOG:
             self.logger.info("INIT: installing flow miss rules")
@@ -166,17 +181,17 @@ class MultiSwitchController():
                                                     match=match, actions=actions)
             self.config.datapaths["main"].send_msg(mod)
 
-    def process_flow_mod():
+    def process_flow_mod(self, fm):
         if not is_ready():
             self.fm_queue.put(fm)
         else:
             mod = fm.get_flow_mod(self.config)
             self.config.datapaths[fm.get_dst_dp()].send_msg(mod)
 
-    def packet_in():
+    def packet_in(self, ev):
         print "PACKET IN"
 
-    def is_ready():
+    def is_ready(self):
         if "main" in self.datapaths and "inbound" in self.datapaths and "outbound" in self.datapaths:
             return True
         return False
