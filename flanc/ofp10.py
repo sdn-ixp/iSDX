@@ -1,6 +1,8 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+from ryu.ofproto import ofproto_v1_0
+
 class FlowMod():
     def __init__(self, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
@@ -9,14 +11,13 @@ class FlowMod():
         self.config
         self.parser
 
-        self.mod_type = "add"
-        self.rule_type = "main"
+        self.mod_type = None
+        self.rule_type = None
 
-        self.origin = 0
-        self.datapath = 0
-        self.table = 0
-        self.priority = 0
-        self.cookie = {}
+        self.origin = None
+        self.datapath = None
+        self.priority = None
+        self.cookie = None
         self.matches = {}
 	self.actions = []
 
@@ -30,8 +31,7 @@ class FlowMod():
         if "origin" in flow_mod:
             self.origin = int(flow_mod["origin"])
             if "id" in flow_mod:
-                self.cookie["cookie"] = int('{0:032b}'.format(self.origin)+'{0:032b}'.format(int(flow_mod["id"])),2)
-                self.cookie["mask"] = 2**64
+                self.cookie = int('{0:032b}'.format(self.origin)+'{0:032b}'.format(int(flow_mod["id"])),2)
                 if ("mod_type" in flow_mod and flow["mod_type"] in self.mod_types):
                     self.mod_type = flow_mod["mod_type"]
                     if ("rule_type" in flow_mod and flow["rule_type"] in self.rule_types):
@@ -49,11 +49,9 @@ class FlowMod():
 
         for match, value in matches.iteritems():
             if match == "eth_dst":
-                if len(value) > 1:
-                    validated_matches[match] = value
+                validated_matches[match] = value
             elif match == "eth_src":
-                if len(value) > 1:
-                    validated_matches[match] = value
+                validated_matches[match] = value
             elif match == "ipv4_src":
                 validated_matches[match] = value
                 if "eth_type" not in validated_matches:
@@ -88,35 +86,21 @@ class FlowMod():
                     validated_matches["ip_proto"] = inet.IPPROTO_UDP
         return validated_matches
 
-    def make_instructions():
-        temp_instructions = []
-        temp_goto_instructions = []
+    def make_actions():
         temp_actions = []
 
         for action, value in actions.iteritems():
             if action == "fwd":
-                if self.config.tables:
-                    if value.isdigit():
-                        temp_actions.append(self.parser.OFPActionOutput(self.config.participant_2_port[int(value)]))
-                    else:
-                        temp_goto_instructions.append(self.parser.OFPInstructionGotoTable(name_2_table[value]))
+                if value.isdigit():
+                    temp_actions.append(self.parser.OFPActionOutput(self.config.participant_2_port[int(value)]))
                 else:
-                    if value.isdigit():
-                        temp_actions.append(self.parser.OFPActionOutput(self.config.participant_2_port[int(value)]))
-                    else:
-                        temp_actions.append(self.parser.OFPActionOutput(self.config.table_2_ports[self.rule_type][value]))
+                    temp_actions.append(self.parser.OFPActionOutput(self.config.table_2_ports[self.rule_type][value]))
             elif action == "set_eth_src":
-                temp_actions.append(self.parser.OFPActionSetField(eth_src=value))
+                temp_actions.append(self.parser.OFPActionSetDlDst(value))
             elif action == "set_eth_dst":
-                temp_actions.append(self.parser.OFPActionSetField(eth_dst=value))
+                temp_actions.append(self.parser.OFPActionSetDlDst(value))
 
-        if actions:
-            temp_instructions = [] = [self.parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
-
-        if len(temp_goto_instructions) > 0:
-            temp_instructions.extend(temp_goto_instructions)
-
-        return temp_instructions
+        return temp_actions
 
     def validate_action(actions):
         validated_actions = {}
@@ -136,17 +120,15 @@ class FlowMod():
 
         match = self.parser.OFPMatch(**self.matches)
 
-        if self.config.tables:
-            table_id = name_2_table[rule_type]
-            datapath = self.config.name_2_datapath["main"]
-        else:
-            table_id = 0
-            datapath = self.config.name_2_datapath[rule_type]
+        datapath = self.config.name_2_datapath[rule_type]
+
+        actions = make_actions()
+
         if self.mod_type == "insert":
             instructions = make_instructions()
-            return parser.OFPFlowMod(datapath=datapath, cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], table_id=table_id, buffer_id=None, priority=self.priority, match=match, instructions=instructions)
+            return parser.OFPFlowMod(datapath=datapath, match=match, cookie=self.cookie, command=ofproto_v1_0.OFPFC_ADD, priority=self.priority, actions=actions):
         else:
-            return parser.OFPFlowMod(datapath=datapath, cookie=cookie, cookie_mask=cookie_mask, table_id=table, command=ofproto_v1_3.OFPFC_DELETE, out_group=ofproto_v1_3.OFPG_ANY, out_port=ofproto_v1_3.OFPP_ANY, match=match)
+            return parser.OFPFlowMod(datapath=datapath, match=match, cookie=self.cookie, command=ofproto_v1_0.OFPFC_DELETE, out_group=ofproto_v1_3.OFPG_ANY, out_port=ofproto_v1_3.OFPP_ANY)
 
 class FlowModValidationError(Exception):
     def __init__(self, flow_mod):

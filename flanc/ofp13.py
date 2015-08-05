@@ -1,6 +1,8 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+from ryu.ofproto import ofproto_v1_3
+
 class FlowMod():
     def __init__(self, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
@@ -9,13 +11,13 @@ class FlowMod():
         self.config
         self.parser
 
-        self.mod_type = "add"
-        self.rule_type = "main"
+        self.mod_type = None
+        self.rule_type = None
 
-        self.origin = 0
-        self.datapath = 0
-        self.table = 0
-        self.priority = 0
+        self.origin = None
+        self.datapath = None
+        self.table = None
+        self.priority = None
         self.cookie = {}
         self.matches = {}
 	self.actions = []
@@ -144,9 +146,9 @@ class FlowMod():
             datapath = self.config.name_2_datapath[rule_type]
         if self.mod_type == "insert":
             instructions = make_instructions()
-            return parser.OFPFlowMod(datapath=datapath, cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], table_id=table_id, buffer_id=None, priority=self.priority, match=match, instructions=instructions)
+            return parser.OFPFlowMod(datapath=datapath, cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], table_id=table_id, command=ofproto_v1_3.OFPFC_ADD, priority=self.priority, match=match, instructions=instructions)
         else:
-            return parser.OFPFlowMod(datapath=datapath, cookie=cookie, cookie_mask=cookie_mask, table_id=table, command=ofproto_v1_3.OFPFC_DELETE, out_group=ofproto_v1_3.OFPG_ANY, out_port=ofproto_v1_3.OFPP_ANY, match=match)
+            return parser.OFPFlowMod(datapath=datapath, cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], table_id=table_id, command=ofproto_v1_3.OFPFC_DELETE, out_group=ofproto_v1_3.OFPG_ANY, out_port=ofproto_v1_3.OFPP_ANY, match=match)
 
 class FlowModValidationError(Exception):
     def __init__(self, flow_mod):
