@@ -118,7 +118,7 @@ class FlowMod():
                 validated_actions[action] = value
             elif action == "set_eth_dst":
                 validated_actions[action] = value
-        return validated_actions, validated instructions
+        return validated_actions
 
     def get_flow_mod(config):
         self.config = config
@@ -136,7 +136,7 @@ class FlowMod():
                                           match=match, 
                                           cookie=self.cookie, 
                                           command=self.config.ofproto.OFPFC_ADD, 
-                                          priority=self.priority, actions=actions):
+                                          priority=self.priority, actions=actions)
         else:
             return self.parser.OFPFlowMod(datapath=datapath, 
                                           match=match, 

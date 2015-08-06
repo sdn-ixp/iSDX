@@ -1,12 +1,19 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+import json
+import logging
+
 from Queue import Queue
 
 from ryu.ofproto import ether
 from ryu.ofproto import inet
 
-LOG = False
+# PRIORITIES
+FLOW_MISS_PRIORITY = 0
+
+# COOKIES
+NO_COOKIE = 0
 
 class Config(object):
     def __init__(self, config_file):
@@ -38,7 +45,7 @@ class Config(object):
                 self.tables = config["fabric options"]["tables"]
             if self.mode == 0 and "dpids" in config["fabric options"]:
                 self.dpids = config["fabric options"]["dpids"]
-                for k,v in self.dpids.iteritems()
+                for k,v in self.dpids.iteritems():
                     self.dpid_2_name[v] = k
             if "OF version" in config["fabric options"]:
                 self.ofv = config["fabric options"]["OF version"]
@@ -56,7 +63,7 @@ class Config(object):
             if not (self.ofv and self.dpids and self.datapath_ports):
                 raise InvalidConfigError(config)
         elif self.mode == 1:
-            if not (self.ofv = "1.3" and self.tables and self.datapath_ports):
+            if not (self.ofv == "1.3" and self.tables and self.datapath_ports):
                 raise InvalidConfigError(config)
         else:
             raise InvalidConfigError(config)
@@ -72,12 +79,6 @@ class MultiTableController():
         self.config = config
 
         self.fm_queue = Queue()
-
-        # PRIORITIES
-        self.FLOW_MISS_PRIORITY = 0
-
-        # COOKIES
-        self.NO_COOKIE = 0
 
     def init_fabrc(self):    
         # install table-miss flow entry
@@ -128,70 +129,74 @@ class MultiTableController():
         return False
 
 class MultiSwitchController(object):
-    def __init__(self):
-        self.datapaths = {}
+    def __init__(self, config):
+        self.logger = logging.getLogger('MultiSwitchController')
+        self.logger.info('creating an instance of MultiSwitchController')
 
+        self.datapaths = {}
         self.config = config
+
+        self.fm_queue = Queue()
 
     def switch_connect(self, dp):
         dp_name = self.config.dpid_2_name[dp.id]
 
-        self.config.datapaths = dp
+        self.config.datapaths[dp_name] = dp
 
-        if self.config.ofproto is not None:
+        if self.config.ofproto is None:
             self.config.ofproto = dp.ofproto
-        if self.config.parser is not None:
+        if self.config.parser is None:
             self.config.parser = dp.ofproto_parser
 
-        if is_ready():
+        self.logger.info('switch connect: ' + dp_name)
+
+        if self.is_ready():
             self.init_fabric()
 
             while not self.fm_queue.empty():
                 self.process_flow_mod(self.fm_queue.get())
 
     def switch_disconnect(self, dp):
-        
         if dp.id in self.config.dpid_2_name:
             dp_name = self.config.dpid_2_name[dp.id]
-            print dp_name + " switch disconnected"
+            self.logger.info('switch disconnect: ' + dp_name)
             del self.config.datapaths[dp_name]
 
     def init_fabric(self):
         # install table-miss flow entry
-        if LOG:
-            self.logger.info("INIT: installing flow miss rules")
+        self.logger.info("init fabric: installing flow miss rules")
         match = self.config.parser.OFPMatch()
         actions = [self.config.parser.OFPActionOutput(self.config.ofproto.OFPP_CONTROLLER, self.config.ofproto.OFPCML_NO_BUFFER)]
 
         if self.config.ofv  == "1.3":
             instructions = [self.config.parser.OFPInstructionActions(self.config.ofproto.OFPIT_APPLY_ACTIONS, actions)]
 
-        for table in self.config.tables.values():
+        for datapath in self.config.datapaths.values():
             if self.config.ofv  == "1.3":
                 mod = self.config.parser.OFPFlowMod(datapath=datapath, 
-                                                    cookie=self.NO_COOKIE, cookie_mask=self.cookie["mask"], 
+                                                    cookie=NO_COOKIE, cookie_mask=3, 
                                                     command=self.config.ofproto.OFPFC_ADD, 
-                                                    priority=self.FLOW_MISS_PRIORITY, 
+                                                    priority=FLOW_MISS_PRIORITY, 
                                                     match=match, instructions=instructions)
             else:
                 mod = self.config.parser.OFPFlowMod(datapath=datapath, 
-                                                    cookie=self.NO_COOKIE, 
+                                                    cookie=NO_COOKIE, 
                                                     command=self.config.ofproto.OFPFC_ADD, 
-                                                    priority=self.FLOW_MISS_PRIORITY, 
+                                                    priority=FLOW_MISS_PRIORITY, 
                                                     match=match, actions=actions)
-            self.config.datapaths["main"].send_msg(mod)
+            datapath.send_msg(mod)
 
     def process_flow_mod(self, fm):
-        if not is_ready():
+        if not self.is_ready():
             self.fm_queue.put(fm)
         else:
             mod = fm.get_flow_mod(self.config)
             self.config.datapaths[fm.get_dst_dp()].send_msg(mod)
 
     def packet_in(self, ev):
-        print "PACKET IN"
+        self.logger.info('packet in')
 
     def is_ready(self):
-        if "main" in self.datapaths and "inbound" in self.datapaths and "outbound" in self.datapaths:
+        if "main" in self.config.datapaths and "inbound" in self.config.datapaths and "outbound" in self.config.datapaths:
             return True
         return False

@@ -14,17 +14,17 @@ class Server():
 
     def __init__(self, refmon, address, port, key):
         self.refmon = refmon
-        self.listener = Listener((address, port), authkey=key)
+        self.listener = Listener((address, port), authkey=str(key))
 
     def start(self):
         self.receive = True
-        self.receiver = Thread(target=_receiver, args=(self.listener))
+        self.receiver = Thread(target=self.receiver)
         self.receiver.start()
 
     ''' receiver '''
-    def receiver(listener,queue):
+    def receiver(self):
         while self.receive:
-            conn = listener.accept()
+            conn = self.listener.accept()
             try:
                 msg = conn.recv()
                 self.refmon.process_flow_mods(msg)

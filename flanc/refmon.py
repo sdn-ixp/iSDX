@@ -2,12 +2,13 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 import os
+import logging
 
 from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import MAIN_DISPATCHER, DEAD_DISPATCHER 
 from ryu.controller.handler import set_ev_cls
-from ryu.app.wsgi import WSGIApplication
+from ryu.ofproto import ofproto_v1_0, ofproto_v1_3
 from ryu import cfg
 
 from lib import MultiSwitchController, MultiTableController, Config, InvalidConfigError
@@ -24,6 +25,9 @@ class RefMon(app_manager.RyuApp):
     def __init__(self, *args, **kwargs):
         super(RefMon, self).__init__(*args, **kwargs)
 
+        self.logger = logging.getLogger('ReferenceMonitor')
+        self.logger.info('start reference monitor')
+
         # retrieve command line arguments
         CONF = cfg.CONF
         config_file_path = CONF['refmon']['config']
@@ -31,27 +35,31 @@ class RefMon(app_manager.RyuApp):
         config_file = os.path.abspath(config_file_path)
 
         # load config from file
+        self.logger.info('load config')
         try:
             self.config = Config(config_file)
         except InvalidConfigError as e:
-            print "Invalid Config:\n"+e
+            self.logger.info('invalid config '+str(e))
 
         # start controller
         if (self.config.mode == 0):
-            self.controller = MultiSwitchController(config)
+            self.controller = MultiSwitchController(self.config)
         elif (self.config.mode == 1):
-            self.config.controller = MultiTableController(config)
+            self.config.controller = MultiTableController(self.config)
 
         # start server receiving flowmod requests
         self.server = Server(self, self.config.server["address"], self.config.server["port"], self.config.server["key"])
         self.server.start()
 
     def close(self):
+        self.logger.info('stop reference monitor')
+
         self.server.stop()
 
     @set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
     def dp_state_change_handler(self, ev):
         datapath = ev.datapath
+
         if ev.state == MAIN_DISPATCHER:
             self.controller.switch_connect(datapath)
         elif ev.state == DEAD_DISPATCHER:
@@ -62,6 +70,8 @@ class RefMon(app_manager.RyuApp):
         self.controller.packet_in(ev)
 
     def process_flow_mods(self, msg):
+        self.logger.info('process received flowmod request')
+
         # authorization
         if "auth_info" in msg:
             auth_info = msg["auth_info"]
@@ -72,9 +82,9 @@ class RefMon(app_manager.RyuApp):
 
             if "flow_mods" in msg:
                 for flow_mod in msg["flow_mods"]:
-                    if self.config.ofv = "1.0":
+                    if self.config.ofv == "1.0":
                         fm = OFP10FlowMod(origin, flow_mod)
-                    elif self.config.ofv = "1.3":
+                    elif self.config.ofv == "1.3":
                         fm = OFP13FlowMod(origin, flow_mod)
 
                     self.controller.process_flow_mod(fm)

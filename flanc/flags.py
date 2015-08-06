@@ -87,4 +87,4 @@ CONF.register_cli_opts([
     # refmon
     cfg.StrOpt('config', default=None,
                help='path of config file'),
-], group='asdx')
+], group='refmon')

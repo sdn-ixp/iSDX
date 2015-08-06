@@ -139,7 +139,7 @@ class FlowMod():
                 validated_actions[action] = value
             elif action == "set_eth_dst":
                 validated_actions[action] = value
-        return validated_actions, validated instructions
+        return validated_actions
 
     def get_flow_mod(config):
         self.config = config
