@@ -1,8 +1,6 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-from ofp10.py import FlowModValidationError
-
 class FlowMod():
     def __init__(self, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
@@ -22,8 +20,7 @@ class FlowMod():
         self.matches = {}
 	self.actions = []
 
-        if (!validate_flow_mod(origin, flow_mod)):
-            raise FlowModValidationError(flow_mod)
+        validate_flow_mod(origin, flow_mod)
 
     def get_flow_mod_msg():
         return self.flow_mod
@@ -42,9 +39,6 @@ class FlowMod():
                             self.match = validate_match(flow_mod["match"])
                         if "action" in flow_mod:
                             self.actions = validate_action(flow_mod["action"])
-                        if self.action and self.match:
-                            return True
-        return False
 
     def validate_match(matches):
         validated_matches = {}

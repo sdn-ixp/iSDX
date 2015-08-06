@@ -11,7 +11,7 @@ from ryu.app.wsgi import WSGIApplication
 from ryu import cfg
 
 from lib import MultiSwitchController, MultiTableController, Config, InvalidConfigError
-from ofp10 import FlowMod as OFP10FlowMod, FlowModValidationError
+from ofp10 import FlowMod as OFP10FlowMod
 from ofp13 import FlowMod as OFP13FlowMod
 
 from server import Server
@@ -72,12 +72,9 @@ class RefMon(app_manager.RyuApp):
 
             if "flow_mods" in msg:
                 for flow_mod in msg["flow_mods"]:
-                    try:
-                        if self.config.ofv = "1.0":
-                            fm = OFP10FlowMod(origin, flow_mod)
-                        elif self.config.ofv = "1.3":
-                            fm = OFP13FlowMod(origin, flow_mod)
-                    except FlowModValidationError as e:
-                        return e
+                    if self.config.ofv = "1.0":
+                        fm = OFP10FlowMod(origin, flow_mod)
+                    elif self.config.ofv = "1.3":
+                        fm = OFP13FlowMod(origin, flow_mod)
 
                     self.controller.process_flow_mod(fm)

@@ -19,8 +19,7 @@ class FlowMod():
         self.matches = {}
 	self.actions = []
 
-        if (!validate_flow_mod(origin, flow_mod)):
-            raise FlowModValidationError(flow_mod)
+        validate_flow_mod(origin, flow_mod)
 
     def get_flow_mod_msg():
         return self.flow_mod
@@ -38,9 +37,6 @@ class FlowMod():
                             self.match = validate_match(flow_mod["match"])
                         if "action" in flow_mod:
                             self.actions = validate_action(flow_mod["action"])
-                        if self.action and self.match:
-                            return True
-        return False
 
     def validate_match(matches):
         validated_matches = {}
@@ -143,10 +139,4 @@ class FlowMod():
                                           out_port=self.config.ofproto.OFPP_ANY)
 
     def get_dst_dp():
-        return rule_type
-
-class FlowModValidationError(Exception):
-    def __init__(self, flow_mod):
-        self.flow_mod = flow_mod
-    def __str__(self):
-        return repr(self.flow_mod) 
+        return rule_type 
