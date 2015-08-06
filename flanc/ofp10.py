@@ -47,9 +47,11 @@ class FlowMod():
 
         for match, value in matches.iteritems():
 
-            #TODO add in_port, out_port, eth_type
-
-            if match == "eth_dst":
+            if match == "eth_type":
+                validated_matches[match] = value
+            elif match == "in_port":
+                validated_matches[match] = value
+            elif match == "eth_dst":
                 validated_matches[match] = value
             elif match == "eth_src":
                 validated_matches[match] = value

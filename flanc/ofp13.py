@@ -49,10 +49,12 @@ class FlowMod():
     def validate_match(matches):
         validated_matches = {}
 
-            #TODO add in_port, out_port, eth_type
-
         for match, value in matches.iteritems():
-            if match == "eth_dst":
+            if match == "eth_type":
+                validated_matches[match] = value
+            elif match == "in_port":
+                validated_matches[match] = value
+            elif match == "eth_dst":
                 if len(value) > 1:
                     validated_matches[match] = value
             elif match == "eth_src":
