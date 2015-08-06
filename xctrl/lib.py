@@ -32,7 +32,7 @@ class Config(object):
         # parse config
         self.parse_config(config)
 
-    def parse_config(self, config)
+    def parse_config(self, config):
         if "Mode" in config:
             self.mode = 0 if config["Mode"] == "Multi-Switch" else 1
         if "VMAC" in config:
@@ -41,7 +41,6 @@ class Config(object):
             if "Options" in config["VMAC"]:
                 self.vmac_options = config["VMAC"]["Options"]
         if "RefMon Server" in config:
-
             self.refmon = config["RefMon Server"]
 
         if "Flanc Auth Info" in config:
@@ -51,31 +50,26 @@ class Config(object):
             self.vnhs = IPNetwork(config["VNHs"])
 
         if "Route Server" in config:
-            if "Ports" in config["Route Server"]:
-                port = config["Route Server"]["Ports"][0] 
-                self.route_server = Peer("RS", Port(port["Id"], port["MAC"], port["IP"])
+            self.route_server = Peer("RS", [Port(config["Route Server"]["Port"], config["Route Server"]["MAC"], config["Route Server"]["IP"])])
 
         if "ARP Proxy" in config:
-            if "Ports" in config["ARP Proxy"]:
-                port = config["ARP Proxy"]["Ports"][0]
-                self.arp_proxy = Peer("ARP", Port(port["Id"], port["MAC"], port["IP"])
+            self.arp_proxy = Peer("ARP", [Port(config["ARP Proxy"]["Port"], config["ARP Proxy"]["MAC"], config["ARP Proxy"]["IP"])])
 
         if "Participants" in config:
-            for participant_name in config["Participants"]:        
-                participant = config[participant_name]
-        
+            for participant_name, participant in config["Participants"].iteritems():
+                participant_name = int(participant_name)
                 if ("Inbound Rules" in participant):
                     inbound_rules = participant["Inbound Rules"]
                 if ("Outbound Rules" in participant):
-                    inbound_rules = participant["Outbound Rules"]
+                    outbound_rules = participant["Outbound Rules"]
             
-                if ("Ports" in participant)
+                if ("Ports" in participant):
                     ports = [Port(participant["Ports"][i]['Id'],
-                              "MAC": participant["Ports"][i]['MAC'],
-                              "IP": participant["Ports"][i]['IP'])
+                              participant["Ports"][i]['MAC'],
+                              participant["Ports"][i]['IP'])
                               for i in range(0, len(participant["Ports"]))]
                       
-                self.peers[participant_name)] = Participant(participant_name, ports, inbound_rules, outbound_rules)
+                self.peers[participant_name] = Participant(participant_name, ports, inbound_rules, outbound_rules)
 
 
 class Peer(object):

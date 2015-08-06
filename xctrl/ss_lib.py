@@ -36,7 +36,7 @@ class VMACBuilder(object):
     def next_hop_mask(self, inbound_bit = False):
         part_bits_only = (1 << self.next_hop_size) - 1
 
-        bitmask = vmac_next_hop_match(part_bits_only, inbound_bit)
+        bitmask = self.next_hop_match(part_bits_only, inbound_bit)
 
         return bitmask
 
@@ -69,11 +69,11 @@ class VMACBuilder(object):
         part_port_size = self.next_hop_size + self.port_size
         part_port_bits = (1 << part_port_size) - 1
 
-        bitmask = vmac_next_hop_match(part_port_bits, inbound_bit)
+        bitmask = self.next_hop_match(part_port_bits, inbound_bit)
     
         return bitmask
 
     # looks like 100000000000000
     def only_first_bit(self):
         # return a match on participant 0 with inbound bit set to 1
-        return vmac_next_hop_match(0, inbound_bit=True)
+        return self.next_hop_match(0, inbound_bit=True)

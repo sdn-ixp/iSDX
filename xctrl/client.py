@@ -8,14 +8,14 @@ from multiprocessing.connection import Client
 
 LOG = False
 
-class Client():
+class RefMonClient():
     def __init__(self, address, port, key):
         self.address = address
         self.port = port
         self.key = key
 
     def send(self, msg):
-        conn = Client((address, port), authkey='xrs')
+        conn = Client((self.address, self.port), authkey=str(self.key))
 
         conn.send(msg)
 

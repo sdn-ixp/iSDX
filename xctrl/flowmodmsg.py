@@ -2,16 +2,12 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-class FlowModMsg(object):
+class FlowModMsgBuilder(object):
     def __init__(self, participant, key):
         self.participant = participant
         self.key = key
 
-        self.flow_mods = []
-
-    def add_flow_mod(self, mod_type, rule_type, priority, match, action):
-        id = len(self.flow_mods) + 1
-        
+    def get_flow_mod_msg(self, id, mod_type, rule_type, priority, match, action):        
         fm = { 
                "id": id,
                "mod_type": mod_type,
@@ -21,18 +17,15 @@ class FlowModMsg(object):
                "action": action
              }
 
-        self.flow_mods.append(fm)
-
-        return id
-
-    def get_msg(self):
         msg = {
                 "auth_info": {
                                "participant" : self.participant,
                                "key" : self.key
                              },
-                "flow_mods": self.flow_mods
+                "flow_mods": fm
               }
+
+
         return msg
 
 #  request body format:

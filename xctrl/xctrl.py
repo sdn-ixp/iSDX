@@ -5,7 +5,9 @@
 import os
 import argparse
 
-from client import Client
+from threading import Thread
+
+from client import RefMonClient
 from lib import Config
 from gss import GSSmS, GSSmT
 from mds import MDS
@@ -14,7 +16,7 @@ class xCtrl(object):
     def __init__(self, config_file):
         self.config = Config(config_file)
 
-        self.client = Client(self.config.refmon["address"], self.config.refmon["port"], self.config.refmon["key"])
+        self.client = RefMonClient(self.config.refmon["address"], self.config.refmon["port"], self.config.refmon["key"])
 
         if self.config.vmac_mode == 0:
             self.controller = MDS(self.client, self.config)
@@ -24,10 +26,10 @@ class xCtrl(object):
             elif self.config.mode == 1:
                 self.controller = GSSmT(self.client, self.config)
 
-    def start():
+    def start(self):
         self.controller.start()
 
-    def stop():
+    def stop(self):
         pass
 
 def main(argv):
