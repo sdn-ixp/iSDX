@@ -194,7 +194,7 @@ class MultiSwitchController(object):
             self.config.datapaths[fm.get_dst_dp()].send_msg(mod)
 
     def packet_in(self, ev):
-        self.logger.info('packet in')
+        pass
 
     def is_ready(self):
         if "main" in self.config.datapaths and "inbound" in self.config.datapaths and "outbound" in self.config.datapaths:

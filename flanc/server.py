@@ -25,6 +25,7 @@ class Server():
     def receiver(self):
         while self.receive:
             conn = self.listener.accept()
+
             try:
                 msg = conn.recv()
                 self.refmon.process_flow_mods(msg)
