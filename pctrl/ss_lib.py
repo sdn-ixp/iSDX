@@ -315,9 +315,3 @@ if __name__ == '__main__':
     print supersets
     print rulesRequired(supersets, weights)
     print bitsRequired(supersets)
-
-
-
-
-
-

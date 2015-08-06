@@ -3,11 +3,13 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 from flowmodmsg import FlowModMsg
+from ss_lib import VMACBuilder
 
 class GSS(object):
     def __init__(self, sender, config):
         self.sender = sender
         self.config = config
+        self.vmac_builder = VMACBuilder(self.config.vmac_options)
 
 class GSSmS(GSS):
     # Priorities
@@ -91,7 +93,9 @@ class GSSmS(GSS):
                 msg.add_flow_mod("insert", "main", ARP_PRIORITY, match, action)
 
             ### direct gratuituous ARPs only to the respective participant
-            match = {"in_port": self.arp_proxy.ports[0].id, "eth_type": ETH_TYPE_ARP, "eth_dst": (#TODO)}
+            vmac = self.vmac_builder.next_hop_match(participant.name, False)
+            vmac_mask = self.vmac_builder.next_hop_mask(False)
+            match = {"in_port": self.arp_proxy.ports[0].id, "eth_type": ETH_TYPE_ARP, "eth_dst": (vmac, vmac_mask)}
             action = {"set_eth_dst": MAC_BROADCAST}
             fwd = []
             for port in participants.ports:
@@ -118,20 +122,27 @@ class GSSmS(GSS):
 
             ### inbound policies specified
             if participant.inbound_rules:
+                i = 0
                 for port in participant.ports:
-                    match = {"eth_dst": #TODO}
+                    vmac = self.vmac_builder.part_port_match(participant.name, i, False)
+                    vmac_mask = self.vmac_builder.part_port_mask(False)
+                    match = {"eth_dst": (vmac, vmac_mask)}
                     action = {"set_eth_dst": port.mac, "fwd": [port.id]}
                     msg.add_flow_mod("insert", "main", FORWARDING_PRIORITY, match, action)               
 
             ### default forwarding
             else:
+                vmac = self.vmac_builder.next_hop_match(participant.name, False)
+                vmac_mask = self.vmac_builder.next_hop_mask(False)
                 port = participant.ports[0]
-                match = {"eth_dst": #TODO}
+                match = {"eth_dst": (vmac, vmac_mask)}
                 action = {"set_eth_dst": port.mac, "fwd": [port.id]}
                 msg.add_flow_mod("insert", "main", FORWARDING_PRIORITY, match, action)
 
         ## direct packets with inbound bit set to the inbound switch
-        match = {"eth_dst": #TODO}
+        vmac = self.vmac_builder.only_first_bit()
+
+        match = {"eth_dst": (vmac, vmac)}
         action = {"fwd": ["inbound"]}
         msg.add_flow_mod("insert", "main", DEFAULT_PRIORITY, match, action)
 
@@ -146,8 +157,11 @@ class GSSmS(GSS):
         for participant in self.config.peers:
             if participant.inbound_rules:
                 port = participant.ports[0]
-                match = {"eth_dst": #TODO}
-                action = {"set_eth_dst": #TODO, "fwd": ["main"]}
+                vmac_match = self.vmac_builder.next_hop_match(participant.name, False)
+                vmac_match_mask = self.vmac_builder.next_hop_mask(False)
+                vmac_action = self.vmac_builder.part_port_match(participant.name, 0, False) 
+                match = {"eth_dst": (vmac_match, vmac_match_mask)}
+                action = {"set_eth_dst": vmac_action, "fwd": ["main"]}
                 msg.add_flow_mod("insert", "inbound", INBOUND_PRIORITY, match, action)
 
         ## send all other packets to main
@@ -163,4 +177,3 @@ class GSSmT(GSS):
 
     def init_fabric(self):
         pass
-

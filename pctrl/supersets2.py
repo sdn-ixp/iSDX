@@ -213,14 +213,3 @@ if __name__ == '__main__':
     print ss.update_supersets(updates)
 
     print ss.supersets
-
-
-
-
-
-
-
-
-
-
-
