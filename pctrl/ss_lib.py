@@ -3,6 +3,7 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 from netaddr import *
+import math
 
 
 def bitsRequired(supersets):
@@ -54,7 +55,7 @@ def minimize_ss_rules_greedy(self, peerSets, ruleCounts):
     while (len(peerSets) > 1):
         m = len(peerSets)
 
-        bits = self.bitsRequired()
+        bits = bitsRequired(peerSets)
 
         # if M is 1 + 2^X for some X, logM will decrease after a merge
         if ((m - 1) & (m - 2)) == 0:
@@ -102,6 +103,7 @@ def minimize_ss_rules_greedy(self, peerSets, ruleCounts):
 
 
 
+
 def is_subset_of_superset(subset, supersets):
     for superset in supersets:
         if ((set(superset)).issuperset(subset)):
@@ -133,9 +135,10 @@ def removeSubsets(sets):
 
 
 def clear_inactive_parts(prefixSets, activePeers):
-	for group in prefixSets:
-		group.intersection_update(activePeers)
-	return prefixSets
+    activePeers = set(activePeers)
+
+    return [activePeers.intersection(prefix) for prefix in prefixSets]
+
 
 
 #                
@@ -159,7 +162,7 @@ def vmac_participant_match(superset_id, participant_index, sdx):
     return vmac_addr
 
 # constructs the accompanying mask for reachability checks
-def vmac_participant_mask(participand_index, sdx):
+def vmac_participant_mask(participant_index, sdx):
     # a superset which is all 1's
     superset_bits = (1 << sdx.superset_id_size) - 1
 
@@ -186,7 +189,7 @@ def vmac_next_hop_match(participant_name, sdx, inbound_bit = False):
 def vmac_next_hop_mask(sdx, inbound_bit = False):
     part_bits_only = (1 << sdx.best_path_size) - 1
 
-    bitmask = vmac_best_path_match(part_bits_only, sdx, inbound_bit)
+    bitmask = vmac_next_hop_match(part_bits_only, sdx, inbound_bit)
 
     return bitmask
 
@@ -219,7 +222,7 @@ def vmac_part_port_mask(sdx, inbound_bit = False):
     part_port_size = sdx.best_path_size + sdx.port_size
     part_port_bits = (1 << part_port_size) - 1
 
-    bitmask = vmac_best_path_match(part_port_bits, sdx, inbound_bit)
+    bitmask = vmac_next_hop_match(part_port_bits, sdx, inbound_bit)
 
     return bitmask
 
@@ -228,6 +231,56 @@ def vmac_only_first_bit(sdx):
 
     # return a match on participant 0 with inbound bit set to 1
     return vmac_next_hop_match(0, sdx, inbound_bit=True)
+
+
+
+
+
+if __name__ == '__main__':
+    "--Unit testing--"
+    class FakeSDX():
+        def __init__(self):
+            self.VMAC_size = 48
+            self.superset_id_size = 5
+            self.best_path_size = 16
+            self.port_size = 10
+            self.max_initial_bits = 20
+            self.bitsRequired = bitsRequired
+
+    part_name = 5
+    ss_id = 4
+    port_num = 10
+    part_index = 20
+
+    sdx = FakeSDX()
+    print vmac_participant_match(ss_id, part_name, sdx)
+    print vmac_participant_mask(part_name, sdx)
+    supersets = [[1,2], [2,3], [3,4]]
+    a = set([1,2])
+    b = set([2,3,4])
+    print is_subset_of_superset(a, supersets)
+    print is_subset_of_superset(b, supersets)
+    print vmac_part_port_mask(sdx, True)
+    print vmac_part_port_match(part_name, port_num, sdx, True)
+    print vmac_part_port_match(part_name, port_num, sdx, False)
+    print vmac_next_hop_mask(sdx, True)
+    print vmac_next_hop_match(part_name, sdx, False)
+    print vmac_participant_match(ss_id, part_index, sdx)
+    print vmac_participant_mask(part_index, sdx)
+
+    activePeers = [1,3,4,5]
+    print clear_inactive_parts(supersets, activePeers)
+
+    print vmac_only_first_bit(sdx)
+
+    supersets = [[1,2,3], [2,3,4,5], [5,6], [4,5,6]]
+    weights = {1:1, 2:2, 3:3, 4:4, 5:5, 6:6}
+    print rulesRequired(supersets, weights)
+    print bitsRequired(supersets)
+    supersets = minimize_ss_rules_greedy(sdx, supersets, weights)
+    print supersets
+    print rulesRequired(supersets, weights)
+    print bitsRequired(supersets)
 
 
 

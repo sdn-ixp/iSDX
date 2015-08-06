@@ -50,7 +50,7 @@ class SuperSets():
 
 
     def update_supersets(self, updates):
-        sdx_msgs = {"type": "update",
+        sdx_msg = {"type": "update",
                     "changes": []}
 
         self.recompute_rulecounts()
@@ -88,12 +88,12 @@ class SuperSets():
             if bestSuperset == None:
                 self.recompute_all_supersets()
 
-                sdx_msgs = {"type": "new",
+                sdx_msg = {"type": "new",
                             "changes": []}
 
                 for superset in self.supersets:
                     for participant in superset:
-                        sdx_msgs["changes"].append({"participant_id": participant,
+                        sdx_msg["changes"].append({"participant_id": participant,
                                                    "superset": superset_index,
                                                    "position": self.supersets[superset_index].index(participant)})
 
@@ -106,17 +106,17 @@ class SuperSets():
             	bestSuperset.append(new_members)
 
             	for participant in new_members:
-            		sdx_msgs["changes"].append({"participant_id": participant,
+            		sdx_msg["changes"].append({"participant_id": participant,
                                                    "superset": superset_index,
                                                    "position": self.supersets[superset_index].index(participant)})
 
 
 
         # check which participants joined a new superset and communicate to the SDX controller
-        return sdx_msgs
+        return [sdx_msgs]
 
 
-    def recomputation(self):
+    def recompute_all_supersets(self):
     	self.recompute_rulecounts()
         # get all sets of participants advertising the same prefix
         peer_sets = get_all_participant_sets(self)
