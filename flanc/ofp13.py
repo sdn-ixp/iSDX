@@ -1,6 +1,9 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+from ryu.ofproto import ether
+from ryu.ofproto import inet
+
 class FlowMod():
     def __init__(self, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
@@ -35,10 +38,12 @@ class FlowMod():
                     self.mod_type = flow_mod["mod_type"]
                     if ("rule_type" in flow_mod and flow["rule_type"] in self.rule_types):
                         self.rule_type = flow_mod["rule_type"]
-                        if "match" in flow_mod:
-                            self.match = validate_match(flow_mod["match"])
-                        if "action" in flow_mod:
-                            self.actions = validate_action(flow_mod["action"])
+                        if ("priority" in flow_mod):
+                            self.priority = flow_mod["priority"]
+                            if "match" in flow_mod:
+                                self.match = validate_match(flow_mod["match"])
+                            if "action" in flow_mod:
+                                self.actions = validate_action(flow_mod["action"])
 
     def validate_match(matches):
         validated_matches = {}
@@ -46,6 +51,10 @@ class FlowMod():
         for match, value in matches.iteritems():
             if match == "eth_type":
                 validated_matches[match] = value
+            elif match == "arp_tpa":
+                validated_matches[match] = value
+                if "eth_type" not in validated_matches:
+                    validated_matches["eth_type"] = ether.ETH_TYPE_ARP
             elif match == "in_port":
                 validated_matches[match] = value
             elif match == "eth_dst":
@@ -96,15 +105,17 @@ class FlowMod():
         for action, value in actions.iteritems():
             if action == "fwd":
                 if self.config.tables:
-                    if value.isdigit():
-                        temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["main"][int(value)]))
-                    else:
-                        temp_goto_instructions.append(self.parser.OFPInstructionGotoTable(self.config.tables[value]))
+                    for port in value:
+                        if isinstance( value, int ) or value.isdigit():
+                            temp_actions.append(self.parser.OFPActionOutput(int(value)))
+                        else:
+                            temp_goto_instructions.append(self.parser.OFPInstructionGotoTable(self.config.tables[value]))
                 else:
-                    if value.isdigit():
-                        temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["main"][int(value)]))
-                    else:
-                        temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][value]))
+                    for port in value:
+                        if isinstance( value, int ) or value.isdigit():
+                            temp_actions.append(self.parser.OFPActionOutput(int(value)))
+                        else:
+                            temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][value]))
             elif action == "set_eth_src":
                 temp_actions.append(self.parser.OFPActionSetField(eth_src=value))
             elif action == "set_eth_dst":
@@ -142,6 +153,7 @@ class FlowMod():
         else:
             table_id = 0
             datapath = self.config.datapaths[rule_type]
+
         if self.mod_type == "insert":
             instructions = make_instructions()
             return self.parser.OFPFlowMod(datapath=datapath, 

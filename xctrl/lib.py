@@ -18,6 +18,12 @@ class Config(object):
 
         self.refmon = None
 
+        self.flanc_auth = None
+
+        self.route_server = None
+
+        self.arp_proxy = None
+
         self.peers = {}
 
         # loading config file
@@ -35,7 +41,11 @@ class Config(object):
             if "Options" in config["VMAC"]:
                 self.vmac_options = config["VMAC"]["Options"]
         if "RefMon Server" in config:
+
             self.refmon = config["RefMon Server"]
+
+        if "Flanc Auth Info" in config:
+            self.flanc_auth = config["Flanc Auth Info"]
 
         if "VNHs" in config:
             self.vnhs = IPNetwork(config["VNHs"])
@@ -43,12 +53,12 @@ class Config(object):
         if "Route Server" in config:
             if "Ports" in config["Route Server"]:
                 port = config["Route Server"]["Ports"][0] 
-                self.peers["RS"] = Peer("RS", Port(port["Id"], port["MAC"], port["IP"])
+                self.route_server = Peer("RS", Port(port["Id"], port["MAC"], port["IP"])
 
         if "ARP Proxy" in config:
             if "Ports" in config["ARP Proxy"]:
                 port = config["ARP Proxy"]["Ports"][0]
-                self.peers["ARP"] = Peer("ARP", Port(port["Id"], port["MAC"], port["IP"])
+                self.arp_proxy = Peer("ARP", Port(port["Id"], port["MAC"], port["IP"])
 
         if "Participants" in config:
             for participant_name in config["Participants"]:        

@@ -33,10 +33,12 @@ class FlowMod():
                     self.mod_type = flow_mod["mod_type"]
                     if ("rule_type" in flow_mod and flow["rule_type"] in self.rule_types):
                         self.rule_type = flow_mod["rule_type"]
-                        if "match" in flow_mod:
-                            self.match = validate_match(flow_mod["match"])
-                        if "action" in flow_mod:
-                            self.actions = validate_action(flow_mod["action"])
+                        if ("priority" in flow_mod):
+                            self.priority = flow_mod["priority"]
+                            if "match" in flow_mod:
+                                self.match = validate_match(flow_mod["match"])
+                            if "action" in flow_mod:
+                                self.actions = validate_action(flow_mod["action"])
 
     def validate_match(matches):
         validated_matches = {}
@@ -47,6 +49,10 @@ class FlowMod():
                 validated_matches[match] = value
             elif match == "in_port":
                 validated_matches[match] = value
+            elif match == "arp_tpa":
+                validated_matches[match] = value
+                if "eth_type" not in validated_matches:
+                    validated_matches["eth_type"] = ether.ETH_TYPE_ARP
             elif match == "eth_dst":
                 validated_matches[match] = value
             elif match == "eth_src":
@@ -90,10 +96,11 @@ class FlowMod():
 
         for action, value in actions.iteritems():
             if action == "fwd":
-                if value.isdigit():
-                    temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["main"][int(value)]))
-                else:
-                    temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][value]))
+                for port in value:
+                    if isinstance( value, int ) or value.isdigit():
+                        temp_actions.append(self.parser.OFPActionOutput(int(value)))
+                    else:
+                        temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][value]))
             elif action == "set_eth_src":
                 temp_actions.append(self.parser.OFPActionSetDlDst(value))
             elif action == "set_eth_dst":
