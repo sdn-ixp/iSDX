@@ -12,9 +12,9 @@ def bitsRequired(supersets):
     if supersets is None:
     	return 0
 
-    logM = 0
+    logM = 1
     if len(supersets) > 1:
-        logM = math.ceil(math.log(len(supersets) - 1, 2))
+        logM = math.ceil(math.log(len(supersets), 2))
     maxS = max(len(superset) for superset in supersets)
 
     return int(logM + maxS)
@@ -35,7 +35,7 @@ def rulesRequired(supersets, rulecounts):
 
 
 
-def minimize_ss_rules_greedy(self, peerSets, ruleCounts):
+def minimize_ss_rules_greedy(peerSets, ruleCounts, max_bits):
     """ Given a list of supersets and the number of rules needed regarding
         each participant in an outbound policy, greedily minimize
         the number of rules that will result from the superset grouping.
@@ -46,7 +46,6 @@ def minimize_ss_rules_greedy(self, peerSets, ruleCounts):
     # smallest sets first
     peerSets.sort(key=len, reverse=True)
     # how many bits are allowed?
-    max_bits = self.max_initial_bits
 
 
     # the longest superset determines the current mask size
@@ -100,6 +99,34 @@ def minimize_ss_rules_greedy(self, peerSets, ruleCounts):
         maxLength = max(len(bestSet1), maxLength)
 
     return peerSets
+
+def best_ss_to_expand_greedy(new_set, supersets, ruleWeights, max_mask):
+    """ Returns index of the best superset to expand, given the rule 
+        weights and the maximum allowed mask size. -1 if none possible.
+    """
+
+    bestSuperset = None
+    bestCost = float('inf')
+
+    new_set = set(new_set)
+    
+    for superset in supersets:
+        # if this merge would exceed the current mask size limit, skip it
+        if len(new_set.union(superset)) > max_mask:
+            continue
+
+        # the rule increase is the sum of all rules that involve each part added to the superset
+        cost = sum(ruleWeights[part] for part in new_set.difference(superset))
+        if cost < bestCost:
+            bestCost = cost
+            bestSuperset = superset
+
+    # if no merge is possible, return -1
+    if bestSuperset == None:
+        return -1
+
+    return supersets.index(bestSuperset)
+
 
 
 
@@ -274,10 +301,17 @@ if __name__ == '__main__':
     print vmac_only_first_bit(sdx)
 
     supersets = [[1,2,3], [2,3,4,5], [5,6], [4,5,6]]
-    weights = {1:1, 2:2, 3:3, 4:4, 5:5, 6:6}
+    weights = {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7}
+
+    new_set = [4,5,6,7]
+    print best_ss_to_expand_greedy(new_set, supersets, weights, 4)
+    new_set = [2,3,4,5,6]
+    print best_ss_to_expand_greedy(new_set, supersets, weights, 4)
+
+
     print rulesRequired(supersets, weights)
     print bitsRequired(supersets)
-    supersets = minimize_ss_rules_greedy(sdx, supersets, weights)
+    supersets = minimize_ss_rules_greedy(supersets, weights, sdx.max_initial_bits)
     print supersets
     print rulesRequired(supersets, weights)
     print bitsRequired(supersets)
