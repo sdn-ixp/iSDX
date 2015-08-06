@@ -186,7 +186,7 @@ def vmac_next_hop_match(participant_name, sdx, inbound_bit = False):
 def vmac_next_hop_mask(sdx, inbound_bit = False):
     part_bits_only = (1 << sdx.best_path_size) - 1
 
-    bitmask = vmac_best_path_match(part_bits_only, sdx, inbound_bit)
+    bitmask = vmac_next_hop_match(part_bits_only, sdx, inbound_bit)
 
     return bitmask
 
@@ -219,7 +219,7 @@ def vmac_part_port_mask(sdx, inbound_bit = False):
     part_port_size = sdx.best_path_size + sdx.port_size
     part_port_bits = (1 << part_port_size) - 1
 
-    bitmask = vmac_best_path_match(part_port_bits, sdx, inbound_bit)
+    bitmask = vmac_next_hop_match(part_port_bits, sdx, inbound_bit)
 
     return bitmask
 
