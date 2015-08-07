@@ -3,6 +3,8 @@
 #  Muhammad Shahbaz (muhammad.shahbaz@gatech.edu)
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+import logging
+
 from threading import Thread
 from multiprocessing import Queue
 from multiprocessing.connection import Listener
@@ -13,8 +15,11 @@ LOG = False
 class Server():
 
     def __init__(self, refmon, address, port, key):
+        self.logger = logging.getLogger('RefMon Server')
+        self.logger.info('server: start')
+
         self.refmon = refmon
-        self.listener = Listener((address, port), authkey=str(key))
+        self.listener = Listener(('localhost', 6000))
 
     def start(self):
         self.receive = True
@@ -25,13 +30,19 @@ class Server():
     def receiver(self):
         while self.receive:
             conn = self.listener.accept()
+            self.logger.info('server: accepted connection from ' + str(self.listener.last_accepted))
+            
+            msg = None
+            while msg is None:
+                try:
+                    msg = conn.recv()
+                except:
+                    pass
+            self.logger.info('server: received message')
+            self.refmon.process_flow_mods(msg)
 
-            try:
-                msg = conn.recv()
-                self.refmon.process_flow_mods(msg)
-            except:
-                pass
             conn.close()
+            self.logger.info('server: closed connection')
 
     def stop(self):
         self.receive = False

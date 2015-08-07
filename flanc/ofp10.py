@@ -6,41 +6,39 @@ class FlowMod():
         self.mod_types = ["insert", "remove"]
         self.rule_types = ["inbound", "outbound", "main"]
         
-        self.config
-        self.parser
+        self.config = None
+        self.parser = None
 
         self.mod_type = None
         self.rule_type = None
 
-        self.origin = None
+        self.origin = origin
         self.datapath = None
         self.priority = None
         self.cookie = None
         self.matches = {}
 	self.actions = []
 
-        validate_flow_mod(origin, flow_mod)
+        self.validate_flow_mod(flow_mod)
 
-    def get_flow_mod_msg():
+    def get_flow_mod_msg(self):
         return self.flow_mod
 
-    def validate_flow_mod(flow_mod):
-        if "origin" in flow_mod:
-            self.origin = int(flow_mod["origin"])
-            if "id" in flow_mod:
-                self.cookie = int('{0:032b}'.format(self.origin)+'{0:032b}'.format(int(flow_mod["id"])),2)
-                if ("mod_type" in flow_mod and flow["mod_type"] in self.mod_types):
-                    self.mod_type = flow_mod["mod_type"]
-                    if ("rule_type" in flow_mod and flow["rule_type"] in self.rule_types):
-                        self.rule_type = flow_mod["rule_type"]
-                        if ("priority" in flow_mod):
-                            self.priority = flow_mod["priority"]
-                            if "match" in flow_mod:
-                                self.match = validate_match(flow_mod["match"])
-                            if "action" in flow_mod:
-                                self.actions = validate_action(flow_mod["action"])
+    def validate_flow_mod(self, flow_mod):
+        if "id" in flow_mod:
+            self.cookie = int('{0:032b}'.format(int(self.origin))+'{0:032b}'.format(int(flow_mod["id"])),2)
+            if ("mod_type" in flow_mod and flow_mod["mod_type"] in self.mod_types):
+                self.mod_type = flow_mod["mod_type"]
+                if ("rule_type" in flow_mod and flow_mod["rule_type"] in self.rule_types):
+                    self.rule_type = flow_mod["rule_type"]
+                    if ("priority" in flow_mod):
+                        self.priority = flow_mod["priority"]
+                        if "match" in flow_mod:
+                            self.match = self.validate_match(flow_mod["match"])
+                        if "action" in flow_mod:
+                            self.actions = self.validate_action(flow_mod["action"])
 
-    def validate_match(matches):
+    def validate_match(self, matches):
         validated_matches = {}
 
         for match, value in matches.iteritems():
@@ -91,16 +89,16 @@ class FlowMod():
                     validated_matches["ip_proto"] = inet.IPPROTO_UDP
         return validated_matches
 
-    def make_actions():
+    def make_actions(self):
         temp_actions = []
 
-        for action, value in actions.iteritems():
+        for action, value in self.actions.iteritems():
             if action == "fwd":
                 for port in value:
-                    if isinstance( value, int ) or value.isdigit():
-                        temp_actions.append(self.parser.OFPActionOutput(int(value)))
+                    if isinstance( port, int ) or port.isdigit():
+                        temp_actions.append(self.parser.OFPActionOutput(int(port)))
                     else:
-                        temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][value]))
+                        temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][port]))
             elif action == "set_eth_src":
                 temp_actions.append(self.parser.OFPActionSetDlDst(value))
             elif action == "set_eth_dst":
@@ -108,30 +106,34 @@ class FlowMod():
 
         return temp_actions
 
-    def validate_action(actions):
+    def validate_action(self, actions):
         validated_actions = {}
 
         for action, value in actions.iteritems():
             if action == "fwd":
-                validated_actions[action] = int(value)
+                temp_fwds = []
+                for val in value:
+                    if isinstance( val, int ) or val.isdigit():
+                        temp_fwds.append(int(val))
+                    elif val in self.rule_types:
+                        temp_fwds.append(val)
+                validated_actions[action] = temp_fwds
             elif action == "set_eth_src":
                 validated_actions[action] = value
             elif action == "set_eth_dst":
                 validated_actions[action] = value
         return validated_actions
 
-    def get_flow_mod(config):
+    def get_flow_mod(self, config):
         self.config = config
         self.parser = config.parser
 
         match = self.parser.OFPMatch(**self.matches)
 
-        datapath = self.config.datapaths[rule_type]
-
-        actions = make_actions()
+        datapath = self.config.datapaths[self.rule_type]
 
         if self.mod_type == "insert":
-            instructions = make_instructions()
+            actions = self.make_actions()
             return self.parser.OFPFlowMod(datapath=datapath, 
                                           match=match, 
                                           cookie=self.cookie, 
@@ -145,5 +147,5 @@ class FlowMod():
                                           out_group=self.config.ofproto.OFPG_ANY, 
                                           out_port=self.config.ofproto.OFPP_ANY)
 
-    def get_dst_dp():
-        return rule_type 
+    def get_dst_dp(self):
+        return self.rule_type 

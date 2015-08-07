@@ -3,6 +3,7 @@
 
 import os
 import logging
+import json
 
 from ryu.base import app_manager
 from ryu.controller import ofp_event
@@ -26,7 +27,7 @@ class RefMon(app_manager.RyuApp):
         super(RefMon, self).__init__(*args, **kwargs)
 
         self.logger = logging.getLogger('ReferenceMonitor')
-        self.logger.info('start reference monitor')
+        self.logger.info('refmon: start')
 
         # retrieve command line arguments
         CONF = cfg.CONF
@@ -35,11 +36,11 @@ class RefMon(app_manager.RyuApp):
         config_file = os.path.abspath(config_file_path)
 
         # load config from file
-        self.logger.info('load config')
+        self.logger.info('refmon: load config')
         try:
             self.config = Config(config_file)
         except InvalidConfigError as e:
-            self.logger.info('invalid config '+str(e))
+            self.logger.info('refmon: invalid config '+str(e))
 
         # start controller
         if (self.config.mode == 0):
@@ -52,7 +53,7 @@ class RefMon(app_manager.RyuApp):
         self.server.start()
 
     def close(self):
-        self.logger.info('stop reference monitor')
+        self.logger.info('refmon: stop')
 
         self.server.stop()
 
@@ -70,7 +71,9 @@ class RefMon(app_manager.RyuApp):
         self.controller.packet_in(ev)
 
     def process_flow_mods(self, msg):
-        self.logger.info('process received flowmod request')
+        self.logger.info('refmon: received flowmod request')
+
+        msg = json.loads(msg)
 
         # authorization
         if "auth_info" in msg:
@@ -81,6 +84,7 @@ class RefMon(app_manager.RyuApp):
             origin = auth_info["participant"]
 
             if "flow_mods" in msg:
+                self.logger.info('refmon: process ' + str(len(msg["flow_mods"])) + ' from flowmods ' + str(origin))
                 for flow_mod in msg["flow_mods"]:
                     if self.config.ofv == "1.0":
                         fm = OFP10FlowMod(origin, flow_mod)

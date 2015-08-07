@@ -83,7 +83,7 @@ class MultiTableController():
     def init_fabrc(self):    
         # install table-miss flow entry
         if LOG:
-            self.logger.info("INIT: installing flow miss rules")
+            self.logger.info("mt_ctrlr: init fabric")
         match = self.config.parser.OFPMatch()
         actions = [self.config.parser.OFPActionOutput(self.config.ofproto.OFPP_CONTROLLER, self.config.ofproto.OFPCML_NO_BUFFER)]
         instructions = [self.config.parser.OFPInstructionActions(self.config.ofproto.OFPIT_APPLY_ACTIONS, actions)]
@@ -101,7 +101,7 @@ class MultiTableController():
         self.config.datapaths["main"] = dp
         self.config.ofproto = dp.ofproto
         self.config.parser = dp.ofproto_parser
-
+        self.logger("mt_ctrlr: main switch connected")
         self.init_fabric()
 
         if is_ready():
@@ -110,7 +110,7 @@ class MultiTableController():
 
     def switch_disconnect(self, dp):
         if self.config.datapaths["main"] == dp:
-            print "main switch disconnected"
+            self.logger("mt_ctrlr: main switch disconnected")
             del self.config.datapaths["main"]
 
     def process_flow_mod(self, fm):
@@ -121,7 +121,7 @@ class MultiTableController():
             self.config.datapaths["main"].send_msg(mod)
            
     def packet_in(self, ev):
-        print "PACKET IN"
+        self.logger("mt_ctrlr: packet in")
 
     def is_ready(self):
         if "main" in self.config.datapaths:
@@ -131,7 +131,7 @@ class MultiTableController():
 class MultiSwitchController(object):
     def __init__(self, config):
         self.logger = logging.getLogger('MultiSwitchController')
-        self.logger.info('creating an instance of MultiSwitchController')
+        self.logger.info('ms_ctrlr: creating an instance of MultiSwitchController')
 
         self.datapaths = {}
         self.config = config
@@ -148,7 +148,7 @@ class MultiSwitchController(object):
         if self.config.parser is None:
             self.config.parser = dp.ofproto_parser
 
-        self.logger.info('switch connect: ' + dp_name)
+        self.logger.info('ms_ctrlr: switch connect: ' + dp_name)
 
         if self.is_ready():
             self.init_fabric()
@@ -159,12 +159,12 @@ class MultiSwitchController(object):
     def switch_disconnect(self, dp):
         if dp.id in self.config.dpid_2_name:
             dp_name = self.config.dpid_2_name[dp.id]
-            self.logger.info('switch disconnect: ' + dp_name)
+            self.logger.info('ms_ctrlr: switch disconnect: ' + dp_name)
             del self.config.datapaths[dp_name]
 
     def init_fabric(self):
         # install table-miss flow entry
-        self.logger.info("init fabric: installing flow miss rules")
+        self.logger.info('ms_ctrlr: init fabric')
         match = self.config.parser.OFPMatch()
         actions = [self.config.parser.OFPActionOutput(self.config.ofproto.OFPP_CONTROLLER, self.config.ofproto.OFPCML_NO_BUFFER)]
 
