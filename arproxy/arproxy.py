@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
+#  Arpit Gupta (Princeton)
 
 import sys
+import simplejson
 import socket
 import struct
 import binascii
 from threading import Thread,Event
 
-from lib import vmac, vmac_best_path
+from multiprocessing.connection import Listener
+
 
 ETH_BROADCAST = 'ff:ff:ff:ff:ff:ff'
 ETH_TYPE_ARP = 0x0806
@@ -16,15 +19,35 @@ LOG = False
 
 class ArpProxy():
 
-    def __init__(self):
+    def __init__(self, config_file):
         self.run = True
         self.host = None
         self.raw_socket = None
         self.listener_garp = None
+        self.garp_socket = None
+
+        self.participants = {}
+        self.portmac_2_participant = {}
+
+        self.parse_arpconfig(config_file)
 
         # Set various listeners
         self.set_arp_listener()
         self.set_garp_listener()
+
+    def parse_arpconfig(self, config_file):
+        "Parse the config file to extract eh_sockets and portmac_2_participant"
+        with open(config_file, 'r') as f:
+            config = simplejson.load(f)
+            tmp = config["ARP Proxy"]["GARP_SOCKET"]
+            self.garp_socket = tuple([tmp[0], int(tmp[1])])
+            for participant_id in config["Participants"]:
+                participant = config["Participants"][participant_id]
+                self.participants[participant_id] = {}
+                self.participants[participant_id]["eh_socket"] = tuple([participant["EH_SOCKET"][0], int(participant["EH_SOCKET"][1])])
+                for i in range(0, len(participant["Ports"])):
+                    self.portmac_2_participant[participant["Ports"][i]['MAC']] = int(participant_id)
+
 
     def set_arp_listener(self):
         # Set listener for ARP requests from IXP Fabric
@@ -32,7 +55,7 @@ class ArpProxy():
 
         try:
             self.raw_socket = socket.socket( socket.AF_PACKET , socket.SOCK_RAW , socket.ntohs(ETH_TYPE_ARP))
-            self.raw_socket.bind(('exabgp-eth0', 0))
+            self.raw_socket.bind(('eth0', 0))
             self.raw_socket.settimeout(1.0)
         except socket.error as msg:
             print 'Failed to create socket. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
@@ -69,10 +92,10 @@ class ArpProxy():
                 if LOG:
                     print 'Socket Timeout Occured'
 
-        def stop(self):
-            self.run = False
-            self.raw_socket.close()
-            self.listener_garp.close()
+    def stop(self):
+        self.run = False
+        self.raw_socket.close()
+        self.listener_garp.close()
 
     def set_garp_listener(self):
         "Set listener for gratuitous ARPs from the participants' controller"
@@ -101,7 +124,7 @@ class ArpProxy():
         requester_id = self.portmac_2_participant[requester_srcmac]
         if requester_id in self.participants:
             # ARP request is sent by participant with its own SDN controller
-            eh_socket = self.participants[requester_id].eh_socket
+            eh_socket = self.participants[requester_id]["eh_socket"]
             data = {}
             data['arp_request'] = requested_ip
             reply = send_data(eh_socket, data)
@@ -130,7 +153,6 @@ class ArpProxy():
         eth_frame = {"dst_mac": ':'.join('%02x' % ord(b) for b in eth_detailed[0]),
                      "src_mac": ':'.join('%02x' % ord(b) for b in eth_detailed[1]),
                      "type": eth_detailed[2]}
-
         return eth_frame
 
     def parse_arp_packet(self, packet):
@@ -174,8 +196,7 @@ class ArpProxy():
 ''' main '''
 if __name__ == '__main__':
     # start arp proxy
-    sdx_ap = arp_proxy()
-    ap_thread = Thread(target=sdx_ap.start)
+    sdx_ap = ArpProxy("xctrl.cfg")
+    ap_thread = Thread(target=sdx_ap.start_arp_listener)
     ap_thread.start()
-
     ap_thread.join()
