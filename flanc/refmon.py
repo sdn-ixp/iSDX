@@ -46,7 +46,7 @@ class RefMon(app_manager.RyuApp):
         if (self.config.mode == 0):
             self.controller = MultiSwitchController(self.config)
         elif (self.config.mode == 1):
-            self.config.controller = MultiTableController(self.config)
+            self.controller = MultiTableController(self.config)
 
         # start server receiving flowmod requests
         self.server = Server(self, self.config.server["address"], self.config.server["port"], self.config.server["key"])
@@ -87,8 +87,8 @@ class RefMon(app_manager.RyuApp):
                 self.logger.info('refmon: process ' + str(len(msg["flow_mods"])) + ' from flowmods ' + str(origin))
                 for flow_mod in msg["flow_mods"]:
                     if self.config.ofv == "1.0":
-                        fm = OFP10FlowMod(origin, flow_mod)
+                        fm = OFP10FlowMod(self.config, origin, flow_mod)
                     elif self.config.ofv == "1.3":
-                        fm = OFP13FlowMod(origin, flow_mod)
+                        fm = OFP13FlowMod(self.config, origin, flow_mod)
 
                     self.controller.process_flow_mod(fm)

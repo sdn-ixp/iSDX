@@ -8,13 +8,15 @@ from flowmodmsg import FlowModMsgBuilder
 from vmac_lib import VMACBuilder
 
 # Priorities
-BGP_PRIORITY = 5
-ARP_PRIORITY = 5
-ARP_BROADCAST_PRIORITY = 4
-OUTBOUND_PRIORITY = 3
-FORWARDING_PRIORITY = 2
+BGP_PRIORITY = 6
+ARP_PRIORITY = 6
+ARP_BROADCAST_PRIORITY = 5
+OUTBOUND_PRIORITY = 4
+FORWARDING_PRIORITY = 4
 
-INBOUND_PRIORITY = 2
+INBOUND_PRIORITY = 3
+
+INBOUND_BIT_PRIORITY = 2
 
 DEFAULT_PRIORITY = 1
 
@@ -122,6 +124,7 @@ class GSS(object):
                 i = 0
                 for port in participant.ports:
                     vmac = self.vmac_builder.part_port_match(participant.name, i, False)
+                    i += 1
                     vmac_mask = self.vmac_builder.part_port_mask(mask_inbound_bit)
                     match = {"eth_dst": (vmac, vmac_mask)}
                     action = {"set_eth_dst": port.mac, "fwd": [port.id]}
@@ -143,20 +146,19 @@ class GSS(object):
         for participant in self.config.peers.values():
             if participant.inbound_rules:
                 port = participant.ports[0]
-                vmac_match = self.vmac_builder.next_hop_match(participant.name, False)
                 vmac_match_mask = self.vmac_builder.next_hop_mask(False)
                 vmac_action = self.vmac_builder.part_port_match(participant.name, 0, False) 
                 match = {"eth_dst": (vmac_match, vmac_match_mask)}
                 action = {"set_eth_dst": vmac_action, "fwd": [fwd]}
-                fm_builder.add_flow_mod("insert", "inbound", INBOUND_PRIORITY, match, action)
+                self.fm_builder.add_flow_mod("insert", "inbound", INBOUND_PRIORITY, match, action)
 
     def handle_inbound(self, rule_type):
         vmac = self.vmac_builder.only_first_bit()
         match = {"eth_dst": (vmac, vmac)}
         action = {"fwd": ["inbound"]}
-        self.fm_builder.add_flow_mod("insert", rule_type, DEFAULT_PRIORITY, match, action)
+        self.fm_builder.add_flow_mod("insert", rule_type, INBOUND_BIT_PRIORITY, match, action)
 
-    def match_any_fwd(swlf, rule_type, dst):
+    def match_any_fwd(self, rule_type, dst):
         match = {}
         action = {"fwd": [dst]}
         self.fm_builder.add_flow_mod("insert", rule_type, DEFAULT_PRIORITY, match, action)
@@ -186,14 +188,14 @@ class GSSmS(GSS):
         ## handle all participant traffic depending on whether they specified inbound/outbound policies
         self.logger.info('create flow mods to handle participant traffic')
         ### outbound policies specified
-        self.handle_participant_with_outbound(self, "main-in")
+        self.handle_participant_with_outbound("main-in")
         ### inbound policies specified
-        self.handle_participant_with_inbound(self, "main-in", True)
+        self.handle_participant_with_inbound("main-in", True)
         ### default forwarding
-        self.default_forwarding(self, "main-in")
+        self.default_forwarding("main-in")
 
         ## direct packets with inbound bit set to the inbound switch
-        self.handle_inbound(rule_type)
+        self.handle_inbound("main-in")
 
         # OUTBOUND SWITCH
         ## whatever doesn't match on any other rule, send to inbound switch
@@ -214,6 +216,11 @@ class GSSmT(GSS):
     def __init__(self, sender, config):
         super(GSSmT, self).__init__(sender, config)
         self.logger = logging.getLogger('GSSmT')
+        self.fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
+
+    def start(self):
+        self.logger.info('start')
+        self.init_fabric()
 
     def init_fabric(self):
         self.logger.info('init fabric')
@@ -231,10 +238,10 @@ class GSSmT(GSS):
         self.logger.info('create flow mods to handle participant traffic')
         ### outbound policies specified
         self.handle_participant_with_outbound("main-in")
-        ### default forwarding
-        self.default_forwarding("main-in")
         ## direct packets with inbound bit set to the inbound switch
-        self.handle_participant_with_inbound("main-in")
+        self.handle_inbound("main-in")
+        ## whatever doesn't match on any other rule, send to inbound switch
+        self.match_any_fwd("main-in", "main-out")
 
         # OUTBOUND SWITCH
         ## whatever doesn't match on any other rule, send to inbound switch
@@ -248,7 +255,7 @@ class GSSmT(GSS):
 
         # MAIN-OUT TABLE
         ### inbound policies specified
-        self.handle_inbound("main-out", True)
+        self.handle_participant_with_inbound("main-out", False)
         ### default forwarding
         self.default_forwarding("main-out")
 
