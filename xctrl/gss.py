@@ -139,7 +139,7 @@ class GSSmS(GSS):
                 i = 0
                 for port in participant.ports:
                     vmac = self.vmac_builder.part_port_match(participant.name, i, False)
-                    vmac_mask = self.vmac_builder.part_port_mask(False)
+                    vmac_mask = self.vmac_builder.part_port_mask(True)
                     match = {"eth_dst": (vmac, vmac_mask)}
                     action = {"set_eth_dst": port.mac, "fwd": [port.id]}
                     fm_builder.add_flow_mod("insert", "main", FORWARDING_PRIORITY, match, action)
