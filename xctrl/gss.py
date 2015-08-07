@@ -115,14 +115,14 @@ class GSS(object):
                     action = {"set_eth_src": mac, "fwd": ["outbound"]}
                     self.fm_builder.add_flow_mod("insert", rule_type, OUTBOUND_PRIORITY, match, action) 
 
-    def handle_participant_with_inbound(self, rule_type, inbound_bit):
+    def handle_participant_with_inbound(self, rule_type, mask_inbound_bit):
         for participant in self.config.peers.values():
             ### inbound policies specified
             if participant.inbound_rules:
                 i = 0
                 for port in participant.ports:
                     vmac = self.vmac_builder.part_port_match(participant.name, i, False)
-                    vmac_mask = self.vmac_builder.part_port_mask(inbound_bit)
+                    vmac_mask = self.vmac_builder.part_port_mask(mask_inbound_bit)
                     match = {"eth_dst": (vmac, vmac_mask)}
                     action = {"set_eth_dst": port.mac, "fwd": [port.id]}
                     self.fm_builder.add_flow_mod("insert", rule_type, FORWARDING_PRIORITY, match, action)
@@ -186,9 +186,9 @@ class GSSmS(GSS):
         ## handle all participant traffic depending on whether they specified inbound/outbound policies
         self.logger.info('create flow mods to handle participant traffic')
         ### outbound policies specified
-        self.handle_outbound(self, "main-in")
+        self.handle_participant_with_outbound(self, "main-in")
         ### inbound policies specified
-        self.handle_inbound(self, "main-in", True)
+        self.handle_participant_with_inbound(self, "main-in", True)
         ### default forwarding
         self.default_forwarding(self, "main-in")
 
@@ -230,11 +230,11 @@ class GSSmT(GSS):
         ## handle all participant traffic depending on whether they specified inbound/outbound policies
         self.logger.info('create flow mods to handle participant traffic')
         ### outbound policies specified
-        self.handle_outbound("main-in")
+        self.handle_participant_with_outbound("main-in")
         ### default forwarding
         self.default_forwarding("main-in")
         ## direct packets with inbound bit set to the inbound switch
-        self.handle_inbound("main-in")
+        self.handle_participant_with_inbound("main-in")
 
         # OUTBOUND SWITCH
         ## whatever doesn't match on any other rule, send to inbound switch

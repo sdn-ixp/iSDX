@@ -7,7 +7,7 @@ from ryu.ofproto import inet
 class FlowMod():
     def __init__(self, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
-        self.rule_types = ["inbound", "outbound", "main"]
+        self.rule_types = ["inbound", "outbound", "main", "main-in", "main-out"]
         
         self.config = None
         self.parser = None
