@@ -146,6 +146,7 @@ class GSS(object):
         for participant in self.config.peers.values():
             if participant.inbound_rules:
                 port = participant.ports[0]
+                vmac_match = self.vmac_builder.next_hop_match(participant.name, False)
                 vmac_match_mask = self.vmac_builder.next_hop_mask(False)
                 vmac_action = self.vmac_builder.part_port_match(participant.name, 0, False) 
                 match = {"eth_dst": (vmac_match, vmac_match_mask)}
