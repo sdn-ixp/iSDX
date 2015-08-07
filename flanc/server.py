@@ -19,7 +19,8 @@ class Server():
         self.logger.info('server: start')
 
         self.refmon = refmon
-        self.listener = Listener(('localhost', 6000))
+        #TODOself.listener = Listener((address, port), authkey=str(key))
+        self.listener = Listener((address, port))
 
     def start(self):
         self.receive = True

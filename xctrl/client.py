@@ -2,6 +2,8 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+import json
+
 from threading import Thread
 from multiprocessing import Queue
 from multiprocessing.connection import Client
@@ -15,7 +17,8 @@ class RefMonClient():
         self.key = key
 
     def send(self, msg):
-        conn = Client((self.address, self.port), authkey=str(self.key))
+        #conn = Client((self.address, self.port), authkey=str(self.key))
+        conn = Client((self.address, self.port))
 
         conn.send(msg)
 

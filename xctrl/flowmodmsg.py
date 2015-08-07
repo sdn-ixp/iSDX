@@ -2,12 +2,17 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+import json
+
 class FlowModMsgBuilder(object):
     def __init__(self, participant, key):
         self.participant = participant
         self.key = key
+        self.flow_mods = []
 
-    def get_flow_mod_msg(self, id, mod_type, rule_type, priority, match, action):        
+    def add_flow_mod(self, mod_type, rule_type, priority, match, action):        
+        id = len(self.flow_mods)+1
+
         fm = { 
                "id": id,
                "mod_type": mod_type,
@@ -17,16 +22,20 @@ class FlowModMsgBuilder(object):
                "action": action
              }
 
+        self.flow_mods.append(fm)
+
+        return id
+
+    def get_msg(self):
         msg = {
                 "auth_info": {
                                "participant" : self.participant,
                                "key" : self.key
                              },
-                "flow_mods": fm
+                "flow_mods": self.flow_mods
               }
 
-
-        return msg
+        return json.dumps(msg)
 
 #  request body format:
 #    {"auth_info": {
@@ -39,14 +48,23 @@ class FlowModMsgBuilder(object):
 #              "rule_type": "inbound/outbound/main",
 #              "priority": 1,
 #              "match" : {
-#                         "ipv4_src" : "192.168.1.1", 
+#                         "eth_type" : 0x0806,
+#                         "arp_tpa" : ("172.1.0.0", "255.255.255.0"),
+#                         "in_port" : 5,
+#                         "eth_dst" : "ff:ff:ff:ff:ff:ff",
+#                         "eth_src" : "80:23:ff:98:10:01",
+#                         "ipv4_src" : "192.168.1.1",
 #                         "ipv4_dst" : "192.168.1.2", 
 #                         "tcp_src" : 80, 
 #                         "tcp_dst" : 179,
 #                         "udp_src" : 23,
 #                         "udp_dst" : 22, 
 #                        },
-#              "action" : {"fwd": 1}
+#              "action" : {
+#                         "fwd": "inbound",
+#                         "set_eth_src": "80:23:ff:98:10:01",
+#                         "set_eth_dst": ("00:00:00:00:00:01","00:00:00:00:03:ff")
+#                         }
 #            },
 #            { "id": 2,
 #              "mod_type": "add/remove",

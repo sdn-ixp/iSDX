@@ -4,6 +4,7 @@
 
 import os
 import argparse
+import logging
 
 from threading import Thread
 
@@ -14,25 +15,35 @@ from mds import MDS
 
 class xCtrl(object):
     def __init__(self, config_file):
+        self.logger = logging.getLogger('xctrl')
+        self.logger.info('init')
+
         self.config = Config(config_file)
 
         self.client = RefMonClient(self.config.refmon["address"], self.config.refmon["port"], self.config.refmon["key"])
 
         if self.config.vmac_mode == 0:
             self.controller = MDS(self.client, self.config)
+            self.logger.info('mode MDS - OF v1.0')
         elif self.config.vmac_mode == 1:
             if self.config.mode == 0:
                 self.controller = GSSmS(self.client, self.config)
+                self.logger.info('mode GSSmS - OF v1.3')
             elif self.config.mode == 1:
                 self.controller = GSSmT(self.client, self.config)
+                self.logger.info('mode GSSmT - OF v1.3')
 
     def start(self):
+        self.logger.info('start')
         self.controller.start()
 
     def stop(self):
-        pass
+        self.logger.info('stop')
 
 def main(argv):
+    # logging - log level
+    logging.basicConfig(level=logging.INFO)
+ 
     # locate config file
     config_file = os.path.abspath(args.config)
     

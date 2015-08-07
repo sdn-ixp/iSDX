@@ -2,8 +2,10 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+import logging
+
 from flowmodmsg import FlowModMsgBuilder
-from ss_lib import VMACBuilder
+from vmac_lib import VMACBuilder
 
 # Priorities
 BGP_PRIORITY = 5
@@ -47,71 +49,61 @@ class GSS(object):
         self.sender = sender
         self.config = config
         self.vmac_builder = VMACBuilder(self.config.vmac_options)
-        self.fm_builder = FlowModMsgBuilder(self.config.flanc_auth["participant"], self.config.flanc_auth["key"])
-
-        self.fm_id = 1
 
 class GSSmS(GSS):
     def __init__(self, sender, config):
         super(GSSmS, self).__init__(sender, config)
-
+        self.logger = logging.getLogger('GSSmS')
+ 
     def start(self):
+        self.logger.info('start')
         self.init_fabric()
 
     def init_fabric(self):
-        print "LETS GO"
+        self.logger.info('init fabric')
+        fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
 
         # MAIN SWITCH
         ## handle BGP traffic
+        self.logger.info('create flow mods to handle BGP traffic')
+
         port = self.config.route_server.ports[0]
         action = {"fwd": [port.id]}
         match = {"eth_dst": port.mac, "tcp_src": BGP}
-        msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "main", BGP_PRIORITY, match, action)
-        self.fm_id += 1
-        self.sender.send(msg)
-
-        print "ONE DOWN"
+        fm_builder.add_flow_mod("insert", "main", BGP_PRIORITY, match, action)
 
         match = {"eth_dst": port.mac, "tcp_dst": BGP}
-        msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "main", BGP_PRIORITY, match, action)
-        self.fm_id += 1
-        self.sender.send(msg)
+        fm_builder.add_flow_mod("insert", "main", BGP_PRIORITY, match, action)
 
         for participant in self.config.peers.values():
             for port in participant.ports:
                 match = {"eth_dst": port.mac, "tcp_src": BGP}
                 action = {"fwd": [port.id]}
-                msg.add_flow_mod("insert", "main", BGP_PRIORITY, match, action)
+                fm_builder.add_flow_mod("insert", "main", BGP_PRIORITY, match, action)
                 match = {"eth_dst": port.mac, "tcp_dst": BGP}
-                msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "main", BGP_PRIORITY, match, action)
-                self.fm_id += 1
-                self.sender.send(msg)
+                fm_builder.add_flow_mod("insert", "main", BGP_PRIORITY, match, action)
 
         ## handle ARP traffic
+        self.logger.info('create flow mods to handle ARP traffic')
+
         ### direct ARP requests for VNHs to ARP proxy
-        port = self.config.route_server.ports[0]
+        port = self.config.arp_proxy.ports[0]
         match = {"eth_type": ETH_TYPE_ARP, "arp_tpa": (str(self.config.vnhs.network), str(self.config.vnhs.netmask))}
         action = {"fwd": [port.id]}
-        msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "main", ARP_PRIORITY, match, action)
-        self.fm_id += 1
-        self.sender.send(msg)
+        fm_builder.add_flow_mod("insert", "main", ARP_PRIORITY, match, action)
 
         ### direct all ARP requests for the route server to it
         port = self.config.route_server.ports[0]
         match = {"eth_type": ETH_TYPE_ARP, "eth_dst": port.mac}
         action = {"fwd": [port.id]}
-        msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "main", ARP_PRIORITY, match, action)
-        self.fm_id += 1
-        self.sender.send(msg)
+        fm_builder.add_flow_mod("insert", "main", ARP_PRIORITY, match, action)
 
         for participant in self.config.peers.values():
             ### make sure ARP replies reach the participants
             for port in participant.ports:
                 match = {"eth_type": ETH_TYPE_ARP, "eth_dst": port.mac}
                 action = {"fwd": [port.id]}
-                msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "main", ARP_PRIORITY, match, action)
-                self.fm_id += 1
-                self.sender.send(msg)
+                fm_builder.add_flow_mod("insert", "main", ARP_PRIORITY, match, action)
 
             ### direct gratuituous ARPs only to the respective participant
             vmac = self.vmac_builder.next_hop_match(participant.name, False)
@@ -122,17 +114,15 @@ class GSSmS(GSS):
             for port in participant.ports:
                 fwd.append(port.id)
             action["fwd"] = fwd
-            msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "main", ARP_PRIORITY, match, action)
-            self.fm_id += 1
-            self.sender.send(msg)
+            fm_builder.add_flow_mod("insert", "main", ARP_PRIORITY, match, action)
 
         match = {"eth_type": ETH_TYPE_ARP, "eth_dst": MAC_BROADCAST}
         action = {"fwd": [OFPP_FLOOD]}
-        msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "main", ARP_BROADCAST_PRIORITY, match, action)
-        self.fm_id += 1
-        self.sender.send(msg)
+        fm_builder.add_flow_mod("insert", "main", ARP_BROADCAST_PRIORITY, match, action)
 
         ## handle all participant traffic depending on whether they specified inbound/outbound policies
+        self.logger.info('create flow mods to handle participant traffic')
+
         for participant in self.config.peers.values():
             ### outbound policies specified
             if participant.outbound_rules:
@@ -142,9 +132,7 @@ class GSSmS(GSS):
                         mac = port.mac
                     match = {"in_port": port.id}
                     action = {"set_eth_src": mac, "fwd": ["outbound"]}
-                    msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "main", OUTBOUND_PRIORITY, match, action)                
-                    self.fm_id += 1
-                    self.sender.send(msg)
+                    fm_builder.add_flow_mod("insert", "main", OUTBOUND_PRIORITY, match, action)                
 
             ### inbound policies specified
             if participant.inbound_rules:
@@ -154,9 +142,7 @@ class GSSmS(GSS):
                     vmac_mask = self.vmac_builder.part_port_mask(False)
                     match = {"eth_dst": (vmac, vmac_mask)}
                     action = {"set_eth_dst": port.mac, "fwd": [port.id]}
-                    msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "main", FORWARDING_PRIORITY, match, action)
-                    self.fm_id += 1
-                    self.sender.send(msg)
+                    fm_builder.add_flow_mod("insert", "main", FORWARDING_PRIORITY, match, action)
 
             ### default forwarding
             else:
@@ -165,31 +151,22 @@ class GSSmS(GSS):
                 port = participant.ports[0]
                 match = {"eth_dst": (vmac, vmac_mask)}
                 action = {"set_eth_dst": port.mac, "fwd": [port.id]}
-                msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "main", FORWARDING_PRIORITY, match, action)
-                self.fm_id += 1
-                self.sender.send(msg)
+                fm_builder.add_flow_mod("insert", "main", FORWARDING_PRIORITY, match, action)
 
         ## direct packets with inbound bit set to the inbound switch
-        msg = FlowModMsg(self.config.flanc_auth["participant"], self.config.flanc_auth["key"])
         vmac = self.vmac_builder.only_first_bit()
-
         match = {"eth_dst": (vmac, vmac)}
         action = {"fwd": ["inbound"]}
-        msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "main", DEFAULT_PRIORITY, match, action)
-        self.fm_id += 1
-        self.sender.send(msg)
+        fm_builder.add_flow_mod("insert", "main", DEFAULT_PRIORITY, match, action)
 
         # OUTBOUND SWITCH
         ## whatever doesn't match on any other rule, send to inbound switch
         match = {}
         action = {"fwd": ["inbound"]}
-        msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "outbound", DEFAULT_PRIORITY, match, action)
-        self.fm_id += 1
-        self.sender.send(msg)
+        fm_builder.add_flow_mod("insert", "outbound", DEFAULT_PRIORITY, match, action)
 
         # INBOUND SWITCH
         ## set the inbound bit to zero
-        msg = FlowModMsg(self.config.flanc_auth["participant"], self.config.flanc_auth["key"])
         for participant in self.config.peers.values():
             if participant.inbound_rules:
                 port = participant.ports[0]
@@ -198,22 +175,21 @@ class GSSmS(GSS):
                 vmac_action = self.vmac_builder.part_port_match(participant.name, 0, False) 
                 match = {"eth_dst": (vmac_match, vmac_match_mask)}
                 action = {"set_eth_dst": vmac_action, "fwd": ["main"]}
-                msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "inbound", INBOUND_PRIORITY, match, action)
-                self.fm_id += 1
-                self.sender.send(msg)
+                fm_builder.add_flow_mod("insert", "inbound", INBOUND_PRIORITY, match, action)
 
         ## send all other packets to main
         match = {}
         action = {"fwd": ["main"]}
-        msg = self.fm_builder.get_flow_mod_msg(self.fm_id, "insert", "inbound", DEFAULT_PRIORITY, match, action)
-        self.fm_id += 1
-        self.sender.send(msg)
+        fm_builder.add_flow_mod("insert", "inbound", DEFAULT_PRIORITY, match, action)
 
-        print "ALL DONE"
+        self.sender.send(fm_builder.get_msg())
+
+        self.logger.info('sent flow mods to reference monitor')
 
 class GSSmT(GSS):
     def __init__(self, sender, config):
         super(GSSmT, self).__init__(sender, config)
+        self.logger = logging.getLogger('GSSmT')
 
     def init_fabric(self):
         pass
