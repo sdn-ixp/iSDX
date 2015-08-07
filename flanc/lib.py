@@ -197,6 +197,6 @@ class MultiSwitchController(object):
         pass
 
     def is_ready(self):
-        if "main" in self.config.datapaths and "inbound" in self.config.datapaths and "outbound" in self.config.datapaths:
+        if len(self.config.datapaths) > 2:
             return True
         return False
