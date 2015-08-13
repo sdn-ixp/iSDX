@@ -173,58 +173,58 @@ def clear_inactive_parts(prefixSets, activePeers):
 #
 
 # constructs a match VMAC for checking reachability 
-def vmac_participant_match(superset_id, participant_index, sdx):
+def vmac_participant_match(superset_id, participant_index, supersets):
     
     # add superset identifier
-    vmac_bitstring = '{num:0{width}b}'.format(num=int(superset_id), width=(sdx.superset_id_size))
+    vmac_bitstring = '{num:0{width}b}'.format(num=int(superset_id), width=(supersets.superset_id_size))
         
     # set bit of participant
     vmac_bitstring += '{num:0{width}b}'.format(num=1, width=(participant_index+1))
-    vmac_bitstring += '{num:0{width}b}'.format(num=0, width=(sdx.VMAC_size-len(vmac_bitstring)))
+    vmac_bitstring += '{num:0{width}b}'.format(num=0, width=(supersets.VMAC_size-len(vmac_bitstring)))
 
     # convert bitstring to hexstring and then to a mac address
-    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=sdx.VMAC_size/4)
-    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,sdx.VMAC_size/4,2)])
+    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=supersets.VMAC_size/4)
+    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,supersets.VMAC_size/4,2)])
         
     return vmac_addr
 
 # constructs the accompanying mask for reachability checks
-def vmac_participant_mask(participant_index, sdx):
+def vmac_participant_mask(participant_index, supersets):
     # a superset which is all 1's
-    superset_bits = (1 << sdx.superset_id_size) - 1
+    superset_bits = (1 << supersets.superset_id_size) - 1
 
-    return vmac_participant_match(superset_bits, participant_index, sdx)
+    return vmac_participant_match(superset_bits, participant_index, supersets)
 
 
 # constructs a match VMAC for checking next-hop
-def vmac_next_hop_match(participant_name, sdx, inbound_bit = False):
+def vmac_next_hop_match(participant_name, supersets, inbound_bit = False):
         
     # add participant identifier
-    vmac_bitstring = '{num:0{width}b}'.format(num=participant_name, width=(sdx.VMAC_size))
+    vmac_bitstring = '{num:0{width}b}'.format(num=participant_name, width=(supersets.VMAC_size))
 
     # set the 'inbound policy required' bit
     if inbound_bit:
         vmac_bitstring = '1' + vmac_bitstring[1:]
 
     # convert bitstring to hexstring and then to a mac address
-    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=sdx.VMAC_size/4)
-    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,sdx.VMAC_size/4,2)])
+    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=supersets.VMAC_size/4)
+    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,supersets.VMAC_size/4,2)])
             
     return vmac_addr
 
 # returns a mask on just participant bits
-def vmac_next_hop_mask(sdx, inbound_bit = False):
-    part_bits_only = (1 << sdx.best_path_size) - 1
+def vmac_next_hop_mask(supersets, inbound_bit = False):
+    part_bits_only = (1 << supersets.best_path_size) - 1
 
-    bitmask = vmac_next_hop_match(part_bits_only, sdx, inbound_bit)
+    bitmask = vmac_next_hop_match(part_bits_only, supersets, inbound_bit)
 
     return bitmask
 
 
 # constructs stage-2 VMACs (for both matching and assignment)
-def vmac_part_port_match(participant_name, port_num, sdx, inbound_bit = False):
-    part_bits = sdx.best_path_size
-    remainder = sdx.VMAC_size - part_bits
+def vmac_part_port_match(participant_name, port_num, supersets, inbound_bit = False):
+    part_bits = supersets.best_path_size
+    remainder = supersets.VMAC_size - part_bits
 
     # padding and port identifier on the left
     vmac_bitstring_part1 = '{num:0{width}b}'.format(num=port_num, width=remainder)
@@ -238,26 +238,47 @@ def vmac_part_port_match(participant_name, port_num, sdx, inbound_bit = False):
         vmac_bitstring = '1' + vmac_bitstring[1:]
 
     # convert bitstring to hexstring and then to a mac address
-    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=sdx.VMAC_size/4)
-    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,sdx.VMAC_size/4,2)])
+    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=supersets.VMAC_size/4)
+    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,supersets.VMAC_size/4,2)])
 
     return vmac_addr
 
 
 # returns a mask on participant and port bits
-def vmac_part_port_mask(sdx, inbound_bit = False):
-    part_port_size = sdx.best_path_size + sdx.port_size
+def vmac_part_port_mask(supersets, inbound_bit = False):
+    part_port_size = supersets.best_path_size + supersets.port_size
     part_port_bits = (1 << part_port_size) - 1
 
-    bitmask = vmac_next_hop_match(part_port_bits, sdx, inbound_bit)
+    bitmask = vmac_next_hop_match(part_port_bits, supersets, inbound_bit)
 
     return bitmask
 
 # looks like 100000000000000
-def vmac_only_first_bit(sdx):
+def vmac_only_first_bit(supersets):
 
     # return a match on participant 0 with inbound bit set to 1
-    return vmac_next_hop_match(0, sdx, inbound_bit=True)
+    return vmac_next_hop_match(0, supersets, inbound_bit=True)
+
+
+
+def get_all_participants_advertising(prefix, participants):
+    participant_set = set()
+   
+    for participant_name in participants:
+        route = participants[participant_name].get_route('input', prefix)
+        if route:
+            participant_set.add(participant_name)
+            
+    return participant_set
+
+
+def get_all_participant_sets(xrs):
+    participant_sets = []
+     
+    for prefix in xrs.prefix_2_VNH:
+        participant_sets.append(get_all_participants_advertising(prefix, xrs.participants))
+            
+    return participant_sets  
 
 
 
@@ -265,7 +286,7 @@ def vmac_only_first_bit(sdx):
 
 if __name__ == '__main__':
     "--Unit testing--"
-    class FakeSDX():
+    class FakeSS():
         def __init__(self):
             self.VMAC_size = 48
             self.superset_id_size = 5
@@ -279,26 +300,26 @@ if __name__ == '__main__':
     port_num = 10
     part_index = 20
 
-    sdx = FakeSDX()
-    print vmac_participant_match(ss_id, part_name, sdx)
-    print vmac_participant_mask(part_name, sdx)
+    supersets = FakeSS()
+    print vmac_participant_match(ss_id, part_name, supersets)
+    print vmac_participant_mask(part_name, supersets)
     supersets = [[1,2], [2,3], [3,4]]
     a = set([1,2])
     b = set([2,3,4])
     print is_subset_of_superset(a, supersets)
     print is_subset_of_superset(b, supersets)
-    print vmac_part_port_mask(sdx, True)
-    print vmac_part_port_match(part_name, port_num, sdx, True)
-    print vmac_part_port_match(part_name, port_num, sdx, False)
-    print vmac_next_hop_mask(sdx, True)
-    print vmac_next_hop_match(part_name, sdx, False)
-    print vmac_participant_match(ss_id, part_index, sdx)
-    print vmac_participant_mask(part_index, sdx)
+    print vmac_part_port_mask(supersets, True)
+    print vmac_part_port_match(part_name, port_num, supersets, True)
+    print vmac_part_port_match(part_name, port_num, supersets, False)
+    print vmac_next_hop_mask(supersets, True)
+    print vmac_next_hop_match(part_name, supersets, False)
+    print vmac_participant_match(ss_id, part_index, supersets)
+    print vmac_participant_mask(part_index, supersets)
 
     activePeers = [1,3,4,5]
     print clear_inactive_parts(supersets, activePeers)
 
-    print vmac_only_first_bit(sdx)
+    print vmac_only_first_bit(supersets)
 
     supersets = [[1,2,3], [2,3,4,5], [5,6], [4,5,6]]
     weights = {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7}
@@ -311,7 +332,7 @@ if __name__ == '__main__':
 
     print rulesRequired(supersets, weights)
     print bitsRequired(supersets)
-    supersets = minimize_ss_rules_greedy(supersets, weights, sdx.max_initial_bits)
+    supersets = minimize_ss_rules_greedy(supersets, weights, supersets.max_initial_bits)
     print supersets
     print rulesRequired(supersets, weights)
     print bitsRequired(supersets)

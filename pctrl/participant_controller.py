@@ -7,6 +7,8 @@ from peer import BGPPeer as BGPPeer
 from supersets import SuperSets
 from arp_proxy import arp_proxy
 
+from ss_rule_scheme import *
+
 LOG = True
 
 
@@ -30,6 +32,7 @@ class ParticipantController():
         self.participant_2_portip = {}
         self.portmac_2_participant = {}
         self.participant_2_portmac = {}
+        self.policies = {}
 
         # ExaBGP Peering Instance
         self.bgp_instance = None
@@ -49,7 +52,7 @@ class ParticipantController():
         # Superset related params
         if self.vmac_mode == 0:
             if LOG: print "Initializing SuperSets class"
-            self.superset_instance = SuperSets()
+            self.superset_instance = SuperSets(self.bgp_instance, participant)
         else:
             # TODO: create similar class for MDS
             if LOG: print "Initializing MDS class"
@@ -64,11 +67,11 @@ class ParticipantController():
         # TODO: Figure out whether we'll need a socket or REST API to communicate with Reference Monitor
         self.refmon_config = ('localhost', 5555)
         # Communication with the Reference Monitor
-        self.refmon_url = 'http://localhost:8080/??'
+        self.refmon_url = 'http://localhost:8080/??'ha
         # Keep track of flow rules pushed
-        self.dp_pushed = {}
+        self.dp_pushed = []
         # Keep track of flow rules scheduled for push
-        self.dp_queued = {}
+        self.dp_queued = []
 
         # Fetch information about XRS Listener
         #TODO: read from a config file
@@ -93,6 +96,13 @@ class ParticipantController():
     def initialize_dataplane(self):
         "Read the config file and update the queued policy variable"
         # TODO: @Robert: Bring your logic of pushing initial inbound policies for each participant here
+
+        port_count = len(self.participant_2_portmac[self.id])
+
+        rule_msgs = init_inbound_rules(self.id, self.policies, port_count)
+
+        self.dp_queued.extend(rule_msgs[changes])
+
         return 0
 
     def push_dp(self):
@@ -126,6 +136,8 @@ class ParticipantController():
             asn = participant["ASN"]
             self.asn_2_participant[participant["ASN"]] = self.id
             self.participant_2_asn[self.id] = participant["ASN"]
+
+            self.policies = participant["policies"]
 
             # adding ports and mappings
             ports = [{"ID": participant["Ports"][i]['Id'],

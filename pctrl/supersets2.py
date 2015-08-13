@@ -15,7 +15,7 @@ from ss_lib import *
 LOG = False
 
 class SuperSets():
-    def __init__(self, sdx, xrs, participant_name, config_file=None):
+    def __init__(self, bgp_instance, participant, config_file=None):
         self.max_bits = 26
         self.max_initial_bits = 22
         self.best_path_size = 16
@@ -33,8 +33,8 @@ class SuperSets():
         self.supersets = []
 
         self.sdx = sdx
-        self.participant_name = participant_name
-        self.xrs = xrs
+        self.participant = participant
+        self.bgp_instance = bgp_instance
 
         self.rulecounts = {}
         self.recompute_rulecounts()
@@ -60,7 +60,7 @@ class SuperSets():
     def recompute_rulecounts(self):
         self.rulecounts = {}
         # construct the participant weight matrix
-        participant = self.sdx.participants[self.participant_name]
+        participant = self.participant
         if ('outbound' in participant['policies']):
             policies = participant['policies']['outbound']
             for policy in policies:
@@ -85,6 +85,7 @@ class SuperSets():
             prefix = update['announce']['prefix']
 
             # get set of all participants advertising that prefix
+            # TODO: remove dependency on sdx.participants (i.e. remove dependency on everyone's ribs)
             new_set = get_all_participants_advertising(prefix, self.sdx.participants)
             # clean out the inactive participants
             new_set = set(new_set)
@@ -148,6 +149,10 @@ class SuperSets():
         self.mask_size = self.max_bits
         if len(self.supersets) > 1:
             self.mask_size -= math.ceil(math.log(len(self.supersets)-1, 2))
+
+
+
+
 
 
 
