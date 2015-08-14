@@ -6,8 +6,6 @@ import ss_lib
 
 LOG = True
 
-
-
 # PRIORITIES (Values can be in [0,65535], 0 is miss)
 FLOW_MISS_PRIORITY = 0
 
@@ -27,7 +25,8 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
                     "changes": []}
 
     if 'outbound' not in policies:
-        return None
+        return dp_msgs
+
     outbound = policies['outbound']
 
     # map each participant to a list of our policies which forward to them
@@ -42,7 +41,7 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
             part_2_policy[part].append(policy)
 
 
-
+    # if the supersets needed to be recomputed
     if sdx_msgs["type"] == "new":
         dp_msgs["type"] = "new"
 
@@ -65,10 +64,10 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
             match_args["eth_dst"] = (vmac, vmac_bitmask)
             match_args["eth_src"] = my_mac
 
-            actions = {"eth_dst":next_hop_mac, "fwd":"inbound"}
+            actions = {"set_eth_dst":next_hop_mac, "fwd":"inbound"}
 
-            rule = {"switch":"outbound", "priority":OUTBOUND_HIT_PRIORITY,
-                    "match":match_args , "actions":actions}
+            rule = {"rule_type":"outbound", "priority":OUTBOUND_HIT_PRIORITY,
+                    "match":match_args , "action":actions, "mod_type":"insert"}
 
             dp_msgs["changes"].append(rule)
 
@@ -109,31 +108,12 @@ def init_inbound_rules(participant_id, policies, port_count):
 		new_vmac = vmac_part_port_match(participant_id, port_num, self.sdx)                
 
                     
-        actions = {"eth_dst":new_vmac, "fwd":"main"}
+        actions = {"set_eth_dst":new_vmac, "fwd":"main"}
 
-        rule = {"switch":"inbound", "priority":INBOUND_HIT_PRIORITY,
-                "match":match_args, "actions":actions}
+        rule = {"rule_type":"inbound", "priority":INBOUND_HIT_PRIORITY,
+                "match":match_args, "action":actions, "mod_type":"insert"}
 
         dp_msgs["changes"].append(rule)
-    # end for
-
-    # now we add the default forwarding rule (which sets the port to 0)
-
-    # match on the next-hop
-    vmac_bitmask = vmac_next_hop_mask(self.sdx)
-    vmac = vmac_next_hop_match(participant_name, self.sdx)
-
-        
-    port_num = 0
-    new_vmac = vmac_part_port_match(participant_name, port_num, self.sdx)
-        
-    match_args = {"eth_dst":(vmac, vmac_bitmask)}
-    actions = {"eth_dst":new_vmac, "fwd":"main"}
-
-    rule = {"switch":"inbound", "priority":INBOUND_MISS_PRIORITY,
-            "match":match_args, "actions":actions}
-
-    dp_msgs["changes"].append(rule)
 
     return dp_msgs
 

@@ -75,7 +75,7 @@ class SuperSets():
 
     def update_supersets(self, updates):
         sdx_msgs = {"type": "update",
-                    "changes": []}
+                    "changes": [], "prefixes": []}
 
         self.recompute_rulecounts()
 
@@ -94,6 +94,8 @@ class SuperSets():
             # if the prefix group is still a subset, no update needed
             if is_subset_of_superset(new_set, self.supersets):
                 continue
+
+            sdx_msgs["prefixes"].append(prefix)
 
             expansion_index = best_ss_to_expand_greedy(new_set, self.supersets,
                                                 self.rulecounts, self.mask_size)

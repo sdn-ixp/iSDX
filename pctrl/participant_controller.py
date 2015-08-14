@@ -4,7 +4,7 @@
 import json
 from netaddr import *
 from peer import BGPPeer as BGPPeer
-from supersets import SuperSets
+from supersets2 import SuperSets
 from arp_proxy import arp_proxy
 
 from ss_rule_scheme import *
@@ -13,7 +13,7 @@ LOG = True
 
 
 class ParticipantController():
-    def __init__(self, id, vmac_mode, dp_mode, config_file):
+    def __init__(self, id, vmac_mode, dp_mode, sender, config_file, policy_file):
         # participant id
         self.id = id
 
@@ -23,16 +23,27 @@ class ParticipantController():
         # Dataplane mode---multi table or multi switch
         self.dp_mode = dp_mode
 
-        # Initialize config related locals params
-        self.asn_2_participant = {}
-        self.participant_2_asn = {}
-        self.port_2_participant = {}
-        self.participant_2_port = {}
-        self.portip_2_participant = {}
-        self.participant_2_portip = {}
-        self.portmac_2_participant = {}
-        self.participant_2_portmac = {}
+        # Initialize participant params
+        self.cfg = {}
+        """
+        self.cfg = 
+        {
+            "Ports": 
+            [
+                {
+                    "Id": X
+                    "MAC": "XX:XX:XX:XX:XX:XX",
+                    "IP": "X.X.X.X"
+                }
+            ],
+            "Peers": [...],
+            "ASN": X
+        }
+        """
         self.policies = {}
+
+        # used for tagging outbound rules as belonging to us
+        self.port0_mac = None
 
         # ExaBGP Peering Instance
         self.bgp_instance = None
@@ -77,6 +88,10 @@ class ParticipantController():
         #TODO: read from a config file
         self.xrs_config = ('localhost', 5566)
 
+        # class for sending flow mods to the reference monitor
+        self.fm_builder = FlowModMsgBuilder(self.id, self.config.flanc_auth["key"])
+        self.sender = sender
+
 
 
     def start(self):
@@ -110,6 +125,17 @@ class ParticipantController():
         (1) Check if there are any policies queued to be pushed
         (2) Send the queued policies to reference monitor
         '''
+
+        while len(self.dp_queued) > 0:
+            mod = self.dp_queued.pop()
+
+            self.fm_builder.add_flow_mod(**mod)
+
+            self.dp_pushed.append(mod)
+
+        self.sender.send(self.fm_builder.get_msg())
+
+
         return 0
 
 
@@ -125,39 +151,27 @@ class ParticipantController():
     def parse_config(self, config_file):
         "Locally parse the SDX config file for each participant"
         # TODO: Explore how we can make sure that each participant has its own config file
+        config = None
         with open(config_file, 'r') as f:
             config = json.load(f)
-            participant = config[self.id]
 
-            # TODO: Make sure making peers_in == peers_out has no negative impact
-            peers_in = participant["Peers"]
-            peers_out = peers_in
 
-            asn = participant["ASN"]
-            self.asn_2_participant[participant["ASN"]] = self.id
-            self.participant_2_asn[self.id] = participant["ASN"]
+        self.cfg = config[self.id]
 
-            self.policies = participant["policies"]
+        # used for tagging outbound rules as belonging to us
+        self.port0_mac = self.cfg["Ports"][0]["MAC"]
 
-            # adding ports and mappings
-            ports = [{"ID": participant["Ports"][i]['Id'],
-                         "MAC": participant["Ports"][i]['MAC'],
-                         "IP": participant["Ports"][i]['IP']}
-                         for i in range(0, len(participant["Ports"]))]
+        # TODO: this doesn't work
+        self.policies = participant["policies"]
 
-            self.participant_2_port[self.id] = []
-            self.participant_2_portip[self.id] = []
-            self.participant_2_portmac[self.id] = []
 
-            for i in range(0, len(participant["Ports"])):
-                self.port_2_participant[participant["Ports"][i]['Id']] = self.id
-                self.portip_2_participant[participant["Ports"][i]['IP']] = self.id
-                self.portmac_2_participant[participant["Ports"][i]['MAC']] = self.id
-                self.participant_2_port[self.id].append(participant["Ports"][i]['Id'])
-                self.participant_2_portip[self.id].append(participant["Ports"][i]['IP'])
-                self.participant_2_portmac[self.id].append(participant["Ports"][i]['MAC'])
+        # TODO: Make sure making peers_in == peers_out has no negative impact
+        peers_in = self.cfg["Peers"]
+        peers_out = peers_in
 
-            self.bgp_instance = BGPPeer(asn, ports, peers_in, peers_out)
+        self.bgp_instance = BGPPeer(self.cfg["ASN", self.cfg["Ports"], 
+                                    peers_in, peers_out)
+
 
 
     def set_event_handler(self):
@@ -204,6 +218,9 @@ class ParticipantController():
     def process_vmac_events(self, data):
         "Process the incoming vmac "
         # TODO: Port the logic of superset_changed function to update the outbound policies
+
+        # Not sure if this needs to be a separate function. Vmac events always immediately follow 
+        # BGP events, and the amount of code needed is rather small.
         return 0
 
     def process_policy_changes(self, data):
@@ -227,7 +244,16 @@ class ParticipantController():
         if self.vmac_mode == 0:
             # update supersets
             "Map these BGP updates to Flow Rules"
-            sdn_ctrlr_msgs = self.superset_instance.update_supersets(updates)
+            ss_changes = self.superset_instance.update_supersets(updates)
+
+
+            flow_msgs = update_outbound_rules(ss_changes, self.policies, 
+                                              self.superset_instance, self.port0_mac)
+            if flow_msgs["type"] == "new":
+                pass
+                "self.dp_queued.append(wipe all outbound)"
+            self.dp_queued.extend(flow_msgs["changes"])
+
         else:
             # TODO: similar logic for MDS
             if LOG: print "Creating ctrlr messages for MDS scheme"
@@ -280,7 +306,7 @@ class ParticipantController():
                 self.VNH_2_prefix[vnh] = prefix
         else:
             "Disjoint"
-            # TODO: @Robert: Place your logic here for VNH assignment for VNH scheme
+            # TODO: @Robert: Place your logic here for VNH assignment for MDS scheme
             if LOG: print "VNH assignment called for disjoint vmac_mode"
 
     def bgp_update_peers(self, updates):
@@ -309,9 +335,10 @@ class ParticipantController():
                                         "VNH": self.prefix_2_VNH[prefix])
 
                     # announce the route to each router of the participant
-                    for neighbor in self.participant_2_portip:
+                    for port in self.cfg["Ports"]:
                         # TODO: Create a sender queue and import the announce_route function
-                        announcements.append(announce_route(neighbor, prefix, route["next_hop"], route["as_path"]))
+                        announcements.append(announce_route(port["IP"], prefix, 
+                                            route["next_hop"], route["as_path"]))
 
             elif ('withdraw' in update):
                 # A new announcement is only needed if the best path has changed
@@ -326,17 +353,21 @@ class ParticipantController():
                             changes.append({"participant": self.id,
                                             "prefix": prefix,
                                             "VNH": self.prefix_2_VNH[prefix]})
-                        for neighbor in self.participant_2_portip:
-                                announcements.append(announce_route(neighbor, prefix, best_route["next_hop"], best_route["as_path"]))
+                        for port in self.cfg["Ports"]:
+                                announcements.append(announce_route(port["IP"], 
+                                                     prefix, best_route["next_hop"], 
+                                                     best_route["as_path"]))
 
                 else:
                     "Currently there is no best route to this prefix"
                     if prev_route:
                         # Clear this entry from the output rib
                         self.delete_route("output", prefix)
-                        for neighbor in self.participant_2_portip:
+                        for port in self.cfg["Ports"]:
                             # TODO: Create a sender queue and import the announce_route function
-                            announcements.append(withdraw_route(neighbor, prefix, self.prefix_2_VNH[prefix]))
+                            announcements.append(withdraw_route(port["IP"], 
+                                                                prefix, 
+                                                                self.prefix_2_VNH[prefix]))
 
         return changes, announcements
 
@@ -353,12 +384,30 @@ if __name__ == '__main__':
                     help='participant id (integer)')
     args = parser.parse_args()
 
+
+
     # locate config file
     # TODO: Separate the config files for each participant
-    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"controller","sdx_config"))
+    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                "..","examples",args.dir,"controller","sdx_config"))
     config_file = os.path.join(base_path, "sdx_global.cfg")
 
+    # locate the participant's policy file as well
+    policy_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                            "..","examples",args.dir,"controller","participant_policies"))
+
+    policy_filenames_file = os.path.join(base_path, "sdx_policies.cfg")
+    with open(policy_filenames_file, 'r') as f:
+        policy_filenames = json.load(f)
+    policy_filename = policy_filenames[str(args.id)]
+
+    policy_file = os.path.join(base_path, policy_filename)
+
+
+
+
     print "Starting the controller ", str(args.id), " with config file: ", config_file
+    print "And policy file: ", policy_file
 
 
     # start controller
