@@ -15,7 +15,7 @@ from ss_lib import *
 LOG = False
 
 class SuperSets():
-    def __init__(self, bgp_instance, participant, config_file=None):
+    def __init__(self, bgp_instance, policies, config_file=None):
         self.max_bits = 26
         self.max_initial_bits = 22
         self.best_path_size = 16
@@ -33,11 +33,10 @@ class SuperSets():
         self.supersets = []
 
         self.sdx = sdx
-        self.participant = participant
+        self.policies = policies
         self.bgp_instance = bgp_instance
 
-        self.rulecounts = {}
-        self.recompute_rulecounts()
+        self.rulecounts = self.recompute_rulecounts(self.policies)
 
 
     def initial_computation(self):
@@ -57,19 +56,20 @@ class SuperSets():
 
 
 
-    def recompute_rulecounts(self):
-        self.rulecounts = {}
+    def recompute_rulecounts(self, policies):
+        rulecounts = {}
         # construct the participant weight matrix
-        participant = self.participant
-        if ('outbound' in participant['policies']):
-            policies = participant['policies']['outbound']
-            for policy in policies:
+        if ('outbound' in policies):
+            out_policies = policies['outbound']
+            for policy in out_policies:
                 if ('fwd' in policy['action']):
 
                     fwd_part = int(policy['action']['fwd'])
-                    if fwd_part not in self.rulecounts:
-                        self.rulecounts[fwd_part] = 0
-                    self.rulecounts[fwd_part] += 1
+                    if fwd_part not in rulecounts:
+                        rulecounts[fwd_part] = 0
+                    rulecounts[fwd_part] += 1
+
+        return rulecounts
 
 
 
@@ -77,7 +77,7 @@ class SuperSets():
         sdx_msgs = {"type": "update",
                     "changes": [], "prefixes": []}
 
-        self.recompute_rulecounts()
+        self.rulecounts = self.recompute_rulecounts(self.policies)
 
         for update in updates:
             if ('announce' not in update):
@@ -135,7 +135,7 @@ class SuperSets():
 
 
     def recompute_all_supersets(self):
-        self.recompute_rulecounts()
+        self.rulecounts = self.recompute_rulecounts(self.policies)
         # get all sets of participants advertising the same prefix
         peer_sets = get_all_participant_sets(self.xrs)
         peer_sets = clear_inactive_parts(peer_sets, self.rulecounts.keys())
@@ -151,6 +151,36 @@ class SuperSets():
         self.mask_size = self.max_bits
         if len(self.supersets) > 1:
             self.mask_size -= math.ceil(math.log(len(self.supersets)-1, 2))
+
+
+    def get_prefix2part_sets(self, prefixes, bgp_instance, nexthop_2_part):
+        groups = []
+
+        for prefix in prefixes:
+            group = get_all_participants_advertising(prefix, bgp_instance, nexthop_2_part)
+            groups.append(group)
+
+        return groups
+
+
+
+
+    def get_all_participants_advertising(self, prefix, bgp_instance, nexthop_2_part):
+
+        routes = bgp_instance.get_routes(self,'input',prefix)
+
+        parts = set([])
+
+
+        for route in routes:
+            (next_hop, origin, as_path, communities, med, atomic_aggregate) = route
+
+            if next_hop in nexthop_2_part:
+                parts.add(nexthop_2_part[next_hop])
+
+        return parts
+
+
 
 
 
@@ -206,6 +236,7 @@ if __name__ == '__main__':
 
 
             self.participants = {part_name:{'policies':out}}
+            self.policies = out
 
     sdx = FakeSDX()
 

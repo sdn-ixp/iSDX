@@ -41,6 +41,7 @@ class ParticipantController():
         }
         """
         self.policies = {}
+        self.nexthop_2_part = {}
 
         # used for tagging outbound rules as belonging to us
         self.port0_mac = None
@@ -63,7 +64,7 @@ class ParticipantController():
         # Superset related params
         if self.vmac_mode == 0:
             if LOG: print "Initializing SuperSets class"
-            self.superset_instance = SuperSets(self.bgp_instance, participant)
+            self.superset_instance = SuperSets(self.bgp_instance, self.policies)
         else:
             # TODO: create similar class for MDS
             if LOG: print "Initializing MDS class"
@@ -114,7 +115,7 @@ class ParticipantController():
 
         port_count = len(self.participant_2_portmac[self.id])
 
-        rule_msgs = init_inbound_rules(self.id, self.policies, port_count)
+        rule_msgs = init_inbound_rules(self.id, self.policies, self.supersets, port_count)
 
         self.dp_queued.extend(rule_msgs[changes])
 
@@ -157,6 +158,12 @@ class ParticipantController():
 
 
         self.cfg = config[self.id]
+
+        # build nexthop-2-participant mapping
+        for part in config:
+            for port in config[part]["Ports"]:
+                nexthop = port["IP"]
+                self.nexthop_2_part[nexthop] = part
 
         # used for tagging outbound rules as belonging to us
         self.port0_mac = self.cfg["Ports"][0]["MAC"]
@@ -223,9 +230,55 @@ class ParticipantController():
         # BGP events, and the amount of code needed is rather small.
         return 0
 
-    def process_policy_changes(self, data):
+    def process_policy_changes(self, add_policies, remove_policies, complete_policies):
         "Process the changes in participants' policies"
         # TODO: Implement the logic of dynamically changing participants' outbound and inbound policy
+
+        # has the set of active participants expanded?
+        old_rulecounts = self.supersets.recompute_rulecounts(self.policies)
+        new_rulecounts = self.supersets.recompute_rulecounts(complete_policies)
+
+        new_active = set(new_rulecounts.keys())
+        # new_parts will contain all participants that now appear that did not appear previousl
+        new_parts = new_active.difference(old_rulecounts.keys())
+
+        port_count = len(self.participant_2_portmac[self.id])
+
+        # we remove rules first, because the supersets might change when adding rules
+
+        removal_rules = []
+
+        if 'outbound' in remove_policies:
+            removal_out = build_outbound_rules_for(remove_policies['outbound'],
+                                     self.supersets, self.port0_mac)
+            removal_rules.extend(removal_out)
+
+        if 'inbound' in remove_policies:
+            removal_in = build_inbound_rules_for(self.id, remove_policies['outbound'],
+                                            self.supersets, port_count)
+            removal_rules.extend(removal_in)
+
+        # set the mod type of these rules to make them deletions, not additions
+        for rule in removal_rules
+            rule['mod_type'] = "remove"
+
+        self.dp_queued.extend(removal_rules)
+
+
+
+        addition_rules = []
+
+        if 'outbound' in add_policies:
+            addition_out = build_outbound_rules_for(add_policies['outbound'],
+                                     self.supersets, self.port0_mac)
+            addition_rules.extend(removal_out)
+
+        if 'inbound' in add_policies:
+            addition_in = build_inbound_rules_for(self.id, add_policies['outbound'],
+                                            self.supersets, port_count)
+            addition_rules.extend(removal_in)
+
+
         return 0
 
     def process_bgp_route(self, route):
@@ -242,17 +295,25 @@ class ParticipantController():
             self.vnh_assignment(update)
 
         if self.vmac_mode == 0:
+        ################## SUPERSET RESPONSE TO BGP ##################
             # update supersets
-            "Map these BGP updates to Flow Rules"
+            "Map the set of BGP updates to a list of superset expansions."
             ss_changes = self.superset_instance.update_supersets(updates)
 
-
+            "Map the superset expansions to a list of new flow rules."
             flow_msgs = update_outbound_rules(ss_changes, self.policies, 
                                               self.superset_instance, self.port0_mac)
+
+            "If a recomputation event was needed, wipe out the flow rules."
             if flow_msgs["type"] == "new":
-                pass
-                "self.dp_queued.append(wipe all outbound)"
+                wipe_msg = self.clear_outbound_msg()
+                self.dp_queued.append(wipe_msg)
+
+            "Dump the new rules into the dataplane queue."
             self.dp_queued.extend(flow_msgs["changes"])
+
+
+        ################## END SUPERSET RESPONSE ##################
 
         else:
             # TODO: similar logic for MDS
@@ -275,6 +336,15 @@ class ParticipantController():
 
 
         return reply
+
+
+    def clear_outbound_msg():
+        "Construct and return a flow mod which removes all our outbound rules"
+        match_args = {"eth_src":port0_mac}
+        rule = {"rule_type":"outbound", "priority":0,
+                    "match":match_args , "action":{}, "mod_type":"remove"}
+
+        return rule
 
     def send_nw_event(self, sdn_ctrlr_msgs, tag):
         "Send the sdn_ctrlr_msgs back to event handler"
