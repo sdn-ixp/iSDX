@@ -12,10 +12,12 @@ from bgp_interface import *
 
 from ss_lib import *
 
+from participant_controller import *
+
 LOG = False
 
 class SuperSets():
-    def __init__(self, bgp_instance, policies, config_file=None):
+    def __init__(self, pctrl, config_file=None):
         self.max_bits = 26
         self.max_initial_bits = 22
         self.best_path_size = 16
@@ -32,31 +34,30 @@ class SuperSets():
         self.mask_size = 0
         self.supersets = []
 
-        self.sdx = sdx
-        self.policies = policies
-        self.bgp_instance = bgp_instance
-
-        self.rulecounts = self.recompute_rulecounts(self.policies)
 
 
-    def initial_computation(self):
-        self.recompute_all_supersets()
+
+    def initial_computation(self, pctrl):
+
+        self.recompute_all_supersets(pctrl)
 
         sdx_msgs = {"type": "new",
                     "changes": []}
 
-        for i in range(len(self.supersets)):
-            superset = self.supersets[i]
-            for participant in superset:
+        for ss_id, superset in enumerate(self.supersets):
+            for part_index, participant in enumerate(superset):
                 sdx_msgs["changes"].append({"participant_id": participant,
-                                           "superset": i,
-                                           "position": superset.index(participant)})
+                                           "superset": ss_id,
+                                           "position": part_index})
 
         return sdx_msgs
 
 
 
-    def recompute_rulecounts(self, policies):
+
+    def recompute_rulecounts(self, pctrl):
+        policies = pctrl.policies
+
         rulecounts = {}
         # construct the participant weight matrix
         if ('outbound' in policies):
@@ -73,20 +74,38 @@ class SuperSets():
 
 
 
-    def update_supersets(self, updates):
+
+    def update_supersets(self, pctrl, updates):
+        policies = pctrl.policies
+
+1
         sdx_msgs = {"type": "update",
                     "changes": [], "prefixes": []}
 
-        self.rulecounts = self.recompute_rulecounts(self.policies)
+        # the list of prefixes who will have changed VMACs
+        impacted_prefixes = []
+
+        self.rulecounts = self.recompute_rulecounts(policies)
+
+        # if supersets haven't been computed at all yet
+        if len(self.supersets) == 0:
+            sdx_msgs = initial_computation(pctrl)
+            return sdx_msgs
+
+
 
         for update in updates:
+            if ('withdraw' in update):
+                prefix = update['withdraw']['prefix']
+                # withdraws always change the bits of a VMAC
+                impacted_prefixes.append(prefix)
             if ('announce' not in update):
                 continue
             prefix = update['announce']['prefix']
 
             # get set of all participants advertising that prefix
-            # TODO: remove dependency on sdx.participants (i.e. remove dependency on everyone's ribs)
-            new_set = get_all_participants_advertising(prefix, self.sdx.participants)
+            new_set = get_all_participants_advertising(pctrl, prefix)
+            
             # clean out the inactive participants
             new_set = set(new_set)
             new_set.intersection_update(self.rulecounts.keys())
@@ -118,6 +137,9 @@ class SuperSets():
 
             # if merge is possible, do the merge and add the new rules required
             else:
+                # an expansion means the VMAC for this prefix changed
+                impacted_prefixes.append(prefix)
+
                 bestSuperset = self.supersets[expansion_index]
 
                 new_members = list(new_set.difference(bestSuperset))
@@ -131,13 +153,14 @@ class SuperSets():
 
 
         # check which participants joined a new superset and communicate to the SDX controller
-        return sdx_msgs
+        return sdx_msgs, impacted_prefixes
 
 
-    def recompute_all_supersets(self):
-        self.rulecounts = self.recompute_rulecounts(self.policies)
+
+    def recompute_all_supersets(self, pctrl):
+        self.rulecounts = self.recompute_rulecounts(pctrl)
         # get all sets of participants advertising the same prefix
-        peer_sets = get_all_participant_sets(self.xrs)
+        peer_sets = get_prefix2part_sets(pctrl)
         peer_sets = clear_inactive_parts(peer_sets, self.rulecounts.keys())
         peer_sets = removeSubsets(peer_sets)
 
@@ -153,11 +176,15 @@ class SuperSets():
             self.mask_size -= math.ceil(math.log(len(self.supersets)-1, 2))
 
 
-    def get_prefix2part_sets(self, prefixes, bgp_instance, nexthop_2_part):
+
+
+    def get_prefix2part_sets(self, pctrl):
+        prefixes = pctrl.prefix_2_VNH.keys()
+
         groups = []
 
         for prefix in prefixes:
-            group = get_all_participants_advertising(prefix, bgp_instance, nexthop_2_part)
+            group = get_all_participants_advertising(pctrl, prefix)
             groups.append(group)
 
         return groups
@@ -165,7 +192,9 @@ class SuperSets():
 
 
 
-    def get_all_participants_advertising(self, prefix, bgp_instance, nexthop_2_part):
+    def get_all_participants_advertising(self, pctrl, prefix):
+        bgp_instance = pctrl.bgp_instance
+        nexthop_2_part = pctrl.nexthop_2_part
 
         routes = bgp_instance.get_routes(self,'input',prefix)
 
@@ -179,6 +208,19 @@ class SuperSets():
                 parts.add(nexthop_2_part[next_hop])
 
         return parts
+
+
+    def get_vmac(self, pctrl, prefix):
+        bgp_instance = pctrl.bgp_instance
+
+
+        prefix_set = get_all_participants_advertising(pctrl, prefix)
+
+
+
+        nexthop_2_part = pctrl.nexthop_2_part
+
+
 
 
 

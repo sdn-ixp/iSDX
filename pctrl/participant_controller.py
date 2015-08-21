@@ -11,6 +11,13 @@ from ss_rule_scheme import *
 
 LOG = True
 
+MULTISWITCH = 0
+MULTITABLE  = 1
+
+SUPERSETS = 0
+MDS       = 1
+
+
 
 class ParticipantController():
     def __init__(self, id, vmac_mode, dp_mode, sender, config_file, policy_file):
@@ -19,7 +26,6 @@ class ParticipantController():
 
         # Vmac encoding mode
         self.vmac_mode = vmac_mode
-
         # Dataplane mode---multi table or multi switch
         self.dp_mode = dp_mode
 
@@ -51,7 +57,7 @@ class ParticipantController():
 
         '''Each controller will parse the config
         and initialize the local params'''
-        self.parse_config(config_file)
+        self.parse_config(config_file, policy_file)
         # TODO: read the event handler socket info from the config itself
         self.eh_socket = ('localhost', 5555)
 
@@ -62,15 +68,13 @@ class ParticipantController():
         self.VNHs = IPNetwork('172.0.1.1/24')
 
         # Superset related params
-        if self.vmac_mode == 0:
+        if self.vmac_mode == SUPERSETS:
             if LOG: print "Initializing SuperSets class"
-            self.superset_instance = SuperSets(self.bgp_instance, self.policies)
+            self.supersets = SuperSets(self.bgp_instance, self.policies)
         else:
-            # TODO: create similar class for MDS
+            # TODO: create similar class and variables for MDS
             if LOG: print "Initializing MDS class"
 
-        else:
-            # TODO: @Robert: decide what variables need to be initialized here for MDS
             self.prefix_mds = []
             self.mds_old=[]
 
@@ -79,7 +83,7 @@ class ParticipantController():
         # TODO: Figure out whether we'll need a socket or REST API to communicate with Reference Monitor
         self.refmon_config = ('localhost', 5555)
         # Communication with the Reference Monitor
-        self.refmon_url = 'http://localhost:8080/??'ha
+        self.refmon_url = 'http://localhost:8080/??' #ha
         # Keep track of flow rules pushed
         self.dp_pushed = []
         # Keep track of flow rules scheduled for push
@@ -89,15 +93,16 @@ class ParticipantController():
         #TODO: read from a config file
         self.xrs_config = ('localhost', 5566)
 
-        # class for sending flow mods to the reference monitor
+        # class for building flow mod msgs to the reference monitor
         self.fm_builder = FlowModMsgBuilder(self.id, self.config.flanc_auth["key"])
+        # thing that actually sends messages to the reference monitor
         self.sender = sender
 
 
 
     def start(self):
         # Start arp proxy
-        self.sdx_ap = arp_proxy(self)
+        self.sdx_ap = (self)
         self.ap_thread = Thread(target=self.sdx_ap.start)
         self.ap_thread.daemon = True
         self.ap_thread.start()
@@ -113,7 +118,7 @@ class ParticipantController():
         "Read the config file and update the queued policy variable"
         # TODO: @Robert: Bring your logic of pushing initial inbound policies for each participant here
 
-        port_count = len(self.participant_2_portmac[self.id])
+        port_count = len(self.cfg["Ports"])
 
         rule_msgs = init_inbound_rules(self.id, self.policies, self.supersets, port_count)
 
@@ -127,15 +132,17 @@ class ParticipantController():
         (2) Send the queued policies to reference monitor
         '''
 
-        while len(self.dp_queued) > 0:
-            mod = self.dp_queued.pop()
+        if LOG: print "Pushing current flow mod queue."
+
+        # it is crucial that dp_queued is traversed chronologically
+        for flowmod in self.dp_queued:
 
             self.fm_builder.add_flow_mod(**mod)
 
             self.dp_pushed.append(mod)
 
+        self.dp_queued = []
         self.sender.send(self.fm_builder.get_msg())
-
 
         return 0
 
@@ -149,7 +156,7 @@ class ParticipantController():
         self.listener_eh.close()
 
 
-    def parse_config(self, config_file):
+    def parse_config(self, config_file, policy_file):
         "Locally parse the SDX config file for each participant"
         # TODO: Explore how we can make sure that each participant has its own config file
         config = None
@@ -168,8 +175,10 @@ class ParticipantController():
         # used for tagging outbound rules as belonging to us
         self.port0_mac = self.cfg["Ports"][0]["MAC"]
 
-        # TODO: this doesn't work
-        self.policies = participant["policies"]
+        # read in the policies file
+        with open(policy_file, 'r') as f:
+            policies = json.load(f)
+        self.policies = policies
 
 
         # TODO: Make sure making peers_in == peers_out has no negative impact
@@ -233,13 +242,14 @@ class ParticipantController():
     def process_policy_changes(self, add_policies, remove_policies, complete_policies):
         "Process the changes in participants' policies"
         # TODO: Implement the logic of dynamically changing participants' outbound and inbound policy
+        # Partially done. Need to handle expansion of active set 
 
         # has the set of active participants expanded?
         old_rulecounts = self.supersets.recompute_rulecounts(self.policies)
         new_rulecounts = self.supersets.recompute_rulecounts(complete_policies)
 
         new_active = set(new_rulecounts.keys())
-        # new_parts will contain all participants that now appear that did not appear previousl
+        # new_parts will contain all participants that now appear that did not appear previously
         new_parts = new_active.difference(old_rulecounts.keys())
 
         port_count = len(self.participant_2_portmac[self.id])
@@ -298,16 +308,21 @@ class ParticipantController():
         ################## SUPERSET RESPONSE TO BGP ##################
             # update supersets
             "Map the set of BGP updates to a list of superset expansions."
-            ss_changes = self.superset_instance.update_supersets(updates)
+            ss_changes, ss_changed_prefs = self.supersets.update_supersets(self, updates)
+            # ss_changed_prefs are prefixes for which the VMAC bits have changed
+            # these prefixes must have gratuitous arps sent
 
             "Map the superset expansions to a list of new flow rules."
             flow_msgs = update_outbound_rules(ss_changes, self.policies, 
-                                              self.superset_instance, self.port0_mac)
+                                              self.supersets, self.port0_mac)
 
             "If a recomputation event was needed, wipe out the flow rules."
             if flow_msgs["type"] == "new":
-                wipe_msg = self.clear_outbound_msg()
-                self.dp_queued.append(wipe_msg)
+                wipe_msgs = self.msg_clear_all_outbound()
+                self.dp_queued.extend(wipe_msgs)
+
+                #if a recomputation was needed, all VMACs must be reARPed (is that a word?)
+                ss_changed_prefs = self.prefix_2_VNH.keys()
 
             "Dump the new rules into the dataplane queue."
             self.dp_queued.extend(flow_msgs["changes"])
@@ -325,9 +340,13 @@ class ParticipantController():
 
         changes, announcements = self.bgp_update_peers(updates)
 
-        # Send gratuitous ARP responses
+        # Send gratuitous ARP responses for changed routes
         for change in changes:
             self.sdx_ap.send_gratuitous_arp(change)
+
+        # Also send gratuitous ARP responses for changed VMACs
+        for prefix in ss_changed_prefs:
+            self.sdx_ap.send_gratuitous_arp(prefix)
 
         # Tell Route Server that it needs to announce these routes
         for announcement in announcements:
@@ -338,13 +357,13 @@ class ParticipantController():
         return reply
 
 
-    def clear_outbound_msg():
+    def msg_clear_all_outbound():
         "Construct and return a flow mod which removes all our outbound rules"
         match_args = {"eth_src":port0_mac}
         rule = {"rule_type":"outbound", "priority":0,
                     "match":match_args , "action":{}, "mod_type":"remove"}
 
-        return rule
+        return [rule]
 
     def send_nw_event(self, sdn_ctrlr_msgs, tag):
         "Send the sdn_ctrlr_msgs back to event handler"
@@ -443,6 +462,12 @@ class ParticipantController():
 
 
 
+
+
+
+
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('dir', help='the directory of the example')
@@ -479,9 +504,10 @@ if __name__ == '__main__':
     print "Starting the controller ", str(args.id), " with config file: ", config_file
     print "And policy file: ", policy_file
 
+    sender = None
 
     # start controller
-    ctrlr = ParticipantController(args.id, args.vmac_mode, args.dp_mode, config_file)
+    ctrlr = ParticipantController(args.id, args.vmac_mode, sender, args.dp_mode, config_file, policy_file)
     ctrlr_thread = Thread(target=ctrlr.start)
     ctrlr_thread.daemon = True
     ctrlr_thread.start()
