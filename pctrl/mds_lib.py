@@ -58,21 +58,40 @@ def decompose_sequential(col_2_rows):
 		Example: {sA:[[p1], [p2,p3]], sB:[[p2,p3], [p4]], sC:[[p4]]}
 	"""
 
+
+	# We will convert each column to a frozenset so that it can be hashed.
+	# By doing this, we can discover identical columns via hashing collisions.
+
+	# this dict recovers the original column IDs from each frozenset
 	froset_2_col = {}
+
+	# for each column
 	for col_id, col_contents in col_2_rows.iteritems():
+		# convert to a frozenset
 		froset = frozenset(col_contents)
+		# if we haven't see this exact column before
 		if froset not in froset_2_col:
+			# add a hash table entry
 			froset_2_col[froset] = []
+		# add it to the list of columns identical to it
 		froset_2_col[froset].append(col_id)
 
 
+	# The keys of froset_2_col are the unique columns we found.
+	# Unique columns correspond to prefix groups.
 
+	# For each participant in the column, add the associated prefix group
+	# to that participant's list of prefix groups
+
+	# this will be the final outout (i.e. participant_2_prefixGroups)
 	final_sets = {}
+
+
 	for froset, cols in froset_2_col.iteritems():
-		for row in froset:
-			if row not in final_sets:
-				final_sets[row] = []
-			final_sets[row].append(cols)
+		for row_id in froset:
+			if row_id not in final_sets:
+				final_sets[row_id] = []
+			final_sets[row_id].append(cols)
 
 
 	return final_sets

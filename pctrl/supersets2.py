@@ -18,8 +18,8 @@ LOG = False
 
 class SuperSets():
     def __init__(self, pctrl, config_file=None):
-        self.max_bits = 26
-        self.max_initial_bits = 22
+        self.max_bits = 30
+        self.max_initial_bits = 26
         self.best_path_size = 16
         self.VMAC_size = 48
         if config_file is not None:
@@ -78,7 +78,6 @@ class SuperSets():
     def update_supersets(self, pctrl, updates):
         policies = pctrl.policies
 
-1
         sdx_msgs = {"type": "update",
                     "changes": [], "prefixes": []}
 
@@ -202,7 +201,8 @@ class SuperSets():
 
 
         for route in routes:
-            (next_hop, origin, as_path, communities, med, atomic_aggregate) = route
+            # first part of the returned tuple is next hop
+            next_hop = route[0]
 
             if next_hop in nexthop_2_part:
                 parts.add(nexthop_2_part[next_hop])
@@ -210,24 +210,71 @@ class SuperSets():
         return parts
 
 
-    def get_vmac(self, pctrl, prefix):
+    def get_vmac(self, pctrl, vnh):
+        """ Returns a VMAC for advertisements.
+        """
         bgp_instance = pctrl.bgp_instance
-
-
-        prefix_set = get_all_participants_advertising(pctrl, prefix)
-
-
-
         nexthop_2_part = pctrl.nexthop_2_part
+        VNH_2_prefix = pctrl.VNH_2_prefix
 
 
+        vmac_bitstring = ""
+        vmac_addr = ""
+
+        if vnh not in VNH_2_prefix:
+            if LOG: print "VNH", vnh, "not found in get_vmac call!"
+            return vmac_addr
+        prefix = VNH_2_prefix[vnh]
 
 
+        # first part of the returned tuple is next hop
+        next_hop = bgp_instance.get_route('local', prefix)[0]
+        if next_hop not in nexthop_2_part:
+            if LOG: print "Next Hop", next_hop, "not found in get_vmac call!"
+            return vmac_addr
+        nexthop_part = nexthop_2_part[next_hop]
 
 
+        prefix_set = set(get_all_participants_advertising(pctrl, prefix))
+
+        # find the superset it belongs to
+        ss_id = -1
+        for i, superset in enumerate(self.supersets):
+            if prefix_set.issubset():
+                ss_id = i
+                break
+        if ss_id == -1:
+            if LOG: print "Prefix", prefix, "doesn't belong to any superset?"
+            return vmac_addr
 
 
+        # build the mask bits
+        set_bitstring = ""
+        for part in self.supersets[i]:
+            if part in prefix_set and part in pctrl.cfg["Peers"]:
+                set_bitstring += '1'
+            else:
+                set_bitstring += '0'
 
+        if (len(set_bitstring) < self.mask_size):
+            pad_len = self.mask_size - len(set_bitstring)
+            set_bitstring += '0' * pad_len
+
+        # bits for the ss ID is total - inbound bit - mask - next hop
+        id_size = self.VMAC_size - 1 - self.mask_size - self.best_path_size
+
+        id_bitstring = '{num:0{width}b}'.format(num=ss_id, width=id_size)
+
+        nexthop_bitstring = '{num:0{width}b}'.format(num=nexthop_part, 
+                                                    width=self.best_path_size)
+
+        vmac_bitstring = '1' + id_bitstring + set_bitstring + nexthop_bitstring
+
+        # convert bitstring to hexstring and then to a mac address
+        vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=self.VMAC_size/4)
+        vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,self.VMAC_size/4,2)])
+
+        return vmac_addr
 
 
 
