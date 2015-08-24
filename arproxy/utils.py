@@ -1,12 +1,5 @@
 
 
-def parse_packet(self, raw_packet):
-    packet = packet[0]
-    eth_frame = self.parse_eth_frame(packet[0:eth_length])
-    arp_packet = self.parse_arp_packet(packet[eth_length:(eth_length+arp_length)])
-
-    return packet, eth_frame, arp_packet
-
 def send_data(sock, data):
     "Send the data over socket `sock`"
     conn = Client(sock, authkey = None)
