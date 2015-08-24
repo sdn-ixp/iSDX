@@ -16,12 +16,19 @@ from ss_lib import *
 LOG = False
 
 class SuperSets():
-    def __init__(self, pctrl, config_file=None):
+    def __init__(self, pctrl, config = None):
         self.max_bits = 30
         self.max_initial_bits = 26
         self.best_path_size = 16
         self.VMAC_size = 48
-        if config_file is not None:
+        if config is not None:
+            self.max_bits = config()
+            {
+                "Participant Field": 31,
+                "Next Hop Field": 12,
+                "Port Field": 10,
+                "VMAC Size": 48
+        }
             with open(config_file, 'r') as f:
                 config = json.load(f)
                 self.max_bits =         config["max_bits"]
