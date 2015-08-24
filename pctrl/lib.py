@@ -81,7 +81,7 @@ class PConfig(object):
         self.asn = participant["ASN"]
 
 
-        self.vnh_prefix = config["VNHs"]
+        self.VNHs = IPNetwork(config["VNHs"])
 
 
 

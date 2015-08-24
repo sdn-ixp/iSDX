@@ -60,8 +60,7 @@ class ParticipantController():
         self.num_VNHs_in_use = 0
         self.VNH_2_prefix = {}
         self.prefix_2_VNH = {}
-        # TODO: Read from config file
-        self.VNHs = IPNetwork(self.cfg.vnh_prefix)
+
 
         # Superset related params
         if self.vmac_mode == SUPERSETS:
@@ -80,17 +79,13 @@ class ParticipantController():
         self.dp_queued = []
 
         # Fetch information about XRS Listener
-        #TODO: read from a config file
         self.xrs_client = self.cfg.get_xrs_client()
         self.eh_client = self.cfg.get_eh_client()
         self.refmon_client = self.cfg.get_refmon_client()
         self.arp_client = self.cfg.get_arp_client()
 
         # class for building flow mod msgs to the reference monitor
-        # TODO: read the key from the config file , we don't have config object right now.
         self.fm_builder = FlowModMsgBuilder(self.id, self.refmon_client.key)
-        # thing that actually sends messages to the reference monitor
-        self.sender = sender
 
 
     def start(self):
@@ -136,7 +131,7 @@ class ParticipantController():
             self.dp_pushed.append(mod)
 
         self.dp_queued = []
-        self.sender.send(self.fm_builder.get_msg())
+        self.refmon_client.send(self.fm_builder.get_msg())
 
         return 0
 
@@ -249,10 +244,6 @@ class ParticipantController():
             # TODO: similar logic for MDS
             if LOG: print "Creating ctrlr messages for MDS scheme"
 
-        # TODO: This should go
-        if sdn_ctrlr_msgs:
-            "Send sdn_ctrlr_msgs to participant's SDN controller as a network event"
-            self.send_nw_event(sdn_ctrlr_msgs, 'vmac')
 
         changes, announcements = self.bgp_update_peers(updates)
 
@@ -272,13 +263,6 @@ class ParticipantController():
         return reply
 
 
-    def send_nw_event(self, sdn_ctrlr_msgs, tag):
-        # TODO: Do we really need this?
-        "Send the sdn_ctrlr_msgs back to event handler"
-        out = {}
-        out['vmac'] = msgs
-        # TODO: Add the logic to send this message to Participant's event handler
-
 
     def send_announcements(self, announcement):
         "Send the announcements to XRS"
@@ -295,7 +279,7 @@ class ParticipantController():
             if (prefix not in self.prefix_2_VNH):
                 # get next VNH and assign it the prefix
                 self.num_VNHs_in_use += 1
-                vnh = str(self.VNHs[self.num_VNHs_in_use])
+                vnh = str(self.cfg.VNHs[self.num_VNHs_in_use])
 
                 self.prefix_2_VNH[prefix] = vnh
                 self.VNH_2_prefix[vnh] = prefix
@@ -380,20 +364,27 @@ if __name__ == '__main__':
 
     # locate config file
     # TODO: Separate the config files for each participant
-    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                "..","examples",args.dir,"controller","sdx_config"))
-    config_file = os.path.join(base_path, "sdx_global.cfg")
+    config_path = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+    config_file = os.path.join(config_path, "pctrlr.cfg")
+
+
+
+
 
     # locate the participant's policy file as well
-    policy_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                            "..","examples",args.dir,"controller","participant_policies"))
+    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                "..","examples",args.dir,"controller","sdx_config"))
 
     policy_filenames_file = os.path.join(base_path, "sdx_policies.cfg")
     with open(policy_filenames_file, 'r') as f:
         policy_filenames = json.load(f)
     policy_filename = policy_filenames[str(args.id)]
 
-    policy_file = os.path.join(base_path, policy_filename)
+
+    policy_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                            "..","examples",args.dir,"controller","participant_policies"))
+
+    policy_file = os.path.join(policy_path, policy_filename)
 
     print "Starting the controller ", str(args.id), " with config file: ", config_file
     print "And policy file: ", policy_file
