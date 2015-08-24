@@ -4,7 +4,7 @@
 #  Arpit Gupta (Princeton)
 
 import sys
-import simplejson
+import json
 import socket
 import struct
 import binascii
@@ -38,7 +38,7 @@ class ArpProxy():
     def parse_arpconfig(self, config_file):
         "Parse the config file to extract eh_sockets and portmac_2_participant"
         with open(config_file, 'r') as f:
-            config = simplejson.load(f)
+            config = json.load(f)
             tmp = config["ARP Proxy"]["GARP_SOCKET"]
             self.garp_socket = tuple([tmp[0], int(tmp[1])])
             for participant_id in config["Participants"]:
@@ -99,6 +99,7 @@ class ArpProxy():
 
     def set_garp_listener(self):
         "Set listener for gratuitous ARPs from the participants' controller"
+        print "Starting the Gratuitous ARP listener"
         self.listener_garp = Listener(self.garp_socket, authkey=None)
         ps_thread = Thread(target=self.start_garp_handler)
         ps_thread.daemon = True
@@ -196,7 +197,11 @@ class ArpProxy():
 ''' main '''
 if __name__ == '__main__':
     # start arp proxy
-    sdx_ap = ArpProxy("xctrl.cfg")
+    sdx_ap = ArpProxy("arproxy.cfg")
     ap_thread = Thread(target=sdx_ap.start_arp_listener)
     ap_thread.start()
-    ap_thread.join()
+    while ap_thread.is_alive():
+        try:
+            ap_thread.join(1)
+        except KeyboardInterrupt:
+            sdx_ap.stop()
