@@ -23,6 +23,7 @@ class Config(object):
         self.ofv = None
         self.tables = None
         self.dpids = None
+        self.dp_alias = []
         self.dpid_2_name = {}
         self.datapath_ports = None
 
@@ -47,6 +48,8 @@ class Config(object):
                 self.dpids = config["fabric options"]["dpids"]
                 for k,v in self.dpids.iteritems():
                     self.dpid_2_name[v] = k
+            if "dp alias" in config["fabric options"]:
+                self.dp_alias = config["fabric options"]["dp alias"]
             if "OF version" in config["fabric options"]:
                 self.ofv = config["fabric options"]["OF version"]
 
@@ -77,23 +80,24 @@ class InvalidConfigError(Exception):
 class MultiTableController():
     def __init__(self, config):
         self.config = config
+        self.logger = logging.getLogger('MultiTableController')
+        self.logger.info('mt_ctrlr: creating an instance of MultiTableController')
 
         self.fm_queue = Queue()
 
-    def init_fabrc(self):    
+    def init_fabric(self):    
         # install table-miss flow entry
-        if LOG:
-            self.logger.info("mt_ctrlr: init fabric")
+        self.logger.info("mt_ctrlr: init fabric")
         match = self.config.parser.OFPMatch()
         actions = [self.config.parser.OFPActionOutput(self.config.ofproto.OFPP_CONTROLLER, self.config.ofproto.OFPCML_NO_BUFFER)]
         instructions = [self.config.parser.OFPInstructionActions(self.config.ofproto.OFPIT_APPLY_ACTIONS, actions)]
 
         for table in self.config.tables.values():
-            mod = self.config.parser.OFPFlowMod(datapath=datapath, 
-                                                cookie=self.NO_COOKIE, cookie_mask=self.cookie["mask"], 
+            mod = self.config.parser.OFPFlowMod(datapath=self.config.datapaths["main"], 
+                                                cookie=NO_COOKIE, cookie_mask=1, 
                                                 table_id=table, 
                                                 command=self.config.ofproto.OFPFC_ADD, 
-                                                priority=self.FLOW_MISS_PRIORITY, 
+                                                priority=FLOW_MISS_PRIORITY, 
                                                 match=match, instructions=instructions)
             self.config.datapaths["main"].send_msg(mod)
 
@@ -101,27 +105,27 @@ class MultiTableController():
         self.config.datapaths["main"] = dp
         self.config.ofproto = dp.ofproto
         self.config.parser = dp.ofproto_parser
-        self.logger("mt_ctrlr: main switch connected")
+        self.logger.info("mt_ctrlr: main switch connected")
         self.init_fabric()
 
-        if is_ready():
+        if self.is_ready():
             while not self.fm_queue.empty():
                 self.process_flow_mod(self.fm_queue.get())
 
     def switch_disconnect(self, dp):
         if self.config.datapaths["main"] == dp:
-            self.logger("mt_ctrlr: main switch disconnected")
+            self.logger.info("mt_ctrlr: main switch disconnected")
             del self.config.datapaths["main"]
 
     def process_flow_mod(self, fm):
-        if not is_ready():
+        if not self.is_ready():
             self.fm_queue.put(fm)
         else:
             mod = fm.get_flow_mod(self.config)
             self.config.datapaths["main"].send_msg(mod)
            
     def packet_in(self, ev):
-        self.logger("mt_ctrlr: packet in")
+        self.logger.info("mt_ctrlr: packet in")
 
     def is_ready(self):
         if "main" in self.config.datapaths:

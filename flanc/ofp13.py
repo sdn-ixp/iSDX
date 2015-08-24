@@ -5,11 +5,11 @@ from ryu.ofproto import ether
 from ryu.ofproto import inet
 
 class FlowMod():
-    def __init__(self, origin, flow_mod):
+    def __init__(self, config, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
         self.rule_types = ["inbound", "outbound", "main", "main-in", "main-out"]
         
-        self.config = None
+        self.config = config
         self.parser = None
 
         self.mod_type = None
@@ -35,7 +35,11 @@ class FlowMod():
             if ("mod_type" in flow_mod and flow_mod["mod_type"] in self.mod_types):
                 self.mod_type = flow_mod["mod_type"]
                 if ("rule_type" in flow_mod and flow_mod["rule_type"] in self.rule_types):
-                    self.rule_type = flow_mod["rule_type"]
+                    if flow_mod["rule_type"] in self.config.dp_alias:
+                        self.rule_type = self.config.dp_alias[flow_mod["rule_type"]]
+                    else:
+                        self.rule_type = flow_mod["rule_type"]
+
                     if ("priority" in flow_mod):
                         self.priority = flow_mod["priority"]
                         if "match" in flow_mod:
@@ -113,6 +117,8 @@ class FlowMod():
                         if isinstance( port, int ) or port.isdigit():
                             temp_actions.append(self.parser.OFPActionOutput(int(port)))
                         else:
+                            if port in self.config.dp_alias:
+                                port = self.config.dp_alias[port]
                             temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][port]))
             elif action == "set_eth_src":
                 temp_actions.append(self.parser.OFPActionSetField(eth_src=value))
@@ -152,7 +158,7 @@ class FlowMod():
         match = self.parser.OFPMatch(**self.matches)
 
         if self.config.tables:
-            table_id = name_2_table[rule_type]
+            table_id = self.config.tables[self.rule_type]
             datapath = self.config.datapaths["main"]
         else:
             table_id = 0

@@ -1,279 +1,118 @@
-#############################################
-# MDS Algorithm                             #
-# author: Arpit Gupta (glex.qsd@gmail.com)  #
-#############################################
-import os
-import sys
-import time
-from multiprocessing import Process, Queue
-import multiprocessing as mp
-import cProfile
-from math import *
-multiprocess = True
-
-debug = False
-
-
-def get_pset(plist):
-    pset = []
-    for elem in plist:
-        pset.append(frozenset(elem))
-    return set(pset)
-
-
-def get_pdict(part_2_prefix):
-    temp = set()
-    for part in part_2_prefix:
-        for plist in part_2_prefix[part]:
-            if len(plist) > 1:
-                temp = temp.union(set(plist))
-                if (debug):
-                    print "plist: ", plist
-    return dict.fromkeys(list(temp), '')
+def decompose_verbrokenheimerschnitzel(row_2_cols):
+	""" Input is a dictionary with matrix row IDs as keys and a list of each
+		row's contents (column indices of nonzero row entries) as a value.
+		BROKEN. DONUT USE.
+	"""
+	item_2_group = {}
+	item_buddies = {}
+	for group in row_2_cols.values():
+		for item in group:
+			# if we haven't seen this item before
+			if item not in item_2_group:
+				# initialize his mapping
+				item_2_group[item] = [group]
+				# and assume all his neighbors are buddies
+				item_buddies[item] = set(group)
+			# if we have seen him before
+			else:
+				# remove any fake buddies
+				item_buddies[item].intersection_update(group)
+				# update the mapping
+				item_2_group[item].append(group)
 
 
-def getMDS(part_2_prefix):
-    MDS_out = []
-    for participant in part_2_prefix:
-        plist = part_2_prefix[participant]
-        for elem in plist:
-            MDS_out.append(frozenset(elem))
-    MDS_out = set(MDS_out)
-    MDS = []
-    for elem in MDS_out:
-        MDS.append(list(elem))
-    print 'MDS_out: ', MDS
-    return MDS
+	for item, buddies in item_buddies.iteritems():
+		item_buddies[item] = frozenset(buddies)
+
+	final_sets = {}
+
+	for row, group in row_2_cols.iteritems():
+		final_set = set([])
+		# add in all the corresponding prefix groups
+		for item in group:
+			final_set.add(item_buddies[item])
+
+		final_sets[row] = final_set
 
 
-def divide_part2prefixes(plist, part_2_prefix):
-    tmp = {}
-    for elem in plist:
-        tmp[elem] = part_2_prefix[elem]
-    return tmp
-
-
-def decompose_set(tdict, part_2_prefix_updated, tempdict_bk):
-    # print "tdict: %s" % (tdict)
-    pmap = []
-    for key in tdict:
-        for lst in tdict[key]:
-            pmap.append(set(lst))
-    # TODO: Use caching for this operation, possible benefits here
-    min_set = set.intersection(*pmap)
-    if (debug):
-        print pmap
-        print "min_set: ", min_set
-    if len(min_set) > 0:
-        for key in tdict:
-            tlist = [min_set]
-            for lst in tdict[key]:
-                temp = (set(lst).difference(min_set))
-                if len(temp) > 0:
-                    tlist.append(temp)
-            tdict[key] = tlist
-            part_2_prefix_updated[key] += (tlist)
-            for elem in tempdict_bk[key]:
-                part_2_prefix_updated[key].remove(elem)
-    return tdict
-
-
-def decompose_simpler_multi(part_2_prefix, q=None):
-    part_2_prefix_updated = part_2_prefix
-    pdict = get_pdict(part_2_prefix_updated)
-    # debug=True
-    if (debug):
-        if (debug):
-            print "pdict: ", pdict
-    for key in pdict:
-        if (debug):
-            print key
-        tempdict = {}
-        tempdict_bk = {}
-        for part in part_2_prefix_updated:
-            # tempdict[part]=[]
-            tlist = []
-            for temp in part_2_prefix_updated[part]:
-                if key in temp:
-                    tlist.append(temp)
-            if len(tlist) > 0:
-                tempdict[part] = tlist
-                tempdict_bk[part] = tlist
-        if (debug):
-            print len(tempdict_bk), tempdict
-        if (len(tempdict) == 1 and len(tempdict.values()[0]) == 1) == False:
-            decompose_set(tempdict, part_2_prefix_updated, tempdict_bk)
-        else:
-            if (debug):
-                if (debug):
-                    print "avoided"
-    MDS = []
-    for part in part_2_prefix_updated:
-        for temp in part_2_prefix_updated[part]:
-            tset = set(temp)
-            if tset not in MDS:
-                MDS.append(tset)
-    if (debug):
-        if (debug):
-            print "MDS: ", MDS
-    if q is not None:
-        q.put((part_2_prefix_updated, MDS))
-        if (debug):
-            print "Put operation completed", mp.current_process()
-    else:
-        return part_2_prefix_updated, MDS
+	return final_sets
 
 
 
 
 
-def get_pdictReconstruct(part_2_prefix):
-    temp = set()
-    for part in part_2_prefix:
-        for plist in part_2_prefix[part]:
-            temp = temp.union(set(plist))
-            if (debug):
-                print "plist: ", plist
-    return dict.fromkeys(list(temp), '')
+
+def decompose_sequential(col_2_rows):
+	""" Input is a dictionary with column IDs as keys and a list of each
+		column's contents (row indices of nonzero entries) as a value.
+
+		Input is a dictionary with prefixes as keys and lists of participants
+		as values. If a participant A has a route to p1, it will appear as
+		'sA' in the value list. If A is the default next-hop to p1, it will
+		also appear as 'bA' in the list.
+
+		Example: With participants [A,B,C] and prefixes [p1,p2,p3,p4],
+		an input could be {p1:[sA], p2:[sA,sB], p3:[sA,sB], p4:[sB,sC]}
+
+		Output is participant to prefix-group mapping.
+		Example: {sA:[[p1], [p2,p3]], sB:[[p2,p3], [p4]], sC:[[p4]]}
+	"""
 
 
-def reconstruct(part_2_prefix, MDS, q=None):
-    assert(len(part_2_prefix.keys()) == 1)
-    part = part_2_prefix.keys()[0]
-    part_2_prefix_updated = {}
-    part_2_prefix_updated[part] = []
-    pdict = get_pdictReconstruct(part_2_prefix)
-    # if part==str(1): print "rc ",part, part_2_prefix
-    completed = set()
-    for pfx in pdict:
-        if pfx not in completed:
-            # print 'searching: ',pfx
-            for psets in MDS.values()[0]:
-                # print "analysing: ",psets
-                if pfx in psets:
-                    # if part==str(1): print "found ",pfx,psets
-                    part_2_prefix_updated[part].append(psets)
-                    # print part_2_prefix_updated
+	# We will convert each column to a frozenset so that it can be hashed.
+	# By doing this, we can discover identical columns via hashing collisions.
 
-                    completed = completed.union(psets)
-                    # if part==str(1): print completed
+	# this dict recovers the original column IDs from each frozenset
+	froset_2_col = {}
 
-    return part_2_prefix_updated[part]
+	# for each column
+	for col_id, col_contents in col_2_rows.iteritems():
+		# convert to a frozenset
+		froset = frozenset(col_contents)
+		# if we haven't see this exact column before
+		if froset not in froset_2_col:
+			# add a hash table entry
+			froset_2_col[froset] = []
+		# add it to the list of columns identical to it
+		froset_2_col[froset].append(col_id)
 
 
-def decompose_multi(part_2_prefix, q=None, index=0):
-    partList = part_2_prefix.keys()
-    P = len(partList)
-    Np = mp.cpu_count()
-    if Np == 1:
-        Np = 8  # dummy value
-    
-    if (debug): print "Started, len: ", P, part_2_prefix.keys()
-    if P == 2:
-        ndict = {}
-        keys = part_2_prefix.keys()
-        nkey = str(keys[0]) + str(keys[1])
-        if (debug):
-            print nkey
-        x, MDS = decompose_simpler_multi(part_2_prefix)
-        if (debug):
-            print part_2_prefix
-        ndict[nkey] = MDS
-        if (debug):
-            print "Completed, len: ", P, part_2_prefix.keys()
-        if q is not None:
-            q.put(ndict)
-            if (debug):
-                print "Put operation completed", mp.current_process()
-        else:
-            return ndict
-    elif P == 1:
+	# The keys of froset_2_col are the unique columns we found.
+	# Unique columns correspond to prefix groups.
 
-        ndict = {}
-        # print part_2_prefix.keys()[0]
-        x, MDS = decompose_simpler_multi(part_2_prefix)
-        ndict[part_2_prefix.keys()[0]] = MDS
-        if (debug):
-            print "Completed, len: ", P, part_2_prefix.keys()
-        if q is not None:
-            q.put(ndict)
-            if (debug):
-                print "Put operation completed", mp.current_process()
-        else:
-            return ndict
-    else:
-        tmp = [divide_part2prefixes(partList[::2], part_2_prefix),
-               divide_part2prefixes(partList[1::2], part_2_prefix)]
-        process = []
-        queue = []
-        qout = []
-        if (debug):
-            print tmp[0], tmp[1]
-        if (debug):
-            print "index: ", index
-        if index > 0 and index <= log(Np) / log(2):
-            index += 1
-            for i in range(2):
-                queue.append(Queue())
-                process.append(
-                    Process(
-                        target=decompose_multi,
-                        args=(
-                            tmp[i],
-                            queue[i],
-                            index)))
-                process[i].start()
-                if (debug):
-                    print "Started: ", process[i]
-            for i in range(2):
-                if (debug):
-                    print "Waiting for: ", process[i], i
-                qout.append(queue[i].get())
-                process[i].join()
-                if (debug):
-                    print "Joined: ", process[i], i
-        else:
-            if (debug):
-                print "New process not spawned, index: ", index
-            for p2p in tmp:
-                qout.append(decompose_multi(p2p))
+	# For each participant in the column, add the associated prefix group
+	# to that participant's list of prefix groups
 
-        MDS = decompose_multi(dict(qout[0].items() + qout[1].items()))
-        if (debug):
-            print "Completed, len: ", P, part_2_prefix.keys()
-        if (debug):
-            print MDS
-        if q is not None:
-            q.put(MDS)
-            if (debug):
-                print "Put operation completed", mp.current_process()
-        else:
-            return MDS
+	# this will be the final outout (i.e. participant_2_prefixGroups)
+	final_sets = {}
 
 
-def MDS_multiprocess(part_2_prefix):
-    '''
-    Input: participant_2_prefixes: {participant: [prefix-group1, ...], ...}
-    Output: part_2_prefix_updated: {participant:[set(prefix-group1), ...], ...}
-    '''
-    # Stage 1
-    start = time.time()
-    MDS = decompose_multi(part_2_prefix, index=1)
-    print "# of MDS: ", len(MDS.values()[0])
-    print "Completed MDS Computation in ", time.time() - start
-    print "Now mapping the disjoint prefix groups to each participant ..."
-    
-    # Stage 2
-    part_2_prefix_updated = {}
-    for part in part_2_prefix:
-        tmp = dict(({part:part_2_prefix[part]}).items())
-        part_2_prefix_updated[part] = reconstruct(tmp, MDS)
-    return part_2_prefix_updated, MDS.values()[0]
+	for froset, cols in froset_2_col.iteritems():
+		for row_id in froset:
+			if row_id not in final_sets:
+				final_sets[row_id] = []
+			final_sets[row_id].append(cols)
 
 
-if __name__ == '__main__':
-    part_2_prefix = {'A': [['p1', 'p2', 'p3']], 'C': [['p2', 'p3']], 'B': [
-        ['p2', 'p3', 'p1'], ['p2', 'p3']], 'D': [['p2', 'p3', 'p1']]}
-    print "Input:", part_2_prefix
-    part_2_prefix, MDS = MDS_multiprocess(part_2_prefix)
-    print "Output:", part_2_prefix, MDS
+	return final_sets
+
+
+
+
+
+
+if __name__ == '__main__':	
+
+	groups = {'a':[1,2,3], 'b':[2,3,4], 'c':[4]}
+
+	spuorg = {}
+	for key, values in groups.iteritems():
+		for item in values:
+			if item not in spuorg:
+				spuorg[item] = []
+			spuorg[item].append(key)
+
+	print groups
+	#print spuorg
+
+	print decompose_sequential(spuorg)

@@ -178,6 +178,9 @@ class BGPPeer():
 
         return self.rib[rib_name].filter(item,value)
 
+
+
+
 ''' main '''
 if __name__ == '__main__':
 
@@ -185,6 +188,6 @@ if __name__ == '__main__':
 
     route = '''{ "exabgp": "2.0", "time": 1387421714, "neighbor": { "ip": "172.0.0.21", "update": { "attribute": { "origin": "igp", "as-path": [ [ 300 ], [ ] ], "med": 0, "atomic-aggregate": false }, "announce": { "ipv4 unicast": { "140.0.0.0/16": { "next-hop": "172.0.0.22" }, "150.0.0.0/16": { "next-hop": "172.0.0.22" } } } } } }'''
 
-    mypeer.udpate(route)
+    mypeer.update(route)
 
     print mypeer.filter_route('input', 'as_path', '300')
