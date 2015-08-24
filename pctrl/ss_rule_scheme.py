@@ -154,11 +154,6 @@ def build_inbound_rules_for(participant_id, in_policies, supersets, port_count):
 
 
 
-
-
-
-
-
 # initialize all inbound rules
 def init_inbound_rules(participant_id, policies, supersets, port_count):
     dp_msgs = {"type": "new",
@@ -180,3 +175,64 @@ def init_inbound_rules(participant_id, policies, supersets, port_count):
     dp_msgs["changes"] = rules
 
     return dp_msgs
+
+
+
+def msg_clear_all_outbound():
+    "Construct and return a flow mod which removes all our outbound rules"
+    match_args = {"eth_src":port0_mac}
+    rule = {"rule_type":"outbound", "priority":0,
+                "match":match_args , "action":{}, "mod_type":"remove"}
+
+    return [rule]
+
+
+def ss_process_policy_change(supersets, add_policies, remove_policies, policies, port_count, port0_mac):
+        "Process the changes in participants' policies"
+        # TODO: Implement the logic of dynamically changing participants' outbound and inbound policy
+        # Partially done. Need to handle expansion of active set
+
+        # has the set of active participants expanded?
+        old_rulecounts = supersets.recompute_rulecounts(self.policies)
+        new_rulecounts = supersets.recompute_rulecounts(complete_policies)
+
+        new_active = set(new_rulecounts.keys())
+        # new_parts will contain all participants that now appear that did not appear previously
+        new_parts = new_active.difference(old_rulecounts.keys())
+
+        port_count = len(self.participant_2_portmac[self.id])
+
+        # we remove rules first, because the supersets might change when adding rules
+
+        removal_rules = []
+
+        if 'outbound' in remove_policies:
+            removal_out = build_outbound_rules_for(remove_policies['outbound'],
+                                     self.supersets, self.port0_mac)
+            removal_rules.extend(removal_out)
+
+        if 'inbound' in remove_policies:
+            removal_in = build_inbound_rules_for(self.id, remove_policies['outbound'],
+                                            self.supersets, port_count)
+            removal_rules.extend(removal_in)
+
+        # set the mod type of these rules to make them deletions, not additions
+        for rule in removal_rules:
+            rule['mod_type'] = "remove"
+
+        self.dp_queued.extend(removal_rules)
+
+        addition_rules = []
+
+        if 'outbound' in add_policies:
+            addition_out = build_outbound_rules_for(add_policies['outbound'],
+                                     self.supersets, self.port0_mac)
+            addition_rules.extend(removal_out)
+
+        if 'inbound' in add_policies:
+            addition_in = build_inbound_rules_for(self.id, add_policies['outbound'],
+                                            self.supersets, port_count)
+            addition_rules.extend(removal_in)
+
+
+        return 0

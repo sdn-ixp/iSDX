@@ -14,6 +14,8 @@ from supersets2 import SuperSets
 
 from ss_rule_scheme import *
 
+from lib import *
+
 LOG = True
 
 MULTISWITCH = 0
@@ -35,29 +37,31 @@ class ParticipantController():
         self.dp_mode = dp_mode
 
         # Initialize participant params
-        self.cfg = {}
-        self.policies = {}
-        self.nexthop_2_part = {}
-
-        # used for tagging outbound rules as belonging to us
-        self.port0_mac = ''
+        self.cfg = PConfig(config_file)
 
         # ExaBGP Peering Instance
-        self.bgp_instance = None
+        self.bgp_instance = self.cfg.get_bgp_instance()
+
+        self.nexthop_2_part = self.cfg.get_nexthop_2_part()
+
+        with open(policy_file, 'r') as f:
+            self.policies = json.load(f)
+
+
+        # used for tagging outbound rules as belonging to us
+        self.port0_mac = self.cfg.port0_mac
+
 
         # Reference Monitor
-        self.refmon_config = tuple()
+        self.refmon_client = self.cfg.get_refmon_client()
 
-        '''Each controller will parse the config
-        and initialize the local params'''
-        self.parse_config(config_file, policy_file)
 
         # VNHs related params
         self.num_VNHs_in_use = 0
         self.VNH_2_prefix = {}
         self.prefix_2_VNH = {}
         # TODO: Read from config file
-        self.VNHs = IPNetwork('172.0.1.1/24')
+        self.VNHs = IPNetwork(self.cfg.vnh_prefix)
 
         # Superset related params
         if self.vmac_mode == SUPERSETS:
@@ -77,11 +81,14 @@ class ParticipantController():
 
         # Fetch information about XRS Listener
         #TODO: read from a config file
-        self.xrs_config = ('localhost', 5566)
+        self.xrs_client = self.cfg.get_xrs_client()
+        self.eh_client = self.cfg.get_eh_client()
+        self.refmon_client = self.cfg.get_refmon_client()
+        self.arp_client = self.cfg.get_arp_client()
 
         # class for building flow mod msgs to the reference monitor
         # TODO: read the key from the config file , we don't have config object right now.
-        self.fm_builder = FlowModMsgBuilder(self.id, self.config.flanc_auth["key"])
+        self.fm_builder = FlowModMsgBuilder(self.id, self.refmon_client.key)
         # thing that actually sends messages to the reference monitor
         self.sender = sender
 
@@ -143,40 +150,6 @@ class ParticipantController():
         self.listener_eh.close()
 
 
-    def parse_config(self, config_file, policy_file):
-        "Locally parse the SDX config file for each participant"
-        # TODO: Explore how we can make sure that each participant has its own config file
-        config = None
-        with open(config_file, 'r') as f:
-            config = json.load(f)
-
-        self.cfg = config["Participants"][self.id]
-
-        # build nexthop-2-participant mapping
-        # TODO: This is a bit intrusive. Let's make sure that we don't
-        # expose peers' multiple ports
-        for part in config["Participants"]:
-            for port in config[part]["Ports"]:
-                nexthop = port["IP"]
-                self.nexthop_2_part[nexthop] = part
-
-        # used for tagging outbound rules as belonging to us
-        self.port0_mac = self.cfg["Ports"][0]["MAC"]
-
-        # reference monitor config
-        self.refmon_config = (config["RefMon Server"]["address"], config["RefMon Server"]["port"])
-
-        # read in the policies file
-        with open(policy_file, 'r') as f:
-            policies = json.load(f)
-        self.policies = policies
-
-        # TODO: Make sure making peers_in == peers_out has no negative impact
-        peers_in = self.cfg["Peers"]
-        peers_out = peers_in
-
-        self.bgp_instance = BGPPeer(self.cfg["ASN"], self.cfg["Ports"],
-                                    peers_in, peers_out)
 
     def set_event_handler(self):
         '''Start the listener socket for network events'''
@@ -210,72 +183,28 @@ class ParticipantController():
             route = data['bgp']
             # Process the incoming BGP updates from XRS
             self.process_bgp_route(route)
-        elif 'vmac' in data:
-            # Process the vmac related change events
-            self.process_vmac_events(data['vmac'])
         elif 'policy_change' in data:
             # Process the event requesting change of participants' policies
             self.process_policy_changes(data['policy_change'])
 
         return reply
 
-    def process_vmac_events(self, data):
-        "Process the incoming vmac "
-        # TODO: Port the logic of superset_changed function to update the outbound policies
 
-        # Not sure if this needs to be a separate function. Vmac events always immediately follow
-        # BGP events, and the amount of code needed is rather small.
-        return 0
 
-    def process_policy_changes(self, add_policies, remove_policies, complete_policies):
+    def process_policy_changes(self, add_policies, remove_policies,policies):
         "Process the changes in participants' policies"
         # TODO: Implement the logic of dynamically changing participants' outbound and inbound policy
-        # Partially done. Need to handle expansion of active set
 
-        # has the set of active participants expanded?
-        old_rulecounts = self.supersets.recompute_rulecounts(self.policies)
-        new_rulecounts = self.supersets.recompute_rulecounts(complete_policies)
+        if self.vmac_mode == SUPERSETS:
+            dp_msgs = ss_process_policy_change(self.supersets, add_policies, remove_policies, policies, 
+                                                self.port_count, self.port0_mac)
+        else:
+            dp_msgs = []
 
-        new_active = set(new_rulecounts.keys())
-        # new_parts will contain all participants that now appear that did not appear previously
-        new_parts = new_active.difference(old_rulecounts.keys())
-
-        port_count = len(self.participant_2_portmac[self.id])
-
-        # we remove rules first, because the supersets might change when adding rules
-
-        removal_rules = []
-
-        if 'outbound' in remove_policies:
-            removal_out = build_outbound_rules_for(remove_policies['outbound'],
-                                     self.supersets, self.port0_mac)
-            removal_rules.extend(removal_out)
-
-        if 'inbound' in remove_policies:
-            removal_in = build_inbound_rules_for(self.id, remove_policies['outbound'],
-                                            self.supersets, port_count)
-            removal_rules.extend(removal_in)
-
-        # set the mod type of these rules to make them deletions, not additions
-        for rule in removal_rules:
-            rule['mod_type'] = "remove"
-
-        self.dp_queued.extend(removal_rules)
-
-        addition_rules = []
-
-        if 'outbound' in add_policies:
-            addition_out = build_outbound_rules_for(add_policies['outbound'],
-                                     self.supersets, self.port0_mac)
-            addition_rules.extend(removal_out)
-
-        if 'inbound' in add_policies:
-            addition_in = build_inbound_rules_for(self.id, add_policies['outbound'],
-                                            self.supersets, port_count)
-            addition_rules.extend(removal_in)
-
+        self.dp_queued.extend(dp_msgs)
 
         return 0
+
 
     def process_bgp_route(self, route):
         "Process each incoming BGP advertisement"
@@ -342,14 +271,6 @@ class ParticipantController():
 
         return reply
 
-
-    def msg_clear_all_outbound():
-        "Construct and return a flow mod which removes all our outbound rules"
-        match_args = {"eth_src":port0_mac}
-        rule = {"rule_type":"outbound", "priority":0,
-                    "match":match_args , "action":{}, "mod_type":"remove"}
-
-        return [rule]
 
     def send_nw_event(self, sdn_ctrlr_msgs, tag):
         # TODO: Do we really need this?

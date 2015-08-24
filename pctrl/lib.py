@@ -5,108 +5,155 @@
 import requests
 import json
 from netaddr import *
+from multiprocessing.connection import Client
+from peer import BGPPeer as BGPPeer
 
-from bgp_interface import get_all_participants_advertising
+
+# from bgp_interface import get_all_participants_advertising
 
 LOG = False
 
-#
-### VNH ASSIGNMENT
-#
 
-def vnh_assignment(updates, xrs):
-    for update in updates:
-        if ('announce' in update):
-            prefix = update['announce']['prefix']
-            
-            if (prefix not in xrs.prefix_2_VNH):
-                # get next VNH and assign it the prefix
-                xrs.num_VNHs_in_use += 1
-                vnh = str(xrs.VNHs[xrs.num_VNHs_in_use])
-                
-                xrs.prefix_2_VNH[prefix] = vnh
-                xrs.VNH_2_prefix[vnh] = prefix
 
-#                
-### VMAC BUILDER
-#
+MULTISWITCH = 0
+MULTITABLE  = 1
 
-def vmac(vnh, participant, xrs):
+SUPERSETS = 0
+MDS       = 1
 
-    vmac_bitstring = ""
-    vmac_addr = ""
-    
-    if vnh in xrs.VNH_2_prefix:
-        # get corresponding prefix
-        prefix = xrs.VNH_2_prefix[vnh]
-        # get set of participants advertising prefix
-        basic_set = get_all_participants_advertising(prefix, xrs.participants)
-        # get corresponding superset identifier
-        superset_identifier = 0
-        for i in range(0, len(xrs.supersets)):
-            if ((set(xrs.supersets[i])).issuperset(basic_set)):
-                superset_identifier = i
-                break
-                
-        vmac_bitstring = '{num:0{width}b}'.format(num=superset_identifier, width=(xrs.VMAC_size-xrs.max_superset_size-xrs.best_path_size))
-        
-        # add one bit for each participant that is a member of the basic set and has a "link" to it
-        set_bitstring = ""
-        for temp_participant in xrs.supersets[superset_identifier]:
-            if (temp_participant in basic_set and temp_participant in xrs.participants[participant].peers_out):
-                set_bitstring += "1"
-            else:
-                set_bitstring += "0"
-        if (len(set_bitstring) < xrs.max_superset_size):
-            set_bitstring += '{num:0{width}b}'.format(num=0, width=(xrs.max_superset_size-len(set_bitstring)))
-            
-        vmac_bitstring += set_bitstring
-        
-        # add identifier of best path
-        route = xrs.participants[participant].get_route('local',prefix)
-        if route:
-            best_participant = xrs.portip_2_participant[route['next_hop']]
 
-            vmac_bitstring += '{num:0{width}b}'.format(num=best_participant, width=(xrs.best_path_size))
 
-            # convert bitstring to hexstring and then to a mac address
-            vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=xrs.VMAC_size/4)
-            vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,xrs.VMAC_size/4,2)])
-            
-            if LOG:
-                print "VMAC-Mapping"
-                print "Participant: "+str(participant)+", Prefix: "+str(prefix)+"Best Path: "+str(best_participant)
-                print "Superset "+str(superset_identifier)+": "+str(xrs.supersets[superset_identifier])
-                print "VMAC: "+str(vmac_addr)+", Bitstring: "+str(vmac_bitstring)
-        
-    return vmac_addr
+class PConfig(object):
+    def __init__(self, config_file, id):
+        self.id = str(id)
 
-#                
-### VMAC BEST PATH
-#
-    
-def vmac_best_path(participant_id, xrs):
-        
-    # add participant identifier
-    vmac_bitstring = '{num:0{width}b}'.format(num=participant_id, width=(xrs.VMAC_size))
+        with open(config_file, 'r') as f:
+            self.config = json.load(f)
 
-    # convert bitstring to hexstring and then to a mac address
-    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=xrs.VMAC_size/4)
-    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,xrs.VMAC_size/4,2)])
-            
-    return vmac_addr
-    
-#                
-### UPDATE SDX CONTROLLER
-#
-    
-def update_sdx_controller(changes, url):
-    payload = changes
-    r = requests.post(url, data=json.dumps(payload))
-    
-    if LOG:
-        if (r.status_code == requests.codes.ok):
-            print "XRS->SDX: Superset Update Succeeded - "+str(r.status_code)
+        parse_modes()
+
+        parse_various()
+
+
+
+    def parse_modes(self):
+        config = self.config
+
+        if config["Mode"] == "Multi-Switch":
+            self.dp_mode = MULTISWITCH
         else:
-            print "XRS->SDX: Superset Update Failed - "+str(r.status_code)
-    
+            self.dp_mode = MULTITABLE
+
+        vmac_cfg = config["VMAC"]
+
+        if vmac_cfg["Mode"] == "Superset":
+            self.vmac_mode = SUPERSETS
+        else:
+            self.vmac_mode = MDS
+
+        self.vmac_options = vmac_cfg["Options"]
+
+
+    def get_nexthop_2_part(self):
+        config = self.config
+
+        nexthop_2_part = {}
+
+        for part in config["Participants"]:
+            for port in config[part]["Ports"]:
+                nexthop = port["IP"]
+                nexthop_2_part[nexthop] = part
+
+        return nexthop_2_part
+
+
+    def parse_various(self):
+        config = self.config
+
+        participant = config[self.id]
+
+        self.ports = participant["Ports"]
+        self.port0_mac = self.ports[0]["MAC"]
+
+        self.peers_in = participant["Peers"]
+        self.peers_out = self.peers_in
+
+        self.asn = participant["ASN"]
+
+
+        self.vnh_prefix = config["VNHs"]
+
+
+
+
+    def get_bgp_instance(self):
+        return BGPPeer(self.asn, self.ports, self.peers_in, self.peers_out)
+
+
+
+    def get_arp_client(self):
+        config = self.config
+
+        conn_info = config["ARP Proxy"]
+
+        port    = conn_info["Port"]
+        address = conn_info["IP"]
+
+        return Client(address, port, mac)
+
+
+
+    def get_eh_client(self):
+        config = self.config
+
+        conn_info = config[self.id]["EH_SOCKET"]
+
+        port    = conn_info["Port"]
+        address = conn_info["IP"]
+
+        return Client(address, port)
+
+
+    def get_refmon_client(self):
+        config = self.config
+
+        conn_info = config["RefMon Server"]
+
+        port    = conn_info["Port"]
+        address = conn_info["IP"]
+
+        key = config[self.id]["Flanc Key"]
+
+        return Client(address, port, key)
+
+
+    def get_xrs_client(self):
+        config = self.config
+
+        conn_info = config["Route Server"]
+
+        port    = conn_info["Port"]
+        address = conn_info["IP"]
+
+        return Client(address, port)
+
+
+
+
+
+
+class Client():
+    def __init__(self, address, port, key = ""):
+        self.address = address
+        self.port = port
+        self.key = key
+
+    def send(self, msg):
+        #conn = Client((self.address, self.port), authkey=str(self.key))
+        conn = Client((self.address, self.port))
+
+        conn.send(msg)
+
+        conn.close()
+
+
