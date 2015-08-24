@@ -12,7 +12,6 @@ from bgp_interface import *
 
 from ss_lib import *
 
-from participant_controller import *
 
 LOG = False
 
@@ -35,8 +34,6 @@ class SuperSets():
         self.supersets = []
 
 
-
-
     def initial_computation(self, pctrl):
 
         self.recompute_all_supersets(pctrl)
@@ -51,8 +48,6 @@ class SuperSets():
                                            "position": part_index})
 
         return sdx_msgs
-
-
 
 
     def recompute_rulecounts(self, pctrl):
@@ -73,8 +68,6 @@ class SuperSets():
         return rulecounts
 
 
-
-
     def update_supersets(self, pctrl, updates):
         policies = pctrl.policies
 
@@ -92,7 +85,6 @@ class SuperSets():
             return sdx_msgs
 
 
-
         for update in updates:
             if ('withdraw' in update):
                 prefix = update['withdraw']['prefix']
@@ -104,7 +96,7 @@ class SuperSets():
 
             # get set of all participants advertising that prefix
             new_set = get_all_participants_advertising(pctrl, prefix)
-            
+
             # clean out the inactive participants
             new_set = set(new_set)
             new_set.intersection_update(self.rulecounts.keys())
@@ -265,7 +257,7 @@ class SuperSets():
 
         id_bitstring = '{num:0{width}b}'.format(num=ss_id, width=id_size)
 
-        nexthop_bitstring = '{num:0{width}b}'.format(num=nexthop_part, 
+        nexthop_bitstring = '{num:0{width}b}'.format(num=nexthop_part,
                                                     width=self.best_path_size)
 
         vmac_bitstring = '1' + id_bitstring + set_bitstring + nexthop_bitstring

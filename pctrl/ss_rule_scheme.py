@@ -55,7 +55,7 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
             continue
 
         for policy in part_2_policy[participant_id]:
-            vmac = vmac_participant_match(superset_id, participant_index, supersets):
+            vmac = vmac_participant_match(superset_id, participant_index, supersets)
             vmac_bitmask = vmac_participant_mask(participant_index, supersets)
 
             next_hop_mac = vmac_next_hop_match(participant_name, supersets, inbound_bit = True)
@@ -98,7 +98,7 @@ def build_outbound_rules_for(out_policies, ss_instance, my_mac):
         part = policy["action"]["fwd"]
 
         for ss_id, part_index in part_2_superset[part]:
-            vmac = vmac_participant_match(ss_id, 
+            vmac = vmac_participant_match(ss_id,
                             part_index, ss_instance)
             vmac_bitmask = vmac_participant_mask(part_index, ss_instance)
 
@@ -140,9 +140,9 @@ def build_inbound_rules_for(participant_id, in_policies, supersets, port_count):
         port_num = policy["action"]["fwd"]
         if (port_num >= port_count):
             port_num = 0
-        new_vmac = vmac_part_port_match(participant_id, port_num, supersets)                
+        new_vmac = vmac_part_port_match(participant_id, port_num, supersets)
 
-                    
+
         actions = {"set_eth_dst":new_vmac, "fwd":"main"}
 
         rule = {"rule_type":"inbound", "priority":INBOUND_HIT_PRIORITY,
@@ -180,9 +180,3 @@ def init_inbound_rules(participant_id, policies, supersets, port_count):
     dp_msgs["changes"] = rules
 
     return dp_msgs
-
-    
-
-
-
-
