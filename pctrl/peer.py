@@ -180,6 +180,68 @@ class BGPPeer():
 
 
 
+    def bgp_update_peers(self, updates, prefix_2_VNH, ports):
+        # TODO: Verify if the new logic makes sense
+        changed_vnhs = []
+        announcements = []
+        for update in updates:
+            if 'announce' in update:
+                prefix = update['announce']['prefix']
+            else:
+                prefix = update['withdraw']['prefix']
+            prev_route = self.rib["output"][prefix]
+            best_route = self.rib["local"][prefix]
+            best_route["next_hop"] = str(prefix_2_VNH[prefix])
+
+            if ('announce' in update):
+                # Check if best path has changed for this prefix
+                if not bgp_routes_are_equal(best_route, prev_route):
+                    # store announcement in output rib
+                    self.delete_route("output", prefix)
+                    self.add_route("output", prefix, best_route)
+
+                    # add the VNH to the list of changed VNHs
+                    changed_vnhs.append(prefix_2_VNH[prefix])
+
+                    # announce the route to each router of the participant
+                    for port in ports:
+                        # TODO: Create a sender queue and import the announce_route function
+                        announcements.append(announce_route(port["IP"], prefix,
+                                            best_route["next_hop"], best_route["as_path"]))
+
+            elif ('withdraw' in update):
+                # A new announcement is only needed if the best path has changed
+                if best_route:
+                    "There is a best path available for this prefix"
+                    if not bgp_routes_are_equal(best_route, prev_route):
+                        "There is a new best path available now"
+                        # store announcement in output rib
+                        self.delete_route("output", prefix)
+                        self.add_route("output", prefix, best_route)
+
+                        # add the VNH to the list of changed VNHs
+                        changed_vnhs.append(prefix_2_VNH[prefix])
+
+                        for port in ports:
+                                announcements.append(announce_route(port["IP"],
+                                                     prefix, best_route["next_hop"],
+                                                     best_route["as_path"]))
+
+                else:
+                    "Currently there is no best route to this prefix"
+                    if prev_route:
+                        # Clear this entry from the output rib
+                        self.delete_route("output", prefix)
+                        for port in self.cfg["Ports"]:
+                            # TODO: Create a sender queue and import the announce_route function
+                            announcements.append(withdraw_route(port["IP"],
+                                                                prefix,
+                                                                prefix_2_VNH[prefix]))
+
+        return changed_vnhs, announcements
+
+
+
 
 ''' main '''
 if __name__ == '__main__':
