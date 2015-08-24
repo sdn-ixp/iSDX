@@ -1,11 +1,16 @@
 #  Author:
 #  Arpit Gupta (Princeton)
+#  Robert MacDavid (Princeton)
+
+import os
+import sys
+import time
 
 import json
 from netaddr import *
+import argparse
 from peer import BGPPeer as BGPPeer
 from supersets2 import SuperSets
-from arp_proxy import arp_proxy
 
 from ss_rule_scheme import *
 
@@ -31,46 +36,33 @@ class ParticipantController():
 
         # Initialize participant params
         self.cfg = {}
-        """
-        self.cfg = 
-        {
-            "Ports": 
-            [
-                {
-                    "Id": X
-                    "MAC": "XX:XX:XX:XX:XX:XX",
-                    "IP": "X.X.X.X"
-                }
-            ],
-            "Peers": [...],
-            "ASN": X
-        }
-        """
         self.policies = {}
         self.nexthop_2_part = {}
 
         # used for tagging outbound rules as belonging to us
-        self.port0_mac = None
+        self.port0_mac = ''
 
         # ExaBGP Peering Instance
         self.bgp_instance = None
 
+        # Reference Monitor
+        self.refmon_config = tuple()
+
         '''Each controller will parse the config
         and initialize the local params'''
         self.parse_config(config_file, policy_file)
-        # TODO: read the event handler socket info from the config itself
-        self.eh_socket = ('localhost', 5555)
 
         # VNHs related params
         self.num_VNHs_in_use = 0
         self.VNH_2_prefix = {}
         self.prefix_2_VNH = {}
+        # TODO: Read from config file
         self.VNHs = IPNetwork('172.0.1.1/24')
 
         # Superset related params
         if self.vmac_mode == SUPERSETS:
             if LOG: print "Initializing SuperSets class"
-            self.supersets = SuperSets(self.bgp_instance, self.policies)
+            self.supersets = SuperSets(self)
         else:
             # TODO: create similar class and variables for MDS
             if LOG: print "Initializing MDS class"
@@ -78,12 +70,6 @@ class ParticipantController():
             self.prefix_mds = []
             self.mds_old=[]
 
-        # Fetch information about Reference Monitor's Listener
-        # TODO: Read from a config file
-        # TODO: Figure out whether we'll need a socket or REST API to communicate with Reference Monitor
-        self.refmon_config = ('localhost', 5555)
-        # Communication with the Reference Monitor
-        self.refmon_url = 'http://localhost:8080/??' #ha
         # Keep track of flow rules pushed
         self.dp_pushed = []
         # Keep track of flow rules scheduled for push
@@ -94,14 +80,15 @@ class ParticipantController():
         self.xrs_config = ('localhost', 5566)
 
         # class for building flow mod msgs to the reference monitor
+        # TODO: read the key from the config file , we don't have config object right now.
         self.fm_builder = FlowModMsgBuilder(self.id, self.config.flanc_auth["key"])
         # thing that actually sends messages to the reference monitor
         self.sender = sender
 
 
-
     def start(self):
         # Start arp proxy
+        # TODO: This needs immediate fixture
         self.sdx_ap = (self)
         self.ap_thread = Thread(target=self.sdx_ap.start)
         self.ap_thread.daemon = True
@@ -163,11 +150,12 @@ class ParticipantController():
         with open(config_file, 'r') as f:
             config = json.load(f)
 
-
-        self.cfg = config[self.id]
+        self.cfg = config["Participants"][self.id]
 
         # build nexthop-2-participant mapping
-        for part in config:
+        # TODO: This is a bit intrusive. Let's make sure that we don't
+        # expose peers' multiple ports
+        for part in config["Participants"]:
             for port in config[part]["Ports"]:
                 nexthop = port["IP"]
                 self.nexthop_2_part[nexthop] = part
@@ -175,24 +163,24 @@ class ParticipantController():
         # used for tagging outbound rules as belonging to us
         self.port0_mac = self.cfg["Ports"][0]["MAC"]
 
+        # reference monitor config
+        self.refmon_config = (config["RefMon Server"]["address"], config["RefMon Server"]["port"])
+
         # read in the policies file
         with open(policy_file, 'r') as f:
             policies = json.load(f)
         self.policies = policies
 
-
         # TODO: Make sure making peers_in == peers_out has no negative impact
         peers_in = self.cfg["Peers"]
         peers_out = peers_in
 
-        self.bgp_instance = BGPPeer(self.cfg["ASN"], self.cfg["Ports"], 
+        self.bgp_instance = BGPPeer(self.cfg["ASN"], self.cfg["Ports"],
                                     peers_in, peers_out)
-
-
 
     def set_event_handler(self):
         '''Start the listener socket for network events'''
-        self.listener_eh = Listener(self.eh_socket, authkey=None)
+        self.listener_eh = Listener(tuple(self.cfg["EH_SOCKET"]), authkey=None)
         ps_thread = Thread(target=self.start_eh)
         ps_thread.daemon = True
         ps_thread.start()
@@ -235,14 +223,14 @@ class ParticipantController():
         "Process the incoming vmac "
         # TODO: Port the logic of superset_changed function to update the outbound policies
 
-        # Not sure if this needs to be a separate function. Vmac events always immediately follow 
+        # Not sure if this needs to be a separate function. Vmac events always immediately follow
         # BGP events, and the amount of code needed is rather small.
         return 0
 
     def process_policy_changes(self, add_policies, remove_policies, complete_policies):
         "Process the changes in participants' policies"
         # TODO: Implement the logic of dynamically changing participants' outbound and inbound policy
-        # Partially done. Need to handle expansion of active set 
+        # Partially done. Need to handle expansion of active set
 
         # has the set of active participants expanded?
         old_rulecounts = self.supersets.recompute_rulecounts(self.policies)
@@ -273,8 +261,6 @@ class ParticipantController():
             rule['mod_type'] = "remove"
 
         self.dp_queued.extend(removal_rules)
-
-
 
         addition_rules = []
 
@@ -313,7 +299,7 @@ class ParticipantController():
             # these prefixes must have gratuitous arps sent
 
             "Map the superset expansions to a list of new flow rules."
-            flow_msgs = update_outbound_rules(ss_changes, self.policies, 
+            flow_msgs = update_outbound_rules(ss_changes, self.policies,
                                               self.supersets, self.port0_mac)
 
             "If a recomputation event was needed, wipe out the flow rules."
@@ -334,6 +320,7 @@ class ParticipantController():
             # TODO: similar logic for MDS
             if LOG: print "Creating ctrlr messages for MDS scheme"
 
+        # TODO: This should go
         if sdn_ctrlr_msgs:
             "Send sdn_ctrlr_msgs to participant's SDN controller as a network event"
             self.send_nw_event(sdn_ctrlr_msgs, 'vmac')
@@ -353,7 +340,6 @@ class ParticipantController():
             # TODO: Complete the logic for this function
             self.send_announcements(announcement)
 
-
         return reply
 
 
@@ -366,12 +352,11 @@ class ParticipantController():
         return [rule]
 
     def send_nw_event(self, sdn_ctrlr_msgs, tag):
+        # TODO: Do we really need this?
         "Send the sdn_ctrlr_msgs back to event handler"
         out = {}
         out['vmac'] = msgs
         # TODO: Add the logic to send this message to Participant's event handler
-
-
 
 
     def send_announcements(self, announcement):
@@ -426,7 +411,7 @@ class ParticipantController():
                     # announce the route to each router of the participant
                     for port in self.cfg["Ports"]:
                         # TODO: Create a sender queue and import the announce_route function
-                        announcements.append(announce_route(port["IP"], prefix, 
+                        announcements.append(announce_route(port["IP"], prefix,
                                             route["next_hop"], route["as_path"]))
 
             elif ('withdraw' in update):
@@ -443,8 +428,8 @@ class ParticipantController():
                                             "prefix": prefix,
                                             "VNH": self.prefix_2_VNH[prefix]})
                         for port in self.cfg["Ports"]:
-                                announcements.append(announce_route(port["IP"], 
-                                                     prefix, best_route["next_hop"], 
+                                announcements.append(announce_route(port["IP"],
+                                                     prefix, best_route["next_hop"],
                                                      best_route["as_path"]))
 
                 else:
@@ -454,18 +439,11 @@ class ParticipantController():
                         self.delete_route("output", prefix)
                         for port in self.cfg["Ports"]:
                             # TODO: Create a sender queue and import the announce_route function
-                            announcements.append(withdraw_route(port["IP"], 
-                                                                prefix, 
+                            announcements.append(withdraw_route(port["IP"],
+                                                                prefix,
                                                                 self.prefix_2_VNH[prefix]))
 
         return changes, announcements
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':
@@ -476,10 +454,8 @@ if __name__ == '__main__':
     parser.add_argument('vmac_mode', type=int,
                   help='VMAC encoding scheme: 0--Super Set, 1---Disjoint Set')
     parser.add_argument('dp_mode', type=int,
-                    help='participant id (integer)')
+                    help='Data Plane Topology: 0--Multi Switch, 1---Multi Table')
     args = parser.parse_args()
-
-
 
     # locate config file
     # TODO: Separate the config files for each participant
@@ -497,9 +473,6 @@ if __name__ == '__main__':
     policy_filename = policy_filenames[str(args.id)]
 
     policy_file = os.path.join(base_path, policy_filename)
-
-
-
 
     print "Starting the controller ", str(args.id), " with config file: ", config_file
     print "And policy file: ", policy_file
