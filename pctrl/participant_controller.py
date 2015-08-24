@@ -185,7 +185,7 @@ class ParticipantController():
         peers_in = self.cfg["Peers"]
         peers_out = peers_in
 
-        self.bgp_instance = BGPPeer(self.cfg["ASN", self.cfg["Ports"], 
+        self.bgp_instance = BGPPeer(self.cfg["ASN"], self.cfg["Ports"], 
                                     peers_in, peers_out)
 
 
@@ -269,7 +269,7 @@ class ParticipantController():
             removal_rules.extend(removal_in)
 
         # set the mod type of these rules to make them deletions, not additions
-        for rule in removal_rules
+        for rule in removal_rules:
             rule['mod_type'] = "remove"
 
         self.dp_queued.extend(removal_rules)
@@ -384,7 +384,7 @@ class ParticipantController():
             " Superset"
             # TODO: Do we really need to assign a VNH for each advertised prefix?
             if ('announce' in update):
-            prefix = update['announce']['prefix']
+                prefix = update['announce']['prefix']
 
             if (prefix not in self.prefix_2_VNH):
                 # get next VNH and assign it the prefix
@@ -421,7 +421,7 @@ class ParticipantController():
                     if prev_route:
                         changes.append({"participant": self.id,
                                         "prefix": prefix,
-                                        "VNH": self.prefix_2_VNH[prefix])
+                                        "VNH": self.prefix_2_VNH[prefix]})
 
                     # announce the route to each router of the participant
                     for port in self.cfg["Ports"]:
