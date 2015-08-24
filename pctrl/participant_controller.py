@@ -78,19 +78,20 @@ class ParticipantController():
         # Keep track of flow rules scheduled for push
         self.dp_queued = []
 
-        # Fetch information about XRS Listener
-        self.xrs_client = self.cfg.get_xrs_client()
-        self.eh_client = self.cfg.get_eh_client()
-        self.refmon_client = self.cfg.get_refmon_client()
-        self.arp_client = self.cfg.get_arp_client()
 
         # class for building flow mod msgs to the reference monitor
         self.fm_builder = FlowModMsgBuilder(self.id, self.refmon_client.key)
 
 
     def start(self):
-        # Start arp proxy
+        # Start all the clients
         # TODO: This needs immediate fixture
+
+        self.xrs_client = self.cfg.get_xrs_client()
+        self.eh_client = self.cfg.get_eh_client()
+        self.refmon_client = self.cfg.get_refmon_client()
+        self.arp_client = self.cfg.get_arp_client()
+
         self.sdx_ap = (self)
         self.ap_thread = Thread(target=self.sdx_ap.start)
         self.ap_thread.daemon = True
@@ -222,6 +223,7 @@ class ParticipantController():
             # ss_changed_prefs are prefixes for which the VMAC bits have changed
             # these prefixes must have gratuitous arps sent
 
+
             "Map the superset expansions to a list of new flow rules."
             flow_msgs = update_outbound_rules(ss_changes, self.policies,
                                               self.supersets, self.port0_mac)
@@ -232,7 +234,10 @@ class ParticipantController():
                 self.dp_queued.extend(wipe_msgs)
 
                 #if a recomputation was needed, all VMACs must be reARPed (is that a word?)
-                ss_changed_prefs = self.prefix_2_VNH.keys()
+                garp_required_vnhs = self.VNH_2_prefix.keys()
+            else:
+                # if recomputation wasn't needed, only garp next-hops with changed VMACs
+                garp_required_vnhs = [prefix_2_VNH[prefix] for prefix in ss_changed_prefs]
 
             "Dump the new rules into the dataplane queue."
             self.dp_queued.extend(flow_msgs["changes"])
@@ -245,15 +250,15 @@ class ParticipantController():
             if LOG: print "Creating ctrlr messages for MDS scheme"
 
 
-        changes, announcements = self.bgp_update_peers(updates)
+        changed_vnhs, announcements = self.bgp_instance.bgp_update_peers(updates)
 
-        # Send gratuitous ARP responses for changed routes
-        for change in changes:
+        changed_vnhs = set(changed_vnhs)
+        changed_vnhs.update(garp_required_vnhs)
+
+        # Send gratuitous ARP responses for vnhs with changed routes and VMACs
+        for vnh in changed_vnhs:
             self.sdx_ap.send_gratuitous_arp(change)
 
-        # Also send gratuitous ARP responses for changed VMACs
-        for prefix in ss_changed_prefs:
-            self.sdx_ap.send_gratuitous_arp(prefix)
 
         # Tell Route Server that it needs to announce these routes
         for announcement in announcements:
@@ -288,67 +293,6 @@ class ParticipantController():
             # TODO: @Robert: Place your logic here for VNH assignment for MDS scheme
             if LOG: print "VNH assignment called for disjoint vmac_mode"
 
-    def bgp_update_peers(self, updates):
-        # TODO: Verify if the new logic makes sense
-        changes = []
-        announcements = []
-        for update in updates:
-            if 'announce' in update:
-                prefix = update['announce']['prefix']
-            else:
-                prefix = update['withdraw']['prefix']
-            prev_route = self.rib["output"][prefix]
-            best_route = self.rib["local"][prefix]
-            best_route["next_hop"] = str(self.prefix_2_VNH[prefix])
-
-            if ('announce' in update):
-                # Check if best path has changed for this prefix
-                if not bgp_routes_are_equal(best_route, prev_route):
-                    # store announcement in output rib
-                    self.delete_route("output", prefix)
-                    self.add_route("output", prefix, best_route)
-
-                    if prev_route:
-                        changes.append({"participant": self.id,
-                                        "prefix": prefix,
-                                        "VNH": self.prefix_2_VNH[prefix]})
-
-                    # announce the route to each router of the participant
-                    for port in self.cfg["Ports"]:
-                        # TODO: Create a sender queue and import the announce_route function
-                        announcements.append(announce_route(port["IP"], prefix,
-                                            route["next_hop"], route["as_path"]))
-
-            elif ('withdraw' in update):
-                # A new announcement is only needed if the best path has changed
-                if best_route:
-                    "There is a best path available for this prefix"
-                    if not bgp_routes_are_equal(best_route, prev_route):
-                        "There is a new best path available now"
-                        # store announcement in output rib
-                        self.delete_route("output", prefix)
-                        self.add_route("output", prefix, best_route)
-                        if prev_route:
-                            changes.append({"participant": self.id,
-                                            "prefix": prefix,
-                                            "VNH": self.prefix_2_VNH[prefix]})
-                        for port in self.cfg["Ports"]:
-                                announcements.append(announce_route(port["IP"],
-                                                     prefix, best_route["next_hop"],
-                                                     best_route["as_path"]))
-
-                else:
-                    "Currently there is no best route to this prefix"
-                    if prev_route:
-                        # Clear this entry from the output rib
-                        self.delete_route("output", prefix)
-                        for port in self.cfg["Ports"]:
-                            # TODO: Create a sender queue and import the announce_route function
-                            announcements.append(withdraw_route(port["IP"],
-                                                                prefix,
-                                                                self.prefix_2_VNH[prefix]))
-
-        return changes, announcements
 
 
 if __name__ == '__main__':
