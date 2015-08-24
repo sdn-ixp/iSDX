@@ -15,12 +15,7 @@ from multiprocessing.connection import Listener, Client
 import Queue
 from threading import Thread,Event
 from server import server as Server
-from core import parse_config, XRS
-from decision_process import decision_process
-from lib import vnh_assignment, update_sdx_controller
-from supersets import update_supersets
-from bgp_interface import bgp_update_peers
-from arp_proxy import arp_proxy
+from core import XRS, XRSPeer
 
 
 
@@ -32,14 +27,26 @@ class route_server():
         print "Initialize the Route Server"
 
         # Init the Route Server
-        ## Parse Config
-        self.xrs = parse_config(config_file)
-        self.xrs.server = Server()
-        self.run = True
+        self.server = None
+        self.ah_socket = None
+        self.participants = {}
 
-    def start(self):
-        print "Start Server"
-        self.xrs.server.start()
+        # Several useful mappings
+        self.port_2_participant = {}
+        self.participant_2_port = {}
+        self.portip_2_participant = {}
+        self.participant_2_portip = {}
+        self.portmac_2_participant = {}
+        self.participant_2_portmac = {}
+        self.asn_2_participant = {}
+        self.participant_2_asn = {}
+
+        ## Parse Config
+        self.parse_config(config_file)
+
+        # Initialize a XRS Server
+        self.server = Server()
+        self.run = True
 
         """
         Start the announcement Listener which will receive announcements
@@ -47,10 +54,15 @@ class route_server():
         """
         self.set_announcement_handler()
 
+
+    def start(self):
+        print "Starting the Server to handle incoming BGP Updates"
+        self.server.start()
+
         while self.run:
             # get BGP messages from ExaBGP via stdin
             try:
-                route = self.xrs.server.receiver_queue.get(True, 1)
+                route = self.server.receiver_queue.get(True, 1)
                 route = json.loads(route)
 
                 # Received BGP route advertisement from ExaBGP
@@ -60,22 +72,67 @@ class route_server():
                     advertise_id = self.portip_2_participant[advertiser_ip]
                     if id in self.participants[advertise_id].peers_out and advertise_id in self.participants[id].peers_in:
                         # Now send this route to participant `id`'s controller'
-                        self.send_update(id, route):
+                        self.send_update(id, route)
 
             except Queue.Empty:
                 if LOG:
                     print "Empty Queue"
 
+
+    def parse_config(self, config_file):
+        # loading config file
+        config = json.load(open(config_file, 'r'))
+
+        self.ah_socket = tuple(config["Route Server"]["AH_SOCKET"])
+
+        for participant_name in config["Participants"]:
+            participant = config["Participants"][participant_name]
+
+            # adding asn and mappings
+            asn = participant["ASN"]
+            self.asn_2_participant[participant["ASN"]] = int(participant_name)
+            self.participant_2_asn[int(participant_name)] = participant["ASN"]
+
+            self.participant_2_port[int(participant_name)] = []
+            self.participant_2_portip[int(participant_name)] = []
+            self.participant_2_portmac[int(participant_name)] = []
+
+            for i in range(0, len(participant["Ports"])):
+                self.port_2_participant[participant["Ports"][i]['Id']] = int(participant_name)
+                self.portip_2_participant[participant["Ports"][i]['IP']] = int(participant_name)
+                self.portmac_2_participant[participant["Ports"][i]['MAC']] = int(participant_name)
+                self.participant_2_port[int(participant_name)].append(participant["Ports"][i]['Id'])
+                self.participant_2_portip[int(participant_name)].append(participant["Ports"][i]['IP'])
+                self.participant_2_portmac[int(participant_name)].append(participant["Ports"][i]['MAC'])
+
+            # adding ports and mappings
+            ports = [{"ID": participant["Ports"][i]['Id'],
+                         "MAC": participant["Ports"][i]['MAC'],
+                         "IP": participant["Ports"][i]['IP']}
+                         for i in range(0, len(participant["Ports"]))]
+
+            peers_out = [peer for peer in participant["Peers"]]
+            # TODO: Make sure this is not an insane assumption
+            peers_in = peers_out
+
+            eh_socket = tuple(participant["EH_SOCKET"])
+
+            # create peer and add it to the route server environment
+            self.participants[int(participant_name)] = XRSPeer(asn, ports, peers_in, peers_out, eh_socket)
+
+
     def set_announcement_handler(self):
         '''Start the listener socket for BGP Announcements'''
+        #print "set_announcement_handler() called"
         self.listener_eh = Listener(self.ah_socket, authkey=None)
         ps_thread = Thread(target=self.start_ah)
         ps_thread.daemon = True
         ps_thread.start()
 
+
     def start_ah(self):
         '''Announcement Handler '''
-        print "Event Handler started for", self.id
+        print "Announcement Handler started "
         while True:
             conn_ah = self.listener_eh.accept()
             tmp = conn.recv()
@@ -85,7 +142,10 @@ class route_server():
             conn_ah.send(reply)
             conn_ah.close()
 
+
     def send_update(self, id, route):
+        # TODO: Explore what is better, persistent client sockets or
+        # new socket for each BGP update
         "Send this BGP route to participant id's controller"
         conn = Client(self.participants[id].eh_socket, authkey = None)
         data = {}
@@ -94,15 +154,16 @@ class route_server():
         recv = conn.recv()
         conn.close()
 
+
     def stop(self):
         self.run = False
         self.sdx_ap.stop()
         self.ap_thread.join()
 
+
 def main(argv):
     # locate config file
-    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"controller","sdx_config"))
-    config_file = os.path.join(base_path, "sdx_global.cfg")
+    config_file = os.path.abspath(args.config)
 
     # start route server
     sdx_rs = route_server(config_file)
@@ -119,7 +180,7 @@ def main(argv):
 ''' main '''
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('dir', help='the directory of the example')
+    parser.add_argument('config', help='path of config file')
     args = parser.parse_args()
 
     main(args)
