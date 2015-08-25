@@ -170,10 +170,12 @@ class MultiSwitchController(object):
         # install table-miss flow entry
         self.logger.info('ms_ctrlr: init fabric')
         match = self.config.parser.OFPMatch()
-        actions = [self.config.parser.OFPActionOutput(self.config.ofproto.OFPP_CONTROLLER, self.config.ofproto.OFPCML_NO_BUFFER)]
 
         if self.config.ofv  == "1.3":
+            actions = [self.config.parser.OFPActionOutput(self.config.ofproto.OFPP_CONTROLLER, self.config.ofproto.OFPCML_NO_BUFFER)]
             instructions = [self.config.parser.OFPInstructionActions(self.config.ofproto.OFPIT_APPLY_ACTIONS, actions)]
+        else:
+            actions = [self.config.parser.OFPActionOutput(self.config.ofproto.OFPP_CONTROLLER)]
 
         for datapath in self.config.datapaths.values():
             if self.config.ofv  == "1.3":
