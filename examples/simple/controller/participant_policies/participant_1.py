@@ -1,6 +1,7 @@
 {
     "outbound": [
         {
+            "cookie": 1,
             "match": 
             {
                 "tcp_dst": 80
@@ -11,6 +12,7 @@
             }
         },
         {
+            "cookie": 2,
             "match": 
             {
                 "tcp_dst": 4321
@@ -21,6 +23,7 @@
             }
         },
         {
+            "cookie": 3,
             "match": 
             {
                 "tcp_dst": 4322
