@@ -99,19 +99,16 @@ class PConfig(object):
         port    = conn_info["Port"]
         address = conn_info["IP"]
 
-        return Client(address, port, mac)
+        return GenericClient(address, port, mac)
 
 
 
-    def get_eh_client(self):
+    def get_eh_info(self):
         config = self.config
 
         conn_info = config[self.id]["EH_SOCKET"]
 
-        port    = conn_info["Port"]
-        address = conn_info["IP"]
-
-        return Client(address, port)
+        return tuple(conn_info)
 
 
     def get_refmon_client(self):
@@ -124,7 +121,7 @@ class PConfig(object):
 
         key = config[self.id]["Flanc Key"]
 
-        return Client(address, port, key)
+        return GenericClient(address, port, key)
 
 
     def get_xrs_client(self):
@@ -135,14 +132,14 @@ class PConfig(object):
         port    = conn_info["Port"]
         address = conn_info["IP"]
 
-        return Client(address, port)
+        return GenericClient(address, port)
 
 
 
 
 
 
-class Client():
+class GenericClient():
     def __init__(self, address, port, key = ""):
         self.address = address
         self.port = port

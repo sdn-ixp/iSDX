@@ -116,7 +116,7 @@ def build_outbound_rules_for(out_policies, ss_instance, my_mac):
         return rules
 
 
-def build_inbound_rules_for(participant_id, in_policies, supersets, port_count):
+def build_inbound_rules_for(participant_id, in_policies, supersets):
     "Given a subset of inbound policies, return all the resulting rules."
 
     rules = []
@@ -138,8 +138,6 @@ def build_inbound_rules_for(participant_id, in_policies, supersets, port_count):
 
 
         port_num = policy["action"]["fwd"]
-        if (port_num >= port_count):
-            port_num = 0
         new_vmac = vmac_part_port_match(participant_id, port_num, supersets)
 
 
@@ -155,7 +153,7 @@ def build_inbound_rules_for(participant_id, in_policies, supersets, port_count):
 
 
 # initialize all inbound rules
-def init_inbound_rules(participant_id, policies, supersets, port_count):
+def init_inbound_rules(participant_id, policies, supersets):
     dp_msgs = {"type": "new",
                     "changes": []}
 
@@ -170,7 +168,7 @@ def init_inbound_rules(participant_id, policies, supersets, port_count):
 
     in_policies = policies['inbound']
 
-    rules = build_inbound_rules_for(participant_id, in_policies, supersets, port_count)
+    rules = build_inbound_rules_for(participant_id, in_policies, supersets)
 
     dp_msgs["changes"] = rules
 
