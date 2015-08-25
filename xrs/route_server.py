@@ -163,7 +163,8 @@ class route_server():
 
 def main(argv):
     # locate config file
-    config_file = os.path.abspath(args.config)
+    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"controller","sdx_config"))
+    config_file = os.path.join(base_path, "sdx_global.cfg")
 
     # start route server
     sdx_rs = route_server(config_file)
@@ -180,7 +181,7 @@ def main(argv):
 ''' main '''
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('config', help='path of config file')
+    parser.add_argument('dir', help='the directory of the example')
     args = parser.parse_args()
 
     main(args)
