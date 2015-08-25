@@ -223,9 +223,9 @@ class BGPPeer():
                         changed_vnhs.append(prefix_2_VNH[prefix])
 
                         for port in ports:
-                                announcements.append(announce_route(port["IP"],
-                                                     prefix, best_route["next_hop"],
-                                                     best_route["as_path"]))
+                            announcements.append(announce_route(port["IP"],
+                                                 prefix, best_route["next_hop"],
+                                                 best_route["as_path"]))
 
                 else:
                     "Currently there is no best route to this prefix"
@@ -239,6 +239,32 @@ class BGPPeer():
                                                                 prefix_2_VNH[prefix]))
 
         return changed_vnhs, announcements
+
+
+
+def bgp_routes_are_equal(route1, route2):
+    if route1 is None:
+        return False
+    if route2 is None:
+        return False
+    if (route1['next_hop'] != route2['next_hop']):
+        return False
+    if (route1['as_path'] != route2['as_path']):
+        return False
+    return True
+        
+def announce_route(neighbor, prefix, next_hop, as_path):
+           
+    msg = "neighbor " + neighbor + " announce route " + prefix + " next-hop " + str(next_hop)
+    msg += " as-path [ ( " + as_path + " ) ]"
+
+    return msg
+
+def withdraw_route(neighbor, prefix, next_hop):
+
+    msg = "neighbor " + neighbor + " withdraw route " + prefix + " next-hop " + str(next_hop)
+
+    return msg
 
 
 

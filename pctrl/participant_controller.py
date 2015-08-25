@@ -312,15 +312,18 @@ class ParticipantController():
         # Tell Route Server that it needs to announce these routes
         for announcement in announcements:
             # TODO: Complete the logic for this function
-            self.send_announcements(announcement)
+            self.send_announcement(announcement)
 
         return reply
 
 
 
-    def send_announcements(self, announcement):
+    def send_announcement(self, announcement):
         "Send the announcements to XRS"
         print "Sending the announcements"
+
+        self.xrs_client.send(announcement)
+
 
     def vnh_assignment(self, update):
         "Assign VNHs for the advertised prefixes"
