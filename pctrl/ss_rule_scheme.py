@@ -67,7 +67,8 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
             actions = {"set_eth_dst":next_hop_mac, "fwd":"inbound"}
 
             rule = {"rule_type":"outbound", "priority":OUTBOUND_HIT_PRIORITY,
-                    "match":match_args , "action":actions, "mod_type":"insert"}
+                    "match":match_args , "action":actions, "mod_type":"insert",
+                    "cookie":policy["cookie"]}
 
             dp_msgs["changes"].append(rule)
 
@@ -109,7 +110,8 @@ def build_outbound_rules_for(out_policies, ss_instance, my_mac):
             actions = {"set_eth_dst":next_hop_mac, "fwd":"inbound"}
 
             rule = {"rule_type":"outbound", "priority":OUTBOUND_HIT_PRIORITY,
-                    "match":match_args , "action":actions, "mod_type":"insert"}
+                    "match":match_args , "action":actions, "mod_type":"insert",
+                    "cookie":policy["cookie"]}
 
             rules.append(rule)
 
@@ -144,7 +146,8 @@ def build_inbound_rules_for(participant_id, in_policies, supersets):
         actions = {"set_eth_dst":new_vmac, "fwd":"main"}
 
         rule = {"rule_type":"inbound", "priority":INBOUND_HIT_PRIORITY,
-                "match":match_args, "action":actions, "mod_type":"insert"}
+                "match":match_args, "action":actions, "mod_type":"insert",
+                "cookie":policy["cookie"]}
 
         rules.append(rule)
 
@@ -176,17 +179,33 @@ def init_inbound_rules(participant_id, policies, supersets):
 
 
 
-def msg_clear_all_outbound():
+def msg_clear_all_outbound(policies):
     "Construct and return a flow mod which removes all our outbound rules"
-    match_args = {"eth_src":port0_mac}
-    rule = {"rule_type":"outbound", "priority":0,
-                "match":match_args , "action":{}, "mod_type":"remove"}
+    mods = []
 
-    return [rule]
+    if 'outbound' not in policies:
+        return mods
+
+    # compile all cookies used by our policies
+    cookies = []
+    for policy in policies['outbound']:
+        cookies.append(policy['cookie'])
+
+    match_args = {"eth_src":port0_mac}
+
+    for cookie in cookies:
+        mod = {"rule_type":"outbound", "priority":0,
+                "match":match_args , "action":{},
+                "cookie":cookie, "mod_type":"remove"}
+        mods.append(mod)
+
+    return mods
 
 
 def ss_process_policy_change(supersets, add_policies, remove_policies, policies, port_count, port0_mac):
         "Process the changes in participants' policies"
+        return 0
+"""
         # TODO: Implement the logic of dynamically changing participants' outbound and inbound policy
         # Partially done. Need to handle expansion of active set
 
@@ -234,3 +253,4 @@ def ss_process_policy_change(supersets, add_policies, remove_policies, policies,
 
 
         return 0
+"""
