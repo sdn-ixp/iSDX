@@ -194,8 +194,8 @@ class ParticipantController():
             '''
             change_info = 
             {
-                removal_cookies = [cookie1, ...], # Cookies of deleted policies
-                new_policies = 
+                'removal_cookies' : [cookie1, ...], # Cookies of deleted policies
+                'new_policies' : 
                 {
                     <policy file format>
                 }
@@ -213,6 +213,9 @@ class ParticipantController():
     def process_policy_changes(self, change_info):
         "Process the changes in participants' policies"
         # TODO: Implement the logic of dynamically changing participants' outbound and inbound policy
+
+        for cookie in change_info['removal_cookies']:
+            rule = 
 
         if self.cfg.vmac_mode == SUPERSETS:
             dp_msgs = ss_process_policy_change(self.supersets, add_policies, remove_policies, policies, 
@@ -275,10 +278,11 @@ class ParticipantController():
 
             "If a recomputation event was needed, wipe out the flow rules."
             if flow_msgs["type"] == "new":
-                wipe_msgs = self.msg_clear_all_outbound()
+                wipe_msgs = self.msg_clear_all_outbound(self.policies)
                 self.dp_queued.extend(wipe_msgs)
 
-                #if a recomputation was needed, all VMACs must be reARPed (is that a word?)
+                #if a recomputation was needed, all VMACs must be reARPed 
+                # TODO: confirm reARPed is a word
                 garp_required_vnhs = self.VNH_2_prefix.keys()
             else:
                 # if recomputation wasn't needed, only garp next-hops with changed VMACs
