@@ -84,7 +84,7 @@ class RefMon(app_manager.RyuApp):
             origin = auth_info["participant"]
 
             if "flow_mods" in msg:
-                self.logger.info('refmon: process ' + str(len(msg["flow_mods"])) + ' from flowmods ' + str(origin))
+                self.logger.info('refmon: process ' + str(len(msg["flow_mods"])) + ' flowmods from ' + str(origin))
                 for flow_mod in msg["flow_mods"]:
                     if self.config.ofv == "1.0":
                         fm = OFP10FlowMod(self.config, origin, flow_mod)

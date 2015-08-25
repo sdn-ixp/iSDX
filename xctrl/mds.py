@@ -48,7 +48,6 @@ class MDS(object):
     def __init__(self, sender, config):
         self.sender = sender
         self.config = config
-        self.vmac_builder = VMACBuilder(self.config.vmac_options)
         self.fm_builder = None
 
     def handle_BGP(self, rule_type):
@@ -109,7 +108,7 @@ class MDS(object):
 
     def handle_participant_with_inbound(self, rule_type):
         for participant in self.config.peers.values():
-            ### inbound policies specified
+            ### send all traffic for participants with inbound policies to inbound handler
             if participant.inbound_rules:
                 for port in participant.ports:
                     match = {"eth_dst": port.mac}
@@ -125,21 +124,23 @@ class MDS(object):
                 action = {"fwd": [port.id]}
                 self.fm_builder.add_flow_mod("insert", rule_type, FORWARDING_PRIORITY, match, action)
 
-    def default_forwarding_inbound(self, rule_type, fwd):
-        ## set the inbound bit to zero
+    def default_forwarding_inbound(self, rule_type, in_port):
+        ### default forwarding for traffic to participants with inbound policies
         for participant in self.config.peers.values():
             if participant.inbound_rules:
-                port = participant.ports[0]
-                match = {"eth_dst": port.mac, "in_port": "inbound"}
-                action = {"fwd": [fwd]}
-                self.fm_builder.add_flow_mod("insert", "inbound", FORWARDING_PRIORITY, match, action)
+                for port in participant.ports:
+                    match = {"eth_dst": port.mac}
+                    if in_port:
+                        match["in_port"] = 1
+                    action = {"fwd": [port.id]}
+                    self.fm_builder.add_flow_mod("insert", rule_type, FORWARDING_PRIORITY, match, action)
 
     def match_any_fwd(self, rule_type, dst):
         match = {}
         action = {"fwd": [dst]}
         self.fm_builder.add_flow_mod("insert", rule_type, DEFAULT_PRIORITY, match, action)
 
-class MDSmS(GSS):
+class MDSmS(MDS):
     def __init__(self, sender, config):
         super(MDSmS, self).__init__(sender, config)
         self.logger = logging.getLogger('MDSmS')
@@ -167,6 +168,7 @@ class MDSmS(GSS):
         self.handle_participant_with_outbound("main-in")
         ### inbound policies specified
         self.handle_participant_with_inbound("main-in")
+        self.default_forwarding_inbound("main-in", True)
         ### default forwarding
         self.default_forwarding("main-in")
 
@@ -180,7 +182,7 @@ class MDSmS(GSS):
 
         self.logger.info('sent flow mods to reference monitor')
 
-class MDSmT(GSS):
+class MDSmT(MDS):
     def __init__(self, sender, config):
         super(MDSmT, self).__init__(sender, config)
         self.logger = logging.getLogger('MDSmT')
@@ -206,20 +208,21 @@ class MDSmT(GSS):
         self.logger.info('create flow mods to handle participant traffic')
         ### outbound policies specified
         self.handle_participant_with_outbound("main-in")
-        ## whatever doesn't match on any other rule, send to inbound switch
+        ### inbound policies specified
+        self.handle_participant_with_inbound("main-in")
+        ## whatever doesn't match on any other rule, send to out table
         self.match_any_fwd("main-in", "main-out")
 
         # OUTBOUND SWITCH
 
         # INBOUND SWITCH
-        ## set the inbound bit to zero
-        self.default_forwarding_inbound("inbound", "main-out")
         ## send all other packets to main
         self.match_any_fwd("inbound", "main-out")
 
         # MAIN-OUT TABLE
         ### default forwarding
         self.default_forwarding("main-out")
+        self.default_forwarding_inbound("main-out", False)
 
         self.sender.send(self.fm_builder.get_msg())
 

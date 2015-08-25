@@ -58,7 +58,11 @@ class FlowMod():
                 if "eth_type" not in validated_matches:
                     validated_matches["eth_type"] = ether.ETH_TYPE_ARP
             elif match == "in_port":
-                validated_matches[match] = value
+                if isinstance( value, int ) or value.isdigit():
+                    validated_matches["in_port"] = value
+                else:
+                    if self.rule_type in self.config.datapath_ports and value in self.config.datapath_ports[self.rule_type]:
+                        validated_matches["in_port"] = self.config.datapath_ports[self.rule_type][value]
             elif match == "eth_dst":
                 if len(value) > 1:
                     validated_matches[match] = value
