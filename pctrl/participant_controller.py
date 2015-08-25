@@ -214,9 +214,22 @@ class ParticipantController():
         "Process the changes in participants' policies"
         # TODO: Implement the logic of dynamically changing participants' outbound and inbound policy
 
-        for cookie in change_info['removal_cookies']:
-            rule = 
 
+        # remove flow rules for the old policies
+        removal_msgs = []
+
+        '''
+        for cookie in change_info['removal_cookies']:
+            mod =  {"rule_type":"outbound", "priority":0,
+                    "match":match_args , "action":{},
+                    "cookie":cookie, "mod_type":"remove"}
+            removal_msgs.append(mod)
+        '''
+
+        self.dp_queued.extend(removal_msgs)
+
+
+        # add flow rules for the new policies
         if self.cfg.vmac_mode == SUPERSETS:
             dp_msgs = ss_process_policy_change(self.supersets, add_policies, remove_policies, policies, 
                                                 self.port_count, self.port0_mac)
@@ -364,17 +377,13 @@ if __name__ == '__main__':
 
     # locate config file
     # TODO: Separate the config files for each participant
-    config_path = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
-    config_file = os.path.join(config_path, "pctrlr.cfg")
-
-
+    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                "..","examples",args.dir,"controller","sdx_config"))
+    config_file = os.path.join(base_path, "pctrlr.cfg")
 
 
 
     # locate the participant's policy file as well
-    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                "..","examples",args.dir,"controller","sdx_config"))
-
     policy_filenames_file = os.path.join(base_path, "sdx_policies.cfg")
     with open(policy_filenames_file, 'r') as f:
         policy_filenames = json.load(f)
