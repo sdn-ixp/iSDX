@@ -3,10 +3,12 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 #  Arpit Gupta (Princeton)
 
+import os
 import sys
 import json
 import socket
 import struct
+import argparse
 
 from threading import Thread,Event
 
@@ -171,14 +173,30 @@ class ArpProxy():
         self.listener_garp.close()
 
 
-''' main '''
-if __name__ == '__main__':
+def main(argv):
+    # locate config file
+    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"controller","sdx_config"))
+    config_file = os.path.join(base_path, "sdx_global.cfg")
+
     # start arp proxy
-    sdx_ap = ArpProxy("arproxy.cfg")
+    sdx_ap = ArpProxy(config_file)
     ap_thread = Thread(target=sdx_ap.start_arp_listener)
+    ap_thread.daemon = True
     ap_thread.start()
+
+
     while ap_thread.is_alive():
         try:
             ap_thread.join(1)
         except KeyboardInterrupt:
             sdx_ap.stop()
+
+
+''' main '''
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('dir', help='the directory of the example')
+    args = parser.parse_args()
+
+    main(args)
