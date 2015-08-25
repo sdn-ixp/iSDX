@@ -11,7 +11,7 @@ from threading import Thread
 from client import RefMonClient
 from lib import Config
 from gss import GSSmS, GSSmT
-from mds import MDS
+from mds import MDSmS, MDSmT
 
 class xCtrl(object):
     def __init__(self, config_file):
@@ -23,8 +23,12 @@ class xCtrl(object):
         self.client = RefMonClient(self.config.refmon["address"], self.config.refmon["port"], self.config.refmon["key"])
 
         if self.config.vmac_mode == 0:
-            self.controller = MDS(self.client, self.config)
-            self.logger.info('mode MDS - OF v1.0')
+            if self.config.mode == 0:
+                self.controller = MDSmS(self.client, self.config)
+                self.logger.info('mode MDSmS - OF v1.0')
+            elif self.config.mode == 1:
+                self.controller = MDSmT(self.client, self.config)
+                self.logger.info('mode MDSmT - OF v1.3')
         elif self.config.vmac_mode == 1:
             if self.config.mode == 0:
                 self.controller = GSSmS(self.client, self.config)

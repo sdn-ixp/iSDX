@@ -54,6 +54,7 @@ class GSS(object):
         self.fm_builder = None
 
     def handle_BGP(self, rule_type):
+        ### BGP traffic to route server
         port = self.config.route_server.ports[0]
         action = {"fwd": [port.id]}
         match = {"eth_dst": port.mac, "tcp_src": BGP}
@@ -62,6 +63,7 @@ class GSS(object):
         match = {"eth_dst": port.mac, "tcp_dst": BGP}
         self.fm_builder.add_flow_mod("insert", rule_type, BGP_PRIORITY, match, action)
 
+        ### BGP traffic to participants
         for participant in self.config.peers.values():
             for port in participant.ports:
                 match = {"eth_dst": port.mac, "tcp_src": BGP}
@@ -101,6 +103,7 @@ class GSS(object):
             action["fwd"] = fwd
             self.fm_builder.add_flow_mod("insert", rule_type, ARP_PRIORITY, match, action)
 
+        ### flood ARP requests
         match = {"eth_type": ETH_TYPE_ARP, "eth_dst": MAC_BROADCAST}
         action = {"fwd": [OFPP_FLOOD]}
         self.fm_builder.add_flow_mod("insert", rule_type, ARP_BROADCAST_PRIORITY, match, action)
