@@ -5,11 +5,11 @@ from ryu.ofproto import ether
 from ryu.ofproto import inet
 
 class FlowMod():
-    def __init__(self, origin, flow_mod):
+    def __init__(self, config, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
         self.rule_types = ["inbound", "outbound", "main", "main-in", "main-out"]
         
-        self.config = None
+        self.config = config
         self.parser = None
 
         self.mod_type = None
@@ -29,7 +29,7 @@ class FlowMod():
 
     def validate_flow_mod(self, flow_mod):
         if "id" in flow_mod:
-            self.cookie = int('{0:016b}'.format(int(self.origin))+'{0:016b}'.format(int(flow_mod["id"])),2)
+            self.cookie = int('{0:08b}'.format(int(self.origin))+'{0:08b}'.format(int(flow_mod["id"])),2)
             if ("mod_type" in flow_mod and flow_mod["mod_type"] in self.mod_types):
                 self.mod_type = flow_mod["mod_type"]
                 if ("rule_type" in flow_mod and flow_mod["rule_type"] in self.rule_types):
@@ -51,7 +51,7 @@ class FlowMod():
         for match, value in matches.iteritems():
 
             if match == "eth_type":
-                validated_matches[match] = value
+                validated_matches["dl_type"] = value
             elif match == "in_port":
                 if isinstance( value, int ) or value.isdigit():
                     validated_matches["in_port"] = value
@@ -60,44 +60,44 @@ class FlowMod():
                         validated_matches["in_port"] = self.config.datapath_ports[self.rule_type][value]
             elif match == "arp_tpa":
                 validated_matches[match] = value
-                if "eth_type" not in validated_matches:
-                    validated_matches["eth_type"] = ether.ETH_TYPE_ARP
+                if "dl_type" not in validated_matches:
+                    validated_matches["dl_type"] = ether.ETH_TYPE_ARP
             elif match == "eth_dst":
-                validated_matches[match] = value
+                validated_matches["dl_dst"] = value
             elif match == "eth_src":
-                validated_matches[match] = value
+                validated_matches["dl_src"] = value
             elif match == "ipv4_src":
-                validated_matches[match] = value
-                if "eth_type" not in validated_matches:
-                    validated_matches["eth_type"] = ether.ETH_TYPE_IP
+                validated_matches["nw_src"] = value
+                if "dl_type" not in validated_matches:
+                    validated_matches["dl_type"] = ether.ETH_TYPE_IP
             elif match == "ipv4_dst":
-                validated_matches[match] = value
-                if "eth_type" not in validated_matches:
-                    validated_matches["eth_type"] = ether.ETH_TYPE_IP
+                validated_matches["nw_dst"] = value
+                if "dl_type" not in validated_matches:
+                    validated_matches["dl_type"] = ether.ETH_TYPE_IP
             elif match == "tcp_src":
-                validated_matches[match] = value
-                if "eth_type" not in validated_matches:
-                    validated_matches["eth_type"] = ether.ETH_TYPE_IP
-                if "ip_proto" not in validated_matches:
-                    validated_matches["ip_proto"] = inet.IPPROTO_TCP
+                validated_matches["tp_src"] = value
+                if "dl_type" not in validated_matches:
+                    validated_matches["dl_type"] = ether.ETH_TYPE_IP
+                if "nw_proto" not in validated_matches:
+                    validated_matches["nw_proto"] = inet.IPPROTO_TCP
             elif match == "tcp_dst":
-                validated_matches[match] = value
-                if "eth_type" not in validated_matches:
-                    validated_matches["eth_type"] = ether.ETH_TYPE_IP
-                if "ip_proto" not in validated_matches:
-                    validated_matches["ip_proto"] = inet.IPPROTO_TCP
+                validated_matches["tp_dst"] = value
+                if "dl_type" not in validated_matches:
+                    validated_matches["dl_type"] = ether.ETH_TYPE_IP
+                if "nw_proto" not in validated_matches:
+                    validated_matches["nw_proto"] = inet.IPPROTO_TCP
             elif match == "udp_src":
-                validated_matches[match] = value
-                if "eth_type" not in validated_matches:
-                    validated_matches["eth_type"] = ether.ETH_TYPE_IP
-                if "ip_proto" not in validated_matches:
-                    validated_matches["ip_proto"] = inet.IPPROTO_UDP
+                validated_matches["tp_src"] = value
+                if "dl_type" not in validated_matches:
+                    validated_matches["dl_type"] = ether.ETH_TYPE_IP
+                if "nw_proto" not in validated_matches:
+                    validated_matches["nw_proto"] = inet.IPPROTO_UDP
             elif match == "udp_dst":
-                validated_matches[match] = value
-                if "eth_type" not in validated_matches:
-                    validated_matches["eth_type"] = ether.ETH_TYPE_IP
-                if "ip_proto" not in validated_matches:
-                    validated_matches["ip_proto"] = inet.IPPROTO_UDP
+                validated_matches["tp_dst"] = value
+                if "dl_type" not in validated_matches:
+                    validated_matches["dl_type"] = ether.ETH_TYPE_IP
+                if "nw_proto" not in validated_matches:
+                    validated_matches["nw_proto"] = inet.IPPROTO_UDP
         return validated_matches
 
     def make_actions(self):
@@ -113,9 +113,9 @@ class FlowMod():
                             port = self.config.dp_alias[port]
                         temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][port]))
             elif action == "set_eth_src":
-                temp_actions.append(self.parser.OFPActionSetDlDst(value))
+                temp_actions.append(self.parser.OFPActionSetDlSrc(str(value)))
             elif action == "set_eth_dst":
-                temp_actions.append(self.parser.OFPActionSetDlDst(value))
+                temp_actions.append(self.parser.OFPActionSetDlDst(str(value)))
 
         return temp_actions
 
@@ -127,6 +127,8 @@ class FlowMod():
                 temp_fwds = []
                 for val in value:
                     if isinstance( val, int ) or val.isdigit():
+                        if val == 0xfffffffb:
+                            val = 0xffb 
                         temp_fwds.append(int(val))
                     elif val in self.rule_types:
                         temp_fwds.append(val)
