@@ -7,15 +7,15 @@ import sys
 import json
 import socket
 import struct
-import binascii
+
 from threading import Thread,Event
 
-from multiprocessing.connection import Listener
+from multiprocessing.connection import Listener, Client
 
 
 ETH_BROADCAST = 'ff:ff:ff:ff:ff:ff'
 ETH_TYPE_ARP = 0x0806
-LOG = False
+LOG = True
 
 class ArpProxy():
 
@@ -29,11 +29,19 @@ class ArpProxy():
         self.participants = {}
         self.portmac_2_participant = {}
 
+        # info about non-sdn participants
+        # TODO: Create a mapping between actual interface IP addresses
+        # and the corresponding MAC addresses for all the non-SDN participants
+        # In case of MDS, it is actual mac adresses of these interfaces, in case
+        # of the superset scheme it is : 1XXXX-nexthop_id
+        self.nonSDN_nhip_2_nhmac = {}
+
         self.parse_arpconfig(config_file)
 
         # Set various listeners
         self.set_arp_listener()
         self.set_garp_listener()
+
 
     def parse_arpconfig(self, config_file):
         "Parse the config file to extract eh_sockets and portmac_2_participant"
@@ -44,6 +52,8 @@ class ArpProxy():
             for participant_id in config["Participants"]:
                 participant = config["Participants"][participant_id]
                 self.participants[participant_id] = {}
+                # Create Persistent Client Object
+                #self.participants[participant_id]["eh_socket"] = Client(tuple([participant["EH_SOCKET"][0], int(participant["EH_SOCKET"][1])]), authkey = None)
                 self.participants[participant_id]["eh_socket"] = tuple([participant["EH_SOCKET"][0], int(participant["EH_SOCKET"][1])])
                 for i in range(0, len(participant["Ports"])):
                     self.portmac_2_participant[participant["Ports"][i]['MAC']] = int(participant_id)
@@ -61,9 +71,8 @@ class ArpProxy():
             print 'Failed to create socket. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
             sys.exit()
 
+
     def start_arp_listener(self):
-        eth_length = 14
-        arp_length = 28
 
         while self.run:
             # receive arp requests
@@ -79,7 +88,14 @@ class ArpProxy():
                     # check if the arp request stems from one of the participants
                     requester_srcmac = eth_frame["src_mac"]
                     requested_ip = arp_packet["dst_ip"]
-                    response_vmac = self.get_vmac(requester_srcmac, requested_ip)
+                    # Send the ARP request message to respective controller and forget about it
+                    self.send_arp_request(requester_srcmac, requested_ip)
+
+                    # TODO: If the requested IP address belongs to a non-SDN participant
+                    # then refer the structure `self.nonSDN_nhip_2_nhmac` and
+                    # send an immediate ARP response.
+                    """
+                    response_vmac = self.get_vmac_default(requester_srcmac, requested_ip)
                     if response_vmac != "":
                         if LOG:
                             print "ARP-PROXY: reply with VMAC "+response_vmac
@@ -87,15 +103,12 @@ class ArpProxy():
                         data = self.craft_arp_packet(arp_packet, response_vmac)
                         eth_packet = self.craft_eth_frame(eth_frame, response_vmac, data)
                         self.raw_socket.send(''.join(eth_packet))
+                    """
 
             except socket.timeout:
                 if LOG:
                     print 'Socket Timeout Occured'
 
-    def stop(self):
-        self.run = False
-        self.raw_socket.close()
-        self.listener_garp.close()
 
     def set_garp_listener(self):
         "Set listener for gratuitous ARPs from the participants' controller"
@@ -104,6 +117,7 @@ class ArpProxy():
         ps_thread = Thread(target=self.start_garp_handler)
         ps_thread.daemon = True
         ps_thread.start()
+
 
     def start_garp_handler(self):
         print "Gratuitous ARP Handler started "
@@ -115,25 +129,34 @@ class ArpProxy():
             conn_ah.send(reply)
             conn_ah.close()
 
+
     def process_garp(self, data):
-        "Process the incoming Gratuitous ARP response"
-        garp_message = craft_garp_reponse(data['vmac'], data['dstmac'])
+        """
+        Process the incoming Gratuitous ARP response:
+        Structure of ARP Response coming from the Participant Controller:
+            - srcip/vnhip: VNH IP address for which the ARP response is created
+            - srcmac/vmac: VMAC that is the MAC address corresponding to the VNH IP address
+            - dstmac: Mac address of the interface for which this response is crafted
+            - dstip: IP address of the target interface (?)
+        """
+        garp_message = craft_garp_reponse(data['vnhip'], data['dstip'],
+                                        data['dstmac'], data['vmac'])
         self.raw_socket.send(garp_message)
 
-    def get_vmac(self, requester_srcmac, requested_ip):
+
+    def send_arp_request(self, requester_srcmac, requested_ip):
         "Get the VMAC for the arp request message"
         requester_id = self.portmac_2_participant[requester_srcmac]
         if requester_id in self.participants:
             # ARP request is sent by participant with its own SDN controller
-            eh_socket = self.participants[requester_id]["eh_socket"]
+            eh_socket = Client(self.participants[requester_id]["eh_socket"])
             data = {}
             data['arp_request'] = requested_ip
-            reply = send_data(eh_socket, data)
-            vmac = reply['vmac']
-            return vmac
-        else:
-            # No SDN controller for this participant
-            vmac = self.get_vmac_default(requester_id)
+            eh_socket.send(json.dumps(data))
+            recv = eh_socket.recv()
+            eh_socket.close()
+            return recv
+
 
     def get_vmac_default(self, requester_id):
         " Keep track of VMACs to be returned for non SDN participants"
@@ -141,58 +164,12 @@ class ArpProxy():
         # TODO: We can create these mappings during init itself
         return ''
 
-    def parse_packet(self, raw_packet):
-        packet = packet[0]
-        eth_frame = self.parse_eth_frame(packet[0:eth_length])
-        arp_packet = self.parse_arp_packet(packet[eth_length:(eth_length+arp_length)])
 
-        return packet, eth_frame, arp_packet
+    def stop(self):
+        self.run = False
+        self.raw_socket.close()
+        self.listener_garp.close()
 
-    def parse_eth_frame(self, frame):
-        eth_detailed = struct.unpack("!6s6s2s", frame)
-
-        eth_frame = {"dst_mac": ':'.join('%02x' % ord(b) for b in eth_detailed[0]),
-                     "src_mac": ':'.join('%02x' % ord(b) for b in eth_detailed[1]),
-                     "type": eth_detailed[2]}
-        return eth_frame
-
-    def parse_arp_packet(self, packet):
-        arp_detailed = struct.unpack("2s2s1s1s2s6s4s6s4s", packet)
-
-        arp_packet = {"htype": arp_detailed[0],
-                      "ptype": arp_detailed[1],
-                      "hlen": arp_detailed[2],
-                      "plen": arp_detailed[3],
-                      "oper": arp_detailed[4],
-                      "src_mac": ':'.join('%02x' % ord(b) for b in arp_detailed[5]),
-                      "src_ip": socket.inet_ntoa(arp_detailed[6]),
-                      "dst_mac": ':'.join('%02x' % ord(b) for b in arp_detailed[7]),
-                      "dst_ip": socket.inet_ntoa(arp_detailed[8])}
-
-        return arp_packet
-
-    def craft_arp_packet(self, packet, dst_mac):
-        arp_packet = [
-            packet["htype"],
-            packet["ptype"],
-            packet["hlen"],
-            packet["plen"],
-            struct.pack("!h", 2),
-            binascii.unhexlify(dst_mac.replace(':', '')),
-            socket.inet_aton(packet["dst_ip"]),
-            binascii.unhexlify(packet["src_mac"].replace(':', '')),
-            socket.inet_aton(packet["src_ip"])]
-
-        return arp_packet
-
-    def craft_eth_frame(self, frame, dst_mac, data):
-        eth_frame = [
-            binascii.unhexlify(frame["src_mac"].replace(':', '')),
-            binascii.unhexlify(dst_mac.replace(':', '')),
-            frame["type"],
-            ''.join(data)]
-
-        return eth_frame
 
 ''' main '''
 if __name__ == '__main__':
