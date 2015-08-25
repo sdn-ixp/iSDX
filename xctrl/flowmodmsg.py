@@ -11,10 +11,11 @@ class FlowModMsgBuilder(object):
         self.flow_mods = []
 
     def add_flow_mod(self, mod_type, rule_type, priority, match, action):        
-        id = len(self.flow_mods)+1
+        cookie = len(self.flow_mods)+1
+        cookie_mask = 65535
 
         fm = { 
-               "id": id,
+               "cookie": (cookie, cookie_mask),
                "mod_type": mod_type,
                "rule_type": rule_type,
                "priority": priority,
@@ -24,7 +25,7 @@ class FlowModMsgBuilder(object):
 
         self.flow_mods.append(fm)
 
-        return id
+        return cookie
 
     def get_msg(self):
         msg = {
@@ -43,8 +44,8 @@ class FlowModMsgBuilder(object):
 #            "key": "xyz"
 #            }
 #     "flow_mods": [
-#            { "id": 1, 
-#              "mod_type": "add/remove",
+#            { "cookie": (1, 2**16-1),
+#              "mod_type": "insert/remove",
 #              "rule_type": "inbound/outbound/main",
 #              "priority": 1,
 #              "match" : {
@@ -66,8 +67,8 @@ class FlowModMsgBuilder(object):
 #                         "set_eth_dst": ("00:00:00:00:00:01","00:00:00:00:03:ff")
 #                         }
 #            },
-#            { "id": 2,
-#              "mod_type": "add/remove",
+#            { "cookie": (2, 2**16-1),
+#              "mod_type": "insert/remove",
 #              "rule_type": "inbound/outbound/main",
 #              "match" : {"tcp_dst" : 80},
 #              "action" : {"fwd": 3}
