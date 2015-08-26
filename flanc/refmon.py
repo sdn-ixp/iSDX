@@ -86,9 +86,6 @@ class RefMon(app_manager.RyuApp):
             if "flow_mods" in msg:
                 self.logger.info('refmon: process ' + str(len(msg["flow_mods"])) + ' flowmods from ' + str(origin))
                 for flow_mod in msg["flow_mods"]:
-
-                    print str(flow_mod)
-
                     if self.config.ofv == "1.0":
                         fm = OFP10FlowMod(self.config, origin, flow_mod)
                     elif self.config.ofv == "1.3":

@@ -167,6 +167,9 @@ class GSS(object):
         action = {"fwd": [dst]}
         self.fm_builder.add_flow_mod("insert", rule_type, DEFAULT_PRIORITY, match, action)
 
+    def delete_flow_rule(self, rule_type, cookie, cookie_mask):
+        self.fm_builder.delete_flow_mod("remove", rule_type, cookie, cookie_mask)
+
 class GSSmS(GSS):
     def __init__(self, sender, config):
         super(GSSmS, self).__init__(sender, config)

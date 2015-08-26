@@ -27,6 +27,15 @@ class FlowModMsgBuilder(object):
 
         return cookie
 
+    def delete_flow_mod(self, mod_type, rule_type, cookie, cookie_mask):
+        fm = {
+            "cookie": (cookie, cookie_mask),
+            "mod_type": mod_type,
+            "rule_type": rule_type,
+        }
+
+        self.flow_mods.append(fm)
+
     def get_msg(self):
         msg = {
                 "auth_info": {
