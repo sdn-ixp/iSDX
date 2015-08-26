@@ -142,7 +142,7 @@ class PConfig(object):
 class GenericClient():
     def __init__(self, address, port, key = ""):
         self.address = address
-        self.port = port
+        self.port = int(port)
         self.key = key
 
     def send(self, msg):
