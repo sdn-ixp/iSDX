@@ -91,7 +91,15 @@ class MDS(object):
 
         ### flood ARP requests
         match = {"eth_type": ETH_TYPE_ARP, "eth_dst": MAC_BROADCAST}
-        action = {"fwd": [OFPP_FLOOD]}
+
+        ports = []
+        for participant in self.config.peers.values():
+            for port in participant.ports:
+                ports.append(port.id)
+        ports.append(self.config.arp_proxy.ports[0].id)
+        ports.append(self.config.route_server.ports[0].id)
+
+        action = {"fwd": ports}
         self.fm_builder.add_flow_mod("insert", rule_type, ARP_PRIORITY, match, action)
 
     def handle_participant_with_outbound(self, rule_type):
