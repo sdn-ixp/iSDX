@@ -45,7 +45,7 @@ class FlowModMsgBuilder(object):
                 "flow_mods": self.flow_mods
               }
 
-        return json.dumps(msg)
+        return msg
 
 #  request body format:
 #    {"auth_info": {

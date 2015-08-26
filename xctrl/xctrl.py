@@ -8,7 +8,8 @@ import logging
 
 from threading import Thread
 
-from client import RefMonClient
+#from flowmodsender import FlowModSender # REST API
+from client import RefMonClient # Socket
 from lib import Config
 from gss import GSSmS, GSSmT
 from mds import MDSmS, MDSmT
@@ -20,6 +21,7 @@ class xCtrl(object):
 
         self.config = Config(config_file)
 
+        #self.client = FlowModSender(self.config.refmon["url"]) # REST API
         self.client = RefMonClient(self.config.refmon["address"], self.config.refmon["port"], self.config.refmon["key"])
 
         if self.config.vmac_mode == 0:

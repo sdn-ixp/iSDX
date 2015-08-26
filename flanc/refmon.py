@@ -3,18 +3,20 @@
 
 import os
 import logging
-import json
 
 from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import MAIN_DISPATCHER, DEAD_DISPATCHER 
 from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_0, ofproto_v1_3
+# REST API from ryu.app.wsgi import WSGIApplication
 from ryu import cfg
 
 from lib import MultiSwitchController, MultiTableController, Config, InvalidConfigError
 from ofp10 import FlowMod as OFP10FlowMod
 from ofp13 import FlowMod as OFP13FlowMod
+
+# REST API from rest import FlowModReceiver
 
 from server import Server
 
@@ -22,9 +24,14 @@ LOG = False
 
 class RefMon(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION, ofproto_v1_3.OFP_VERSION]
+    # REST API _CONTEXTS = { 'wsgi': WSGIApplication }
 
     def __init__(self, *args, **kwargs):
         super(RefMon, self).__init__(*args, **kwargs)
+
+        # Used for REST API
+        #wsgi = kwargs['wsgi']
+        #wsgi.register(FlowModReceiver, self)
 
         self.logger = logging.getLogger('ReferenceMonitor')
         self.logger.info('refmon: start')
@@ -55,7 +62,7 @@ class RefMon(app_manager.RyuApp):
     def close(self):
         self.logger.info('refmon: stop')
 
-        self.server.stop()
+        #self.server.stop()
 
     @set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
     def dp_state_change_handler(self, ev):
@@ -72,8 +79,6 @@ class RefMon(app_manager.RyuApp):
 
     def process_flow_mods(self, msg):
         self.logger.info('refmon: received flowmod request')
-
-        msg = json.loads(msg)
 
         # authorization
         if "auth_info" in msg:
@@ -92,3 +97,5 @@ class RefMon(app_manager.RyuApp):
                         fm = OFP13FlowMod(self.config, origin, flow_mod)
 
                     self.controller.process_flow_mod(fm)
+
+        return "TEST"

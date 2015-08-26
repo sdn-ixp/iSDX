@@ -4,12 +4,11 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 import logging
+import json
 
 from threading import Thread
 from multiprocessing import Queue
 from multiprocessing.connection import Listener
-
-LOG = False
 
 ''' Server of Reference Monitor to Receive Flow Mods '''
 class Server():
@@ -19,8 +18,7 @@ class Server():
         self.logger.info('server: start')
 
         self.refmon = refmon
-        #TODOself.listener = Listener((address, port), authkey=str(key))
-        self.listener = Listener((address, port))
+        self.listener = Listener((address, port), authkey=str(key))
 
     def start(self):
         self.receive = True
@@ -40,7 +38,7 @@ class Server():
                 except:
                     pass
             self.logger.info('server: received message')
-            self.refmon.process_flow_mods(msg)
+            self.refmon.process_flow_mods(json.loads(msg))
 
             conn.close()
             self.logger.info('server: closed connection')

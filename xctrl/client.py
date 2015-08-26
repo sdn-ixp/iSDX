@@ -13,13 +13,12 @@ LOG = False
 class RefMonClient():
     def __init__(self, address, port, key):
         self.address = address
-        self.port = port
+        self.port = int(port)
         self.key = key
 
     def send(self, msg):
-        #conn = Client((self.address, self.port), authkey=str(self.key))
-        conn = Client((self.address, self.port))
+        conn = Client((self.address, self.port), authkey=str(self.key))
 
-        conn.send(msg)
+        conn.send(json.dumps(msg))
 
         conn.close()
