@@ -6,7 +6,6 @@
 import sys
 sys.path.insert(0, '../xrs/')
 
-from bgp_interface import *
 
 #from ..xrs.bgp_interface import *
 

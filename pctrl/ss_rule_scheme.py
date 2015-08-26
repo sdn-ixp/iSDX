@@ -162,20 +162,21 @@ def init_inbound_rules(participant_id, policies, supersets):
 
 
     if LOG:
-        self.logger.info("INIT: -- Installing inbound switch rules --")
+        print "INIT: -- Installing inbound switch rules --"
 
 
     # do we even have inbound policies?
     if ('inbound' not in policies):
-        return None
+        return {}
+    else:
 
-    in_policies = policies['inbound']
+        in_policies = policies['inbound']
 
-    rules = build_inbound_rules_for(participant_id, in_policies, supersets)
+        rules = build_inbound_rules_for(participant_id, in_policies, supersets)
 
-    dp_msgs["changes"] = rules
+        dp_msgs["changes"] = rules
 
-    return dp_msgs
+        return dp_msgs
 
 
 
