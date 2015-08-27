@@ -7,8 +7,7 @@ This controller is in charge of pushing all the flow rules to the SDX fabric tha
 ```bash
 $ git checkout xrs
 $ cd ~/sdx-ryu/arproxy/
-$ python arproxy.py
+$ sudo python arproxy.py <example-name> (e.g sudo python arproxy.py simple)
 ```
 
-A sample config file (arproxy.cfg) is provided.
 Note: This module requires root permission to sniff all incoming packets on the `eth0` interface.  
