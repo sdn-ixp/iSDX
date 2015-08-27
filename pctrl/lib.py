@@ -8,6 +8,10 @@ from netaddr import *
 from multiprocessing.connection import Client
 from peer import BGPPeer as BGPPeer
 
+import sys
+sys.path.insert(0,'../xctrl')
+from flowmodmsg import FlowModMsgBuilder
+
 
 # from bgp_interface import get_all_participants_advertising
 
@@ -30,9 +34,9 @@ class PConfig(object):
         with open(config_file, 'r') as f:
             self.config = json.load(f)
 
-        parse_modes()
+        self.parse_modes()
 
-        parse_various()
+        self.parse_various()
 
 
 
@@ -60,7 +64,7 @@ class PConfig(object):
         nexthop_2_part = {}
 
         for part in config["Participants"]:
-            for port in config[part]["Ports"]:
+            for port in config["Participants"][part]["Ports"]:
                 nexthop = port["IP"]
                 nexthop_2_part[nexthop] = part
 
@@ -70,7 +74,7 @@ class PConfig(object):
     def parse_various(self):
         config = self.config
 
-        participant = config[self.id]
+        participant = config["Participants"][self.id]
 
         self.ports = participant["Ports"]
         self.port0_mac = self.ports[0]["MAC"]
@@ -87,7 +91,7 @@ class PConfig(object):
 
 
     def get_bgp_instance(self):
-        return BGPPeer(self.asn, self.ports, self.peers_in, self.peers_out)
+        return BGPPeer(self.id, self.asn, self.ports, self.peers_in, self.peers_out)
 
 
 
@@ -99,14 +103,14 @@ class PConfig(object):
         port    = conn_info["Port"]
         address = conn_info["IP"]
 
-        return GenericClient(address, port, mac)
+        return GenericClient(address, port)
 
 
 
     def get_eh_info(self):
         config = self.config
 
-        conn_info = config[self.id]["EH_SOCKET"]
+        conn_info = config["Participants"][self.id]["EH_SOCKET"]
 
         return tuple(conn_info)
 
@@ -119,7 +123,7 @@ class PConfig(object):
         port    = conn_info["Port"]
         address = conn_info["IP"]
 
-        key = config[self.id]["Flanc Key"]
+        key = config["Participants"][self.id]["Flanc Key"]
 
         return GenericClient(address, port, key)
 
@@ -142,7 +146,7 @@ class PConfig(object):
 class GenericClient():
     def __init__(self, address, port, key = ""):
         self.address = address
-        self.port = port
+        self.port = int(port)
         self.key = key
 
     def send(self, msg):
@@ -152,5 +156,3 @@ class GenericClient():
         conn.send(msg)
 
         conn.close()
-
-

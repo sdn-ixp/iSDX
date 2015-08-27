@@ -6,12 +6,16 @@ import os
 import sys
 import time
 
+from threading import Thread
+
 from multiprocessing.connection import Listener
 import json
 from netaddr import *
 import argparse
 from peer import BGPPeer as BGPPeer
-from supersets2 import SuperSets
+from supersets import SuperSets
+
+
 
 from ss_rule_scheme import *
 
@@ -33,7 +37,7 @@ class ParticipantController():
         self.id = id
 
         # Initialize participant params
-        self.cfg = PConfig(config_file)
+        self.cfg = PConfig(config_file, self.id)
         # Vmac encoding mode
         # self.cfg.vmac_mode = config_file["vmac_mode"]
         # Dataplane mode---multi table or multi switch
@@ -67,7 +71,6 @@ class ParticipantController():
         self.dp_pushed = []
         # Keep track of flow rules which are scheduled to be pushed
         self.dp_queued = []
-       
 
 
     def start(self):
@@ -97,7 +100,6 @@ class ParticipantController():
         self.push_dp()
 
 
-        
     def load_policies(self, policy_file):
         # Load policies from file
 
@@ -107,8 +109,8 @@ class ParticipantController():
         port_count = len(self.cfg.ports)
 
         # sanitize the input policies
-        if 'inbound' in policies:
-            for policy in policies['inbound']:
+        if 'inbound' in self.policies:
+            for policy in self.policies['inbound']:
                 if 'action' not in policy:
                     continue
                 if 'fwd' in policy['action']:
@@ -117,15 +119,13 @@ class ParticipantController():
                     policy['action']['fwd'] = 0
 
 
-
-
     def initialize_dataplane(self):
         "Read the config file and update the queued policy variable"
 
         rule_msgs = init_inbound_rules(self.id, self.policies, self.supersets)
 
-        self.dp_queued.extend(rule_msgs[changes])
-
+        if "changes" in rule_msgs:
+            self.dp_queued.extend(rule_msgs["changes"])
 
 
     def push_dp(self):
@@ -145,7 +145,6 @@ class ParticipantController():
 
         self.dp_queued = []
         self.refmon_client.send(self.fm_builder.get_msg())
-
 
 
     def stop(self):
@@ -192,10 +191,10 @@ class ParticipantController():
             # Process the event requesting change of participants' policies
             change_info = data['policy']
             '''
-            change_info = 
+            change_info =
             {
                 'removal_cookies' : [cookie1, ...], # Cookies of deleted policies
-                'new_policies' : 
+                'new_policies' :
                 {
                     <policy file format>
                 }
@@ -207,7 +206,6 @@ class ParticipantController():
         elif 'arp' in data:
             requested_vnh = data['arp']
             self.process_arp_request(requested_vnh)
-
 
 
     def process_policy_changes(self, change_info):
@@ -231,7 +229,7 @@ class ParticipantController():
 
         # add flow rules for the new policies
         if self.cfg.vmac_mode == SUPERSETS:
-            dp_msgs = ss_process_policy_change(self.supersets, add_policies, remove_policies, policies, 
+            dp_msgs = ss_process_policy_change(self.supersets, add_policies, remove_policies, policies,
                                                 self.port_count, self.port0_mac)
         else:
             dp_msgs = []
@@ -260,7 +258,6 @@ class ParticipantController():
                           "dst_mac":part_mac}
 
             self.arp_client.send(arp_fields)
-
 
 
     def process_bgp_route(self, route):
@@ -294,7 +291,7 @@ class ParticipantController():
                 wipe_msgs = self.msg_clear_all_outbound(self.policies)
                 self.dp_queued.extend(wipe_msgs)
 
-                #if a recomputation was needed, all VMACs must be reARPed 
+                #if a recomputation was needed, all VMACs must be reARPed
                 # TODO: confirm reARPed is a word
                 garp_required_vnhs = self.VNH_2_prefix.keys()
             else:
@@ -312,7 +309,7 @@ class ParticipantController():
             if LOG: print "Creating ctrlr messages for MDS scheme"
 
 
-        changed_vnhs, announcements = self.bgp_instance.bgp_update_peers(updates, 
+        changed_vnhs, announcements = self.bgp_instance.bgp_update_peers(updates,
                                         self.prefix_2_VNH, self.cfg.ports)
 
         """ Combine the VNHs which have changed BGP default routes with the
@@ -332,7 +329,6 @@ class ParticipantController():
             self.send_announcement(announcement)
 
         return reply
-
 
 
     def send_announcement(self, announcement):
@@ -363,25 +359,18 @@ class ParticipantController():
             if LOG: print "VNH assignment called for disjoint vmac_mode"
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('dir', help='the directory of the example')
     parser.add_argument('id', type=int,
                    help='participant id (integer)')
-    parser.add_argument('vmac_mode', type=int,
-                  help='VMAC encoding scheme: 0--Super Set, 1---Disjoint Set')
-    parser.add_argument('dp_mode', type=int,
-                    help='Data Plane Topology: 0--Multi Switch, 1---Multi Table')
     args = parser.parse_args()
 
     # locate config file
     # TODO: Separate the config files for each participant
     base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                 "..","examples",args.dir,"controller","sdx_config"))
-    config_file = os.path.join(base_path, "pctrlr.cfg")
-
-
+    config_file = os.path.join(base_path, "sdx_global.cfg")
 
     # locate the participant's policy file as well
     policy_filenames_file = os.path.join(base_path, "sdx_policies.cfg")
@@ -398,10 +387,9 @@ if __name__ == '__main__':
     print "Starting the controller ", str(args.id), " with config file: ", config_file
     print "And policy file: ", policy_file
 
-    sender = None
 
     # start controller
-    ctrlr = ParticipantController(args.id, args.vmac_mode, sender, args.dp_mode, config_file, policy_file)
+    ctrlr = ParticipantController(args.id, config_file, policy_file)
     ctrlr_thread = Thread(target=ctrlr.start)
     ctrlr_thread.daemon = True
     ctrlr_thread.start()

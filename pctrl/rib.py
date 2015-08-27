@@ -150,7 +150,7 @@ if __name__ == '__main__':
     
     #TODO Update test
     
-    myrib = rib()
+    myrib = rib('1.2.3.4', 'test')
     
     myrib['100.0.0.1/16'] = ('172.0.0.2', 'igp', '100, 200, 300', '0', 'false')
     #myrib['100.0.0.1/16'] = ['172.0.0.2', 'igp', '100, 200, 300', '0', 'false']
