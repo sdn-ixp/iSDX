@@ -2,7 +2,7 @@
 
 ## Mininext
 ```bash
-$ cd ~/sdx-ryu/examples/test-ms/mininext(
+$ cd ~/sdx-ryu/examples/test-ms/mininext
 $ sudo ./sdx_mininext.py
 ```
 
@@ -33,9 +33,6 @@ $ cd ~/sdx-ryu/xrs/
 $ sudo python route_server.py test-ms
 ```
 
-## Run ExaBGP
-exabgp ~/sdx-ryu/examples/test-ms/controller/sdx_config/bgp.conf
-
 ## Run pctrl
 
 ```bash
@@ -45,10 +42,12 @@ $ sudo python participant_controller.py test-ms 2
 $ sudo python participant_controller.py test-ms 3
 ```
 
+## Run ExaBGP
+exabgp ~/sdx-ryu/examples/test-ms/controller/sdx_config/bgp.conf
+
 ### Mininet with SDNIP
 
 ```bash
 $ cd ~/sdx-ryu/examples/test-ms/mininet/
 $ sudo ./simple_sdx.py
 ```
-
