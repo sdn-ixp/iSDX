@@ -1,6 +1,6 @@
 import struct
 import binascii
-
+import socket
 
 eth_length = 14
 arp_length = 28

@@ -5,20 +5,16 @@
 import os
 import sys
 import time
+import json
+import argparse
 
 from threading import Thread
-
 from multiprocessing.connection import Listener
-import json
 from netaddr import *
-import argparse
+
 from peer import BGPPeer as BGPPeer
 from supersets import SuperSets
-
-
-
 from ss_rule_scheme import *
-
 from lib import *
 
 LOG = True
@@ -144,7 +140,7 @@ class ParticipantController():
             self.dp_pushed.append(mod)
 
         self.dp_queued = []
-        self.refmon_client.send(self.fm_builder.get_msg())
+        self.refmon_client.send(json.dumps(self.fm_builder.get_msg()))
 
 
     def stop(self):
