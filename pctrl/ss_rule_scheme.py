@@ -161,10 +161,6 @@ def init_inbound_rules(participant_id, policies, supersets):
                     "changes": []}
 
 
-    if LOG:
-        print "INIT: -- Installing inbound switch rules --"
-
-
     # do we even have inbound policies?
     if ('inbound' not in policies):
         return {}

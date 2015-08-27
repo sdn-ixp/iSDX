@@ -31,6 +31,8 @@ class ParticipantController():
     def __init__(self, id, config_file, policy_file):
         # participant id
         self.id = id
+        # print ID for logging
+        self.idp = "P_" + str(self.id) + ":"
 
         # Initialize participant params
         self.cfg = PConfig(config_file, self.id)
@@ -56,11 +58,11 @@ class ParticipantController():
 
         # Superset related params
         if self.cfg.vmac_mode == SUPERSETS:
-            if LOG: print "Initializing SuperSets class"
+            if LOG: print self.idp, "Initializing SuperSets class"
             self.supersets = SuperSets(self)
         else:
             # TODO: create similar class and variables for MDS
-            if LOG: print "Initializing MDS class"
+            if LOG: print self.idp, "Initializing MDS class"
             self.mds = None
 
         # Keep track of flow rules pushed
@@ -71,7 +73,7 @@ class ParticipantController():
 
     def start(self):
         # Start all clients/listeners/whatevs
-        if LOG: print "Starting controller for participant", self.id
+        if LOG: print self.idp, "Starting controller for participant", self.id
 
         # ExaBGP Peering Instance
         self.bgp_instance = self.cfg.get_bgp_instance()
@@ -83,17 +85,19 @@ class ParticipantController():
          # class for building flow mod msgs to the reference monitor
         self.fm_builder = FlowModMsgBuilder(self.id, self.refmon_client.key)
 
-        # Start the event handler
-        eh_socket = self.cfg.get_eh_info()
-        self.listener_eh = Listener(eh_socket, authkey=None)
-        ps_thread = Thread(target=self.start_eh)
-        ps_thread.daemon = True
-        ps_thread.start()
-
 
         # Send flow rules for initial policies to the SDX's Reference Monitor
         self.initialize_dataplane()
         self.push_dp()
+
+
+        # Start the event handler
+        eh_socket = self.cfg.get_eh_info()
+        self.listener_eh = Listener(eh_socket, authkey=None)
+        self.start_eh()
+        #ps_thread = Thread(target=self.start_eh)
+        #ps_thread.daemon = True
+        #ps_thread.start()
 
 
     def load_policies(self, policy_file):
@@ -118,6 +122,8 @@ class ParticipantController():
     def initialize_dataplane(self):
         "Read the config file and update the queued policy variable"
 
+        if LOG: print self.idp, "Initializing inbound rules"
+
         rule_msgs = init_inbound_rules(self.id, self.policies, self.supersets)
 
         if "changes" in rule_msgs:
@@ -130,7 +136,7 @@ class ParticipantController():
         (2) Send the queued policies to reference monitor
         '''
 
-        if LOG: print "Pushing current flow mod queue."
+        if LOG: print self.idp, "Pushing current flow mod queue."
 
         # it is crucial that dp_queued is traversed chronologically
         for flowmod in self.dp_queued:
@@ -145,7 +151,7 @@ class ParticipantController():
 
     def stop(self):
         "Stop the Participants' SDN Controller"
-        if LOG: print "Ending controller for participant", self.id
+        if LOG: print self.idp, "Stopping Controller."
 
         # TODO: confirm that this isn't silly
         self.xrs_client = None
@@ -158,11 +164,15 @@ class ParticipantController():
 
     def start_eh(self):
         '''Socket listener for network events '''
-        if LOG: print "Event Handler started for", self.id
+        if LOG: print self.idp, "Event Handler started."
         while True:
+            if LOG: print self.idp, "EH waiting for connection..."
             conn_eh = self.listener_eh.accept()
+            if LOG: print self.idp, "EH established connection..."
             tmp = conn.recv()
             data = json.loads(tmp)
+
+            if LOG: print self.idp, "Event received of type", data.keys()
 
             # Starting a thread for independently processing each incoming network event
             event_processor_thread = Thread(target = process_event, args = [data])
@@ -302,7 +312,7 @@ class ParticipantController():
 
         else:
             # TODO: similar logic for MDS
-            if LOG: print "Creating ctrlr messages for MDS scheme"
+            if LOG: print self.idp, "Creating ctrlr messages for MDS scheme"
 
 
         changed_vnhs, announcements = self.bgp_instance.bgp_update_peers(updates,
@@ -329,7 +339,7 @@ class ParticipantController():
 
     def send_announcement(self, announcement):
         "Send the announcements to XRS"
-        print "Sending the announcements"
+        if LOG: print self.idp, "Sending announcements to XRS."
 
         self.xrs_client.send(announcement)
 
@@ -352,7 +362,7 @@ class ParticipantController():
         else:
             "Disjoint"
             # TODO: @Robert: Place your logic here for VNH assignment for MDS scheme
-            if LOG: print "VNH assignment called for disjoint vmac_mode"
+            if LOG: print self.idp, "VNH assignment called for disjoint vmac_mode"
 
 
 if __name__ == '__main__':
@@ -380,8 +390,10 @@ if __name__ == '__main__':
 
     policy_file = os.path.join(policy_path, policy_filename)
 
-    print "Starting the controller ", str(args.id), " with config file: ", config_file
-    print "And policy file: ", policy_file
+    idp = "P_" + str(args.id) + ":"
+
+    print idp, "Starting controller with config file: ", config_file
+    print idp, "and policy file: ", policy_file
 
 
     # start controller
