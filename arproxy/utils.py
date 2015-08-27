@@ -59,7 +59,7 @@ def craft_eth_frame(frame, dst_mac, data):
     return eth_frame
 
 
-def craft_garp_reponse(vnhip, dstip, vmac_addr, dst_mac):
+def craft_garp_response(vnhip, dstip, vmac_addr, dst_mac):
     "Craft Gratuitous ARP Response Message"
     arp_packet = [
         # HTYPE

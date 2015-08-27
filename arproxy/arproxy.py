@@ -14,6 +14,7 @@ from threading import Thread,Event
 
 from multiprocessing.connection import Listener, Client
 
+from utils import parse_packet, parse_eth_frame, parse_arp_packet, craft_arp_packet, craft_eth_frame, craft_garp_response
 
 ETH_BROADCAST = 'ff:ff:ff:ff:ff:ff'
 ETH_TYPE_ARP = 0x0806
@@ -155,7 +156,7 @@ class ArpProxy():
             - dstmac: Mac address of the interface for which this response is crafted
             - dstip: IP address of the target interface (?)
         """
-        garp_message = craft_garp_reponse(data['vnhip'], data['dstip'],
+        garp_message = craft_garp_response(data['vnhip'], data['dstip'],
                                         data['dstmac'], data['vmac'])
         self.raw_socket.send(garp_message)
 
