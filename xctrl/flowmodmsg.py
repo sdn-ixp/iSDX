@@ -10,12 +10,12 @@ class FlowModMsgBuilder(object):
         self.key = key
         self.flow_mods = []
 
-    def add_flow_mod(self, mod_type, rule_type, priority, match, action):        
-        cookie = len(self.flow_mods)+1
-        cookie_mask = 65535
+    def add_flow_mod(self, mod_type, rule_type, priority, match, action, cookie = None):        
+        if cookie is None:
+            cookie = (len(self.flow_mods)+1, 65535)
 
         fm = { 
-               "cookie": (cookie, cookie_mask),
+               "cookie": cookie,
                "mod_type": mod_type,
                "rule_type": rule_type,
                "priority": priority,

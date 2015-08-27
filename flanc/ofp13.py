@@ -30,8 +30,12 @@ class FlowMod():
 
     def validate_flow_mod(self, flow_mod):
         if "cookie" in flow_mod:
-            self.cookie["cookie"] = int('{0:016b}'.format(int(self.origin))+'{0:016b}'.format(int(flow_mod["cookie"][0])),2)
-            self.cookie["mask"] = int('{0:016b}'.format(2**16-1) + '{0:016b}'.format(flow_mod["cookie"][1]),2)
+            if len(flow_mod["cookie"]) > 1:
+                self.cookie["cookie"] = int('{0:016b}'.format(int(self.origin))+'{0:016b}'.format(int(flow_mod["cookie"][0])),2)
+                self.cookie["mask"] = int('{0:016b}'.format(2**16-1) + '{0:016b}'.format(flow_mod["cookie"][1]),2)
+            else:
+                self.cookie["cookie"] = int('{0:016b}'.format(int(self.origin))+'{0:016b}'.format(int(flow_mod["cookie"])),2)
+                self.cookie["mask"] = 2**32-1
             if ("mod_type" in flow_mod and flow_mod["mod_type"] in self.mod_types):
                 self.mod_type = flow_mod["mod_type"]
                 if ("rule_type" in flow_mod and flow_mod["rule_type"] in self.rule_types):

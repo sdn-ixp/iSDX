@@ -1,12 +1,12 @@
 import struct
 import binascii
-
+import socket
 
 eth_length = 14
 arp_length = 28
 
 def parse_packet(raw_packet):
-    packet = packet[0]
+    packet = raw_packet[0]
     eth_frame = parse_eth_frame(packet[0:eth_length])
     arp_packet = parse_arp_packet(packet[eth_length:(eth_length+arp_length)])
 
@@ -59,7 +59,7 @@ def craft_eth_frame(frame, dst_mac, data):
     return eth_frame
 
 
-def craft_garp_reponse(vnhip, dstip, vmac_addr, dst_mac):
+def craft_garp_response(vnhip, dstip, vmac_addr, dst_mac):
     "Craft Gratuitous ARP Response Message"
     arp_packet = [
         # HTYPE

@@ -2,7 +2,7 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 
-import ss_lib
+from ss_lib import *
 
 LOG = True
 
@@ -68,7 +68,7 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
 
             rule = {"rule_type":"outbound", "priority":OUTBOUND_HIT_PRIORITY,
                     "match":match_args , "action":actions, "mod_type":"insert",
-                    "cookie":policy["cookie"]}
+                    "cookie":(policy["cookie"],2**16-1)}
 
             dp_msgs["changes"].append(rule)
 
@@ -111,7 +111,7 @@ def build_outbound_rules_for(out_policies, ss_instance, my_mac):
 
             rule = {"rule_type":"outbound", "priority":OUTBOUND_HIT_PRIORITY,
                     "match":match_args , "action":actions, "mod_type":"insert",
-                    "cookie":policy["cookie"]}
+                    "cookie":(policy["cookie"],2**16-1)}
 
             rules.append(rule)
 
@@ -147,11 +147,11 @@ def build_inbound_rules_for(participant_id, in_policies, supersets):
 
         rule = {"rule_type":"inbound", "priority":INBOUND_HIT_PRIORITY,
                 "match":match_args, "action":actions, "mod_type":"insert",
-                "cookie":policy["cookie"]}
+                "cookie":(policy["cookie"],2**16-1)}
 
         rules.append(rule)
 
-    return dp_msgs
+    return rules
 
 
 
