@@ -84,7 +84,7 @@ CONF.register_cli_opts([
 ], group='test-switch')
 
 CONF.register_cli_opts([
-    # aSDX
-    cfg.StrOpt('dir', default='simple',
-               help='directory where the example resides'),
-], group='asdx')
+    # refmon
+    cfg.StrOpt('config', default=None,
+               help='path of config file'),
+], group='refmon')
