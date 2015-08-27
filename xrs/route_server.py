@@ -68,7 +68,8 @@ class route_server():
                 # Received BGP route advertisement from ExaBGP
                 for id, peer in self.participants.iteritems():
                     # Apply the filtering logic
-                    advertiser_ip = route['neighbor']
+                    advertiser_ip = route['neighbor']['ip']
+                    print "Advertiser IP:", advertiser_ip
                     advertise_id = self.portip_2_participant[advertiser_ip]
                     if id in self.participants[advertise_id].peers_out and advertise_id in self.participants[id].peers_in:
                         # Now send this route to participant `id`'s controller'
@@ -115,7 +116,8 @@ class route_server():
             # TODO: Make sure this is not an insane assumption
             peers_in = peers_out
 
-            eh_socket = tuple(participant["EH_SOCKET"])
+            temp = participant["EH_SOCKET"]
+            eh_socket = (str(temp[0]), int(temp[1]))
 
             # create peer and add it to the route server environment
             self.participants[int(participant_name)] = XRSPeer(asn, ports, peers_in, peers_out, eh_socket)
@@ -147,7 +149,8 @@ class route_server():
         # TODO: Explore what is better, persistent client sockets or
         # new socket for each BGP update
         "Send this BGP route to participant id's controller"
-        conn = Client(self.participants[id].eh_socket, authkey = None)
+        print "EH Socket:", self.participants[id].eh_socket
+        conn = Client(tuple(self.participants[id].eh_socket), authkey = None)
         data = {}
         data['bgp'] = route
         conn.send(json.dumps(data))
