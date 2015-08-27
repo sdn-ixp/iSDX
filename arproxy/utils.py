@@ -6,7 +6,7 @@ eth_length = 14
 arp_length = 28
 
 def parse_packet(raw_packet):
-    packet = packet[0]
+    packet = raw_packet[0]
     eth_frame = parse_eth_frame(packet[0:eth_length])
     arp_packet = parse_arp_packet(packet[eth_length:(eth_length+arp_length)])
 
