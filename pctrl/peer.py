@@ -7,7 +7,7 @@ import json
 import sqlite3
 
 from rib import rib
-from decision_process import decision_process
+from decision_process import decision_process, best_path_selection
 
 class BGPPeer():
 

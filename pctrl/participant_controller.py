@@ -59,7 +59,7 @@ class ParticipantController():
         # Superset related params
         if self.cfg.vmac_mode == SUPERSETS:
             if LOG: print self.idp, "Initializing SuperSets class"
-            self.supersets = SuperSets(self)
+            self.supersets = SuperSets(self, config_file=config_file)
         else:
             # TODO: create similar class and variables for MDS
             if LOG: print self.idp, "Initializing MDS class"
@@ -169,13 +169,13 @@ class ParticipantController():
             if LOG: print self.idp, "EH waiting for connection..."
             conn_eh = self.listener_eh.accept()
             if LOG: print self.idp, "EH established connection..."
-            tmp = conn.recv()
+            tmp = conn_eh.recv()
             data = json.loads(tmp)
 
             if LOG: print self.idp, "Event received of type", data.keys()
 
             # Starting a thread for independently processing each incoming network event
-            event_processor_thread = Thread(target = process_event, args = [data])
+            event_processor_thread = Thread(target = self.process_event, args = [data])
             event_processor_thread.daemon = True
             event_processor_thread.start()
 

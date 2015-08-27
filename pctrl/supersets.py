@@ -1,39 +1,35 @@
 #!/usr/bin/env python
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
+#  Robert MacDavid (Princeton)
 
-
-import sys
-sys.path.insert(0, '../xrs/')
-
-
-#from ..xrs.bgp_interface import *
+import json
 
 from ss_lib import *
 
 
-LOG = False
+LOG = True
 
 class SuperSets():
-    def __init__(self, pctrl, config = None):
+    def __init__(self, pctrl, config_file = None):
         self.max_bits = 30
         self.max_initial_bits = 26
         self.best_path_size = 16
         self.VMAC_size = 48
-        if config is not None:
-            self.max_bits = config()
-            {
-                "Participant Field": 31,
-                "Next Hop Field": 12,
-                "Port Field": 10,
-                "VMAC Size": 48
-        }
+        if config_file is not None:
+
+            if LOG: print pctrl.idp, "Initializing SuperSets with config file."
+
             with open(config_file, 'r') as f:
                 config = json.load(f)
-                self.max_bits =         config["max_bits"]
-                self.max_initial_bits = config["max_initial_bits"]
-                self.best_path_size =   config["best_path_size"]
-                self.VMAC_size =        config["vmac_size"]
+                config = config["VMAC"]["Options"]
+                self.max_bits =         config["Superset Bits"]
+                self.max_initial_bits = self.max_bits - 4
+                self.best_path_size =   config["Next Hop Bits"]
+                self.VMAC_size =        config["VMAC Size"]
+
+        else:
+            if LOG: print pctrl.idp, "Initializing SuperSets WITHOUT config file."
 
         # this is decided each time a recomputation occurs
         self.mask_size = 0
@@ -77,17 +73,19 @@ class SuperSets():
     def update_supersets(self, pctrl, updates):
         policies = pctrl.policies
 
+        if LOG: print pctrl.idp, "Updating supersets..."
+
         sdx_msgs = {"type": "update",
                     "changes": [], "prefixes": []}
 
         # the list of prefixes who will have changed VMACs
         impacted_prefixes = []
 
-        self.rulecounts = self.recompute_rulecounts(policies)
+        self.rulecounts = self.recompute_rulecounts(pctrl)
 
         # if supersets haven't been computed at all yet
         if len(self.supersets) == 0:
-            sdx_msgs = initial_computation(pctrl)
+            sdx_msgs = self.initial_computation(pctrl)
             return sdx_msgs
 
 
@@ -119,7 +117,7 @@ class SuperSets():
 
             # if no merge is possible, recompute from scratch
             if expansion_index == -1:
-                self.recompute_all_supersets()
+                self.recompute_all_supersets(pctrl)
 
                 sdx_msgs = {"type": "new",
                             "changes": []}
@@ -155,6 +153,9 @@ class SuperSets():
 
 
     def recompute_all_supersets(self, pctrl):
+
+        if LOG: print pctrl.idp, "~Recomputing all Supersets...",
+
         self.rulecounts = self.recompute_rulecounts(pctrl)
         # get all sets of participants advertising the same prefix
         peer_sets = get_prefix2part_sets(pctrl)
@@ -172,40 +173,8 @@ class SuperSets():
         if len(self.supersets) > 1:
             self.mask_size -= math.ceil(math.log(len(self.supersets)-1, 2))
 
+        if LOG: print "done.~"
 
-
-
-    def get_prefix2part_sets(self, pctrl):
-        prefixes = pctrl.prefix_2_VNH.keys()
-
-        groups = []
-
-        for prefix in prefixes:
-            group = get_all_participants_advertising(pctrl, prefix)
-            groups.append(group)
-
-        return groups
-
-
-
-
-    def get_all_participants_advertising(self, pctrl, prefix):
-        bgp_instance = pctrl.bgp_instance
-        nexthop_2_part = pctrl.nexthop_2_part
-
-        routes = bgp_instance.get_routes(self,'input',prefix)
-
-        parts = set([])
-
-
-        for route in routes:
-            # first part of the returned tuple is next hop
-            next_hop = route[0]
-
-            if next_hop in nexthop_2_part:
-                parts.add(nexthop_2_part[next_hop])
-
-        return parts
 
 
     def get_vmac(self, pctrl, vnh):
@@ -273,6 +242,39 @@ class SuperSets():
         vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,self.VMAC_size/4,2)])
 
         return vmac_addr
+
+
+def get_prefix2part_sets(pctrl):
+    prefixes = pctrl.prefix_2_VNH.keys()
+
+    groups = []
+
+    for prefix in prefixes:
+        group = get_all_participants_advertising(pctrl, prefix)
+        groups.append(group)
+
+    return groups
+
+
+
+
+def get_all_participants_advertising(pctrl, prefix):
+    bgp_instance = pctrl.bgp_instance
+    nexthop_2_part = pctrl.nexthop_2_part
+
+    routes = bgp_instance.get_routes('input',prefix)
+
+    parts = set([])
+
+
+    for route in routes:
+        # first part of the returned tuple is next hop
+        next_hop = route[0]
+
+        if next_hop in nexthop_2_part:
+            parts.add(nexthop_2_part[next_hop])
+
+    return parts
 
 
 

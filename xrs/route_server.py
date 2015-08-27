@@ -19,12 +19,14 @@ from core import XRS, XRSPeer
 
 
 
-LOG = False
+LOG = True
 
 class route_server():
 
     def __init__(self, config_file):
-        print "Initialize the Route Server"
+        self.idp = "XRS:"
+
+        if LOG: print self.idp, "Initializing the Route Server."
 
         # Init the Route Server
         self.server = None
@@ -56,7 +58,7 @@ class route_server():
 
 
     def start(self):
-        print "Starting the Server to handle incoming BGP Updates"
+        if LOG: print self.idp, "Starting the Server to handle incoming BGP Updates."
         self.server.start()
 
         while self.run:
@@ -65,23 +67,26 @@ class route_server():
                 route = self.server.receiver_queue.get(True, 1)
                 route = json.loads(route)
 
+                if LOG: print self.idp, "Got route from ExaBGP."
+
                 # Received BGP route advertisement from ExaBGP
                 for id, peer in self.participants.iteritems():
                     # Apply the filtering logic
                     advertiser_ip = route['neighbor']['ip']
-                    print "Advertiser IP:", advertiser_ip
                     advertise_id = self.portip_2_participant[advertiser_ip]
                     if id in self.participants[advertise_id].peers_out and advertise_id in self.participants[id].peers_in:
                         # Now send this route to participant `id`'s controller'
                         self.send_update(id, route)
 
             except Queue.Empty:
-                if LOG:
-                    print "Empty Queue"
+                if LOG: print self.idp, "Empty Queue."
 
 
     def parse_config(self, config_file):
         # loading config file
+
+        if LOG: print self.idp, "Parsing config...",
+
         config = json.load(open(config_file, 'r'))
 
         self.ah_socket = tuple(config["Route Server"]["AH_SOCKET"])
@@ -122,10 +127,14 @@ class route_server():
             # create peer and add it to the route server environment
             self.participants[int(participant_name)] = XRSPeer(asn, ports, peers_in, peers_out, eh_socket)
 
+        if LOG: print "done."
+
 
     def set_announcement_handler(self):
         '''Start the listener socket for BGP Announcements'''
-        #print "set_announcement_handler() called"
+
+        if LOG: print self.idp, "Starting the announcement handler..."
+
         self.listener_eh = Listener(self.ah_socket, authkey=None)
         ps_thread = Thread(target=self.start_ah)
         ps_thread.daemon = True
@@ -134,10 +143,15 @@ class route_server():
 
     def start_ah(self):
         '''Announcement Handler '''
-        print "Announcement Handler started "
+
+        if LOG: print self.idp, "Announcement Handler started."
+
         while True:
             conn_ah = self.listener_eh.accept()
             tmp = conn.recv()
+
+            if LOG: print self.idp, "Received an announcement."
+
             announcement = json.loads(tmp)
             self.server.sender_queue.put(announcement)
             reply = "Announcement processed"
@@ -149,7 +163,7 @@ class route_server():
         # TODO: Explore what is better, persistent client sockets or
         # new socket for each BGP update
         "Send this BGP route to participant id's controller"
-        print "EH Socket:", self.participants[id].eh_socket
+        if LOG: print self.idp, "Sending a route update to participant", id
         conn = Client(tuple(self.participants[id].eh_socket), authkey = None)
         data = {}
         data['bgp'] = route
@@ -159,10 +173,9 @@ class route_server():
 
 
     def stop(self):
-        self.run = False
-        self.sdx_ap.stop()
-        self.ap_thread.join()
 
+        if LOG: print self.idp, "Stopping."
+        self.run = False
 
 def main(argv):
     # locate config file
