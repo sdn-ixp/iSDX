@@ -23,10 +23,10 @@ class SuperSets():
             with open(config_file, 'r') as f:
                 config = json.load(f)
                 config = config["VMAC"]["Options"]
-                self.max_bits =         config["Superset Bits"]
+                self.max_bits =         int(config["Superset Bits"])
                 self.max_initial_bits = self.max_bits - 4
-                self.best_path_size =   config["Next Hop Bits"]
-                self.VMAC_size =        config["VMAC Size"]
+                self.best_path_size =   int(config["Next Hop Bits"])
+                self.VMAC_size =        int(config["VMAC Size"])
 
         else:
             if LOG: print pctrl.idp, "Initializing SuperSets WITHOUT config file."
@@ -40,14 +40,15 @@ class SuperSets():
 
         self.recompute_all_supersets(pctrl)
 
-        sdx_msgs = {"type": "new",
-                    "changes": []}
+        changes = []
 
         for ss_id, superset in enumerate(self.supersets):
             for part_index, participant in enumerate(superset):
-                sdx_msgs["changes"].append({"participant_id": participant,
+                changes.append({"participant_id": participant,
                                            "superset": ss_id,
                                            "position": part_index})
+
+        sdx_msgs = {"type":"new", "changes":changes}
 
         return sdx_msgs
 
@@ -75,8 +76,7 @@ class SuperSets():
 
         if LOG: print pctrl.idp, "Updating supersets..."
 
-        sdx_msgs = {"type": "update",
-                    "changes": [], "prefixes": []}
+        sdx_msgs = {"type": "update", "changes": []}
 
         # the list of prefixes who will have changed VMACs
         impacted_prefixes = []
@@ -86,7 +86,7 @@ class SuperSets():
         # if supersets haven't been computed at all yet
         if len(self.supersets) == 0:
             sdx_msgs = self.initial_computation(pctrl)
-            return sdx_msgs
+            return (sdx_msgs, impacted_prefixes)
 
 
         for update in updates:
@@ -109,8 +109,6 @@ class SuperSets():
             if is_subset_of_superset(new_set, self.supersets):
                 continue
 
-            sdx_msgs["prefixes"].append(prefix)
-
             expansion_index = best_ss_to_expand_greedy(new_set, self.supersets,
                                                 self.rulecounts, self.mask_size)
 
@@ -119,8 +117,7 @@ class SuperSets():
             if expansion_index == -1:
                 self.recompute_all_supersets(pctrl)
 
-                sdx_msgs = {"type": "new",
-                            "changes": []}
+                sdx_msgs = {"type": "new", "changes": []}
 
                 for superset in self.supersets:
                     for participant in superset:
@@ -148,7 +145,7 @@ class SuperSets():
 
 
         # check which participants joined a new superset and communicate to the SDX controller
-        return sdx_msgs, impacted_prefixes
+        return (sdx_msgs, impacted_prefixes)
 
 
 
@@ -195,7 +192,9 @@ class SuperSets():
 
 
         # first part of the returned tuple is next hop
-        next_hop = bgp_instance.get_route('local', prefix)[0]
+        route = bgp_instance.get_route('local', prefix)
+        print "::ROUTE::", route
+        next_hop = route[1]
         if next_hop not in nexthop_2_part:
             if LOG: print "Next Hop", next_hop, "not found in get_vmac call!"
             return vmac_addr
@@ -207,7 +206,7 @@ class SuperSets():
         # find the superset it belongs to
         ss_id = -1
         for i, superset in enumerate(self.supersets):
-            if prefix_set.issubset():
+            if prefix_set.issubset(superset):
                 ss_id = i
                 break
         if ss_id == -1:

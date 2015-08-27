@@ -247,7 +247,7 @@ class ParticipantController():
         return 0
 
 
-    def process_arp_request(self, requested_vnh):
+    def process_arp_request(self, vnh):
         vmac = ""
         if self.cfg.vmac_mode == SUPERSETS:
             vmac = self.supersets.get_vmac(self, vnh)
@@ -287,14 +287,12 @@ class ParticipantController():
             # ss_changed_prefs are prefixes for which the VMAC bits have changed
             # these prefixes must have gratuitous arps sent
 
+            if LOG: print self.idp, "SS Changes:", ss_changes
 
-            "Map the superset expansions to a list of new flow rules."
-            flow_msgs = update_outbound_rules(ss_changes, self.policies,
-                                              self.supersets, self.port0_mac)
 
             "If a recomputation event was needed, wipe out the flow rules."
-            if flow_msgs["type"] == "new":
-                wipe_msgs = self.msg_clear_all_outbound(self.policies)
+            if ss_changes["type"] == "new":
+                wipe_msgs = msg_clear_all_outbound(self.policies, self.port0_mac)
                 self.dp_queued.extend(wipe_msgs)
 
                 #if a recomputation was needed, all VMACs must be reARPed
@@ -302,10 +300,15 @@ class ParticipantController():
                 garp_required_vnhs = self.VNH_2_prefix.keys()
             else:
                 # if recomputation wasn't needed, only garp next-hops with changed VMACs
-                garp_required_vnhs = [prefix_2_VNH[prefix] for prefix in ss_changed_prefs]
+                garp_required_vnhs = [self.prefix_2_VNH[prefix] for prefix in ss_changed_prefs]
+
+
+            "Map the superset changes to a list of new flow rules."
+            flow_msgs = update_outbound_rules(ss_changes, self.policies,
+                                              self.supersets, self.port0_mac)
 
             "Dump the new rules into the dataplane queue."
-            self.dp_queued.extend(flow_msgs["changes"])
+            self.dp_queued.extend(flow_msgs)
 
 
         ################## END SUPERSET RESPONSE ##################

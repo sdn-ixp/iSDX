@@ -112,6 +112,7 @@ class BGPPeer():
                 if ('ipv4 unicast' in announce):
                     for next_hop in announce['ipv4 unicast'].keys():
                         for prefix in announce['ipv4 unicast'][next_hop].keys():
+                            print "::::PREFIX:::::", prefix
                             self.rib["input"][prefix] = (next_hop,
                                                          origin,
                                                          as_path,
@@ -189,9 +190,12 @@ class BGPPeer():
                 prefix = update['announce']['prefix']
             else:
                 prefix = update['withdraw']['prefix']
+
             prev_route = self.rib["output"][prefix]
+            #prev_route["next_hop"] = str(prefix_2_VNH[prefix])
+
             best_route = self.rib["local"][prefix]
-            best_route["next_hop"] = str(prefix_2_VNH[prefix])
+            #best_route["next_hop"] = str(prefix_2_VNH[prefix])
 
             if ('announce' in update):
                 # Check if best path has changed for this prefix
@@ -206,8 +210,9 @@ class BGPPeer():
                     # announce the route to each router of the participant
                     for port in ports:
                         # TODO: Create a sender queue and import the announce_route function
+
                         announcements.append(announce_route(port["IP"], prefix,
-                                            best_route["next_hop"], best_route["as_path"]))
+                                            prefix_2_VNH[prefix], best_route["as_path"]))
 
             elif ('withdraw' in update):
                 # A new announcement is only needed if the best path has changed
@@ -224,7 +229,7 @@ class BGPPeer():
 
                         for port in ports:
                             announcements.append(announce_route(port["IP"],
-                                                 prefix, best_route["next_hop"],
+                                                 prefix, prefix_2_VNH[prefix],
                                                  best_route["as_path"]))
 
                 else:

@@ -21,11 +21,10 @@ INBOUND_MISS_PRIORITY = 1
 
 # create new outbound rules in response to superset changes
 def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
-    dp_msgs = {"type": "add",
-                    "changes": []}
+    rules = []
 
     if 'outbound' not in policies:
-        return dp_msgs
+        return rules
 
     outbound = policies['outbound']
 
@@ -41,9 +40,6 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
             part_2_policy[part].append(policy)
 
 
-    # if the supersets needed to be recomputed
-    if sdx_msgs["type"] == "new":
-        dp_msgs["type"] = "new"
 
     updates = sdx_msgs["changes"]
     for update in updates:
@@ -70,9 +66,9 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
                     "match":match_args , "action":actions, "mod_type":"insert",
                     "cookie":(policy["cookie"],2**16-1)}
 
-            dp_msgs["changes"].append(rule)
+            rules.append(rule)
 
-
+    return rules
 
 
 
@@ -176,7 +172,7 @@ def init_inbound_rules(participant_id, policies, supersets):
 
 
 
-def msg_clear_all_outbound(policies):
+def msg_clear_all_outbound(policies, port0_mac):
     "Construct and return a flow mod which removes all our outbound rules"
     mods = []
 
