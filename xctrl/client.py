@@ -17,7 +17,8 @@ class RefMonClient():
         self.key = key
 
     def send(self, msg):
-        conn = Client((self.address, self.port), authkey=str(self.key))
+        #conn = Client((self.address, self.port), authkey=str(self.key))
+        conn = Client((self.address, self.port))
 
         conn.send(json.dumps(msg))
 
