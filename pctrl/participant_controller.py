@@ -135,9 +135,9 @@ class ParticipantController():
         # it is crucial that dp_queued is traversed chronologically
         for flowmod in self.dp_queued:
 
-            self.fm_builder.add_flow_mod(**mod)
+            self.fm_builder.add_flow_mod(**flowmod)
 
-            self.dp_pushed.append(mod)
+            self.dp_pushed.append(flowmod)
 
         self.dp_queued = []
         self.refmon_client.send(json.dumps(self.fm_builder.get_msg()))
