@@ -5,7 +5,7 @@ and the `pctrlr` module respectively. It receives BGP updates from the `exaBGP` 
 forwards them to the `pctrlr`. It also receives announcements from the `pctrlr` which
 it forwards to the `exaBGP` module.
 
-## Run arproxy
+## Run xrs
 
 ```bash
 $ git checkout xrs
