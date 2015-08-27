@@ -1,4 +1,4 @@
-# xrs - SDX RS
+# pctrl - Participants' SDX Controller
 
 This module is in charge of running an `event handler` for each SDX participant. This `event handler`
 receives network events from `xrs` module (BGP updates), `arproxy` module (ARP requests), and participants's
