@@ -37,17 +37,19 @@ class SuperSets():
 
 
     def initial_computation(self, pctrl):
+        print pctrl.idp, "&& SUPERSET Init"
 
         self.recompute_all_supersets(pctrl)
 
         changes = []
 
         for ss_id, superset in enumerate(self.supersets):
+            print pctrl.idp, "&& SUPERSET loop", ss_id, superset
             for part_index, participant in enumerate(superset):
                 changes.append({"participant_id": participant,
                                            "superset": ss_id,
                                            "position": part_index})
-
+                print pctrl.idp, "&& SUPERSET loop2", part_index, participant
         sdx_msgs = {"type":"new", "changes":changes}
 
         return sdx_msgs
