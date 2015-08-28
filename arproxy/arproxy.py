@@ -67,7 +67,7 @@ class ArpProxy():
 
             for participant_id in config["Participants"]:
                 participant = config["Participants"][participant_id]
-                
+
                 self.participants[participant_id] = {}
                 # Create Persistent Client Object
                 #self.participants[participant_id]["eh_socket"] = Client(tuple([participant["EH_SOCKET"][0], int(participant["EH_SOCKET"][1])]), authkey = None)
@@ -123,6 +123,7 @@ class ArpProxy():
                     """
 
             except socket.timeout:
+                LOG = False
                 if LOG:
                     print 'Socket Timeout Occured'
 
@@ -140,7 +141,8 @@ class ArpProxy():
         print "Gratuitous ARP Handler started "
         while True:
             conn_ah = self.listener_garp.accept()
-            tmp = conn.recv()
+            print "GARP: connection accepted"
+            tmp = conn_ah.recv()
             self.process_garp(json.loads(tmp))
             reply = "Gratuitous ARP response processed"
             conn_ah.send(reply)
@@ -156,6 +158,7 @@ class ArpProxy():
             - dstmac: Mac address of the interface for which this response is crafted
             - dstip: IP address of the target interface (?)
         """
+        print "GARP received: ", data
         garp_message = craft_garp_response(data['vnhip'], data['dstip'],
                                         data['dstmac'], data['vmac'])
         self.raw_socket.send(garp_message)

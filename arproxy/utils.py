@@ -2,6 +2,9 @@ import struct
 import binascii
 import socket
 
+ETH_BROADCAST = 'ff:ff:ff:ff:ff:ff'
+ETH_TYPE_ARP = 0x0806
+
 eth_length = 14
 arp_length = 28
 

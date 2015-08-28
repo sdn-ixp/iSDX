@@ -100,11 +100,7 @@ class PConfig(object):
 
         conn_info = config["ARP Proxy"]
 
-        port    = conn_info["Port"]
-        address = conn_info["IP"]
-
-        return GenericClient(address, port)
-
+        return GenericClient(conn_info["GARP_SOCKET"][0], conn_info["GARP_SOCKET"][1])
 
 
     def get_eh_info(self):
@@ -133,14 +129,7 @@ class PConfig(object):
 
         conn_info = config["Route Server"]
 
-        port    = conn_info["Port"]
-        address = conn_info["IP"]
-
-        return GenericClient(address, port)
-
-
-
-
+        return GenericClient(conn_info["AH_SOCKET"][0], conn_info["AH_SOCKET"][1])
 
 
 class GenericClient():

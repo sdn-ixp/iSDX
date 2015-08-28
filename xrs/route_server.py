@@ -148,7 +148,7 @@ class route_server():
 
         while True:
             conn_ah = self.listener_eh.accept()
-            tmp = conn.recv()
+            tmp = conn_ah.recv()
 
             if LOG: print self.idp, "Received an announcement."
 

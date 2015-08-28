@@ -260,11 +260,11 @@ class ParticipantController():
             part_ip = port["IP"]
             part_mac = port["MAC"]
             arp_fields = {"vnhip":vnh,
-                          "vmac_addr":vmac,
+                          "vmac":vmac,
                           "dstip":part_ip,
-                          "dst_mac":part_mac}
+                          "dstmac":part_mac}
 
-            self.arp_client.send(arp_fields)
+            self.arp_client.send(json.dumps(arp_fields))
 
 
     def process_bgp_route(self, route):
@@ -343,9 +343,9 @@ class ParticipantController():
 
     def send_announcement(self, announcement):
         "Send the announcements to XRS"
-        if LOG: print self.idp, "Sending announcements to XRS."
+        if LOG: print self.idp, "Sending announcements to XRS.", type(announcement)
 
-        self.xrs_client.send(announcement)
+        self.xrs_client.send(json.dumps(announcement))
 
 
     def vnh_assignment(self, update):
