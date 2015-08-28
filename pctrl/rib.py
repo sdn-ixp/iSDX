@@ -79,7 +79,7 @@ class rib():
             cursor = self.db.cursor()
 
             if (key is not None):
-                cursor.execute('''select * from ''' + self.name + ''' where prefix = ?''', (key,))
+                cursor.execute('select * from ' + self.name + ' where prefix = "' + key + '"')
             else:
                 cursor.execute('''select * from ''' + self.name)
 

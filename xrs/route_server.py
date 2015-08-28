@@ -61,11 +61,15 @@ class route_server():
         if LOG: print self.idp, "Starting the Server to handle incoming BGP Updates."
         self.server.start()
 
+        waiting = 0
+
         while self.run:
             # get BGP messages from ExaBGP via stdin
             try:
                 route = self.server.receiver_queue.get(True, 1)
                 route = json.loads(route)
+
+                waiting = 0
 
                 if LOG: print self.idp, "Got route from ExaBGP.", route, type(route)
 
@@ -79,7 +83,17 @@ class route_server():
                         self.send_update(id, route)
 
             except Queue.Empty:
-                if LOG: print self.idp, "Empty Queue."
+                if LOG: 
+                    if waiting == 0:
+                        print self.idp, "Waiting for BGP update..."
+                        waiting = 1
+                    else:
+                        waiting = (waiting % 30) + 1
+                        if waiting == 30:
+                            print ''
+                        else:
+                            print ".",
+                            sys.stdout.flush()
 
 
     def parse_config(self, config_file):

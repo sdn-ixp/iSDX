@@ -301,15 +301,17 @@ class ParticipantController():
                 # if recomputation wasn't needed, only garp next-hops with changed VMACs
                 garp_required_vnhs = [self.prefix_2_VNH[prefix] for prefix in ss_changed_prefs]
 
+            if len(ss_changes['changes']) > 0:
 
-            "Map the superset changes to a list of new flow rules."
-            flow_msgs = update_outbound_rules(ss_changes, self.policies,
-                                              self.supersets, self.port0_mac)
+                "Map the superset changes to a list of new flow rules."
+                flow_msgs = update_outbound_rules(ss_changes, self.policies,
+                                                  self.supersets, self.port0_mac)
 
 
-            if LOG: print "Flow msgs:", flow_msgs
-            "Dump the new rules into the dataplane queue."
-            self.dp_queued.extend(flow_msgs)
+                if LOG: print self.idp, "Flow msgs:", flow_msgs
+                "Dump the new rules into the dataplane queue."
+                self.dp_queued.extend(flow_msgs)
+
             self.push_dp()
 
 
@@ -321,7 +323,7 @@ class ParticipantController():
 
 
         changed_vnhs, announcements = self.bgp_instance.bgp_update_peers(updates,
-                                        self.prefix_2_VNH, self.cfg.ports)
+                                        self.prefix_2_VNH, self.cfg.ports, self.idp)
 
         """ Combine the VNHs which have changed BGP default routes with the
             VNHs which have changed supersets.
@@ -332,7 +334,6 @@ class ParticipantController():
         # Send gratuitous ARP responses for all them
         for vnh in changed_vnhs:
             self.process_arp_request(vnh)
-
 
         # Tell Route Server that it needs to announce these routes
         for announcement in announcements:

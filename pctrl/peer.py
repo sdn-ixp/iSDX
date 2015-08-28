@@ -188,7 +188,7 @@ class BGPPeer():
 
 
 
-    def bgp_update_peers(self, updates, prefix_2_VNH, ports):
+    def bgp_update_peers(self, updates, prefix_2_VNH, ports, idp = 'P_U:'):
         # TODO: Verify if the new logic makes sense
         changed_vnhs = []
         announcements = []
@@ -216,10 +216,12 @@ class BGPPeer():
                     # add the VNH to the list of changed VNHs
                     changed_vnhs.append(prefix_2_VNH[prefix])
 
+                    if best_route is None:
+                        print idp, prefix, "not found in rib! Prev route:", prev_route
+
                     # announce the route to each router of the participant
                     for port in ports:
                         # TODO: Create a sender queue and import the announce_route function
-
                         announcements.append(announce_route(port["IP"], prefix,
                                             prefix_2_VNH[prefix], best_route["as_path"]))
 

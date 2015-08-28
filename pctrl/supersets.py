@@ -216,9 +216,14 @@ class SuperSets():
             return vmac_addr
         nexthop_part = nexthop_2_part[next_hop]
 
+        # the participants who are involved in policies
+        active_parts = self.recompute_rulecounts(pctrl).keys()
 
-
+        # the set of participants which advertise this prefix
         prefix_set = set(get_all_participants_advertising(pctrl, prefix))
+
+        # remove everyone but the active participants!
+        prefix_set.intersection_update(active_parts)
 
         # find the superset it belongs to
         ss_id = -1
@@ -227,7 +232,9 @@ class SuperSets():
                 ss_id = i
                 break
         if ss_id == -1:
-            if LOG: print "Prefix", prefix, "doesn't belong to any superset?"
+            if LOG: print pctrl.idp, "Prefix", prefix, "doesn't belong to any superset? >>"
+            if LOG: print pctrl.idp, ">> Supersets:", self.SuperSets
+            if LOG: print pctrl.idp, ">> Set of prefix", prefix, "=", prefix_set
             return vmac_addr
 
 
