@@ -33,24 +33,27 @@ class SuperSets():
 
         # this is decided each time a recomputation occurs
         self.mask_size = 0
+        self.id_size = 0
         self.supersets = []
 
 
     def initial_computation(self, pctrl):
-        print pctrl.idp, "&& SUPERSET Init"
+        if LOG: print pctrl.idp, "Superset intial computation running..",
 
         self.recompute_all_supersets(pctrl)
 
         changes = []
 
         for ss_id, superset in enumerate(self.supersets):
-            print pctrl.idp, "&& SUPERSET loop", ss_id, superset
             for part_index, participant in enumerate(superset):
                 changes.append({"participant_id": participant,
                                            "superset": ss_id,
                                            "position": part_index})
-                print pctrl.idp, "&& SUPERSET loop2", part_index, participant
         sdx_msgs = {"type":"new", "changes":changes}
+
+        if LOG: 
+            print pctrl.idp, "Superset computation complete. Supersets:"
+            print pctrl.idp, ">>", self.supersets
 
         return sdx_msgs
 
@@ -117,6 +120,7 @@ class SuperSets():
 
             # if no merge is possible, recompute from scratch
             if expansion_index == -1:
+                if LOG: print pctrl.idp, "No SS merge was possible. Recomputing."
                 self.recompute_all_supersets(pctrl)
 
                 sdx_msgs = {"type": "new", "changes": []}
@@ -126,6 +130,7 @@ class SuperSets():
                         sdx_msgs["changes"].append({"participant_id": participant,
                                                    "superset": superset_index,
                                                    "position": self.supersets[superset_index].index(participant)})
+                break
 
 
 
@@ -138,6 +143,10 @@ class SuperSets():
 
                 new_members = list(new_set.difference(bestSuperset))
                 bestSuperset.extend(new_members)
+
+                if LOG: 
+                    print pctrl.idp, "Merge possible. Merging", new_set, "into superset", bestSuperset,
+                    print "with new members", new_members
 
                 for participant in new_members:
                     sdx_msgs["changes"].append({"participant_id": participant,
@@ -171,8 +180,13 @@ class SuperSets():
         self.mask_size = self.max_bits
         if len(self.supersets) > 1:
             self.mask_size -= math.ceil(math.log(len(self.supersets)-1, 2))
+        # also fix the ID size, which is the leftover bits
+        self.id_size = self.max_bits - self.mask_size
 
-        if LOG: print "done.~"
+        if LOG: 
+            print "done.~"
+            print pctrl.idp, "Supersets:"
+            print pctrl.idp, ">>", self.supersets
 
 
 
@@ -220,7 +234,7 @@ class SuperSets():
         # build the mask bits
         set_bitstring = ""
         for part in self.supersets[i]:
-            if part in prefix_set and part in pctrl.cfg["Peers"]:
+            if part in prefix_set and part in pctrl.cfg.peers_out:
                 set_bitstring += '1'
             else:
                 set_bitstring += '0'
@@ -230,14 +244,10 @@ class SuperSets():
             set_bitstring += '0' * pad_len
 
 
-
-        # bits for the ss ID is total - inbound bit - mask - next hop
-        id_size = self.VMAC_size - 1 - self.mask_size - self.best_path_size
-
         # debug
-        if LOG: print "****DEBUG: Next Hop part", type(nexthop_part), self.best_path_size, type(ss_id), id_size
+        #if LOG: print "****DEBUG: Next Hop part", type(nexthop_part), self.best_path_size, type(ss_id), self.id_size
 
-        id_bitstring = '{num:0{width}b}'.format(num=ss_id, width=id_size)
+        id_bitstring = '{num:0{width}b}'.format(num=ss_id, width=self.id_size)
 
         nexthop_bitstring = '{num:0{width}b}'.format(num=nexthop_part, width=self.best_path_size)
 
@@ -250,6 +260,8 @@ class SuperSets():
         return vmac_addr
 
 
+
+
 def get_prefix2part_sets(pctrl):
     prefixes = pctrl.prefix_2_VNH.keys()
 
@@ -258,6 +270,8 @@ def get_prefix2part_sets(pctrl):
     for prefix in prefixes:
         group = get_all_participants_advertising(pctrl, prefix)
         groups.append(group)
+
+    if LOG: print pctrl.idp, "Prefix2Part called. Returning", groups[:50], "(this should not be empty)"
 
     return groups
 
@@ -275,10 +289,12 @@ def get_all_participants_advertising(pctrl, prefix):
 
     for route in routes:
         # first part of the returned tuple is next hop
-        next_hop = route[0]
+        next_hop = route[1]
 
         if next_hop in nexthop_2_part:
             parts.add(nexthop_2_part[next_hop])
+        else:
+            if LOG: print pctrl.idp, "In subcall of prefix2part: Next hop", next_hop, "NOT in nexthop_2_part"
 
     return parts
 

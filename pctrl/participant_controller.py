@@ -17,6 +17,9 @@ from supersets import SuperSets
 from ss_rule_scheme import *
 from lib import *
 
+sys.path.insert(0, '../xctrl/')
+from flowmodmsg import FlowModMsgBuilder
+
 LOG = True
 
 MULTISWITCH = 0
@@ -58,11 +61,9 @@ class ParticipantController():
 
         # Superset related params
         if self.cfg.vmac_mode == SUPERSETS:
-            if LOG: print self.idp, "Initializing SuperSets class"
             self.supersets = SuperSets(self, config_file=config_file)
         else:
             # TODO: create similar class and variables for MDS
-            if LOG: print self.idp, "Initializing MDS class"
             self.mds = None
 
         # Keep track of flow rules pushed
@@ -136,13 +137,12 @@ class ParticipantController():
         (2) Send the queued policies to reference monitor
         '''
 
-        if LOG: print self.idp, "Pushing current flow mod queue."
+        if LOG: print self.idp, "Pushing current flow mod queue:"
 
         # it is crucial that dp_queued is traversed chronologically
         for flowmod in self.dp_queued:
-            print "Flowmods to push 1:", flowmod
+            if LOG: print self.idp, "MOD:", flowmod
             self.fm_builder.add_flow_mod(**flowmod)
-            print "Flowmods to push 2:", flowmod
             self.dp_pushed.append(flowmod)
 
         self.dp_queued = []
@@ -187,27 +187,16 @@ class ParticipantController():
 
     def process_event(self, data):
         "Locally process each incoming network event"
-        print "Data received: ", data
+        #if LOG: print self.idp, "Data received: ", data
         if 'bgp' in data:
             route = data['bgp']
             # Process the incoming BGP updates from XRS
-            print "BGP Route received: ",route, type(route)
+            #print self.idp, "BGP Route received: ",route, type(route)
             self.process_bgp_route(route)
 
         elif 'policy' in data:
             # Process the event requesting change of participants' policies
             change_info = data['policy']
-            '''
-            change_info =
-            {
-                'removal_cookies' : [cookie1, ...], # Cookies of deleted policies
-                'new_policies' :
-                {
-                    <policy file format>
-                }
-
-            }
-            '''
             self.process_policy_changes(change_info)
 
         elif 'arp' in data:
@@ -218,8 +207,17 @@ class ParticipantController():
     def process_policy_changes(self, change_info):
         "Process the changes in participants' policies"
         # TODO: Implement the logic of dynamically changing participants' outbound and inbound policy
+        '''
+            change_info =
+            {
+                'removal_cookies' : [cookie1, ...], # Cookies of deleted policies
+                'new_policies' :
+                {
+                    <policy file format>
+                }
 
-
+            }
+        '''
         # remove flow rules for the old policies
         removal_msgs = []
 
@@ -309,7 +307,7 @@ class ParticipantController():
                                               self.supersets, self.port0_mac)
 
 
-            if LOG: print "Flow msg:", flow_msgs
+            if LOG: print "Flow msgs:", flow_msgs
             "Dump the new rules into the dataplane queue."
             self.dp_queued.extend(flow_msgs)
             self.push_dp()

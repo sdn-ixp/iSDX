@@ -20,9 +20,10 @@ INBOUND_MISS_PRIORITY = 1
 
 
 # create new outbound rules in response to superset changes
-def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
+def update_outbound_rules(sdx_msgs, policies, ss_instance, my_mac):
+    supersets = ss_instance.supersets
+
     rules = []
-    print "$$$$$$ OUTBOUND : ", policies, sdx_msgs
     if 'outbound' not in policies:
         return rules
 
@@ -34,7 +35,7 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
     # build this mapping
     for policy in outbound:
         if "fwd" in policy["action"]:
-            part = policy["action"]["fwd"]
+            part = int(policy["action"]["fwd"])
             if part not in part_2_policy:
                 part_2_policy[part] = []
             part_2_policy[part].append(policy)
@@ -42,21 +43,25 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
 
 
     updates = sdx_msgs["changes"]
-    print "$$$$$$ OUTBOUND Updates: ", updates
 
     for update in updates:
-        participant_id = update["participant_id"]
-        superset_id = update["superset"]
-        bit_position = update["position"]
+        part = int(update["participant_id"])
+        superset_id = int(update["superset"])
+        bit_position = int(update["position"])
 
-        if participant_id not in part_2_policy:
+        # if we have no rules regarding this participant, skip
+        if part not in part_2_policy:
             continue
 
-        for policy in part_2_policy[participant_id]:
-            vmac = vmac_participant_match(superset_id, participant_index, supersets)
-            vmac_bitmask = vmac_participant_mask(participant_index, supersets)
+        # for all policies involving this participant
+        for policy in part_2_policy[part]:
 
-            next_hop_mac = vmac_next_hop_match(participant_name, supersets, inbound_bit = True)
+            # vmac and mask which check if part is reachable
+            vmac = vmac_participant_match(superset_id, bit_position, ss_instance)
+            vmac_bitmask = vmac_participant_mask(bit_position, ss_instance)
+
+            # the vmac which will be written on a policy match
+            next_hop_mac = vmac_next_hop_match(part, ss_instance, inbound_bit = True)
 
             match_args = policy["match"]
             match_args["eth_dst"] = (vmac, vmac_bitmask)
@@ -67,7 +72,6 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
             rule = {"rule_type":"outbound", "priority":OUTBOUND_HIT_PRIORITY,
                     "match":match_args , "action":actions, "mod_type":"insert",
                     "cookie":(policy["cookie"],2**16-1)}
-            print "$$$$$$OUTBOUND Rules: ", rule
             rules.append(rule)
 
     return rules
@@ -114,7 +118,7 @@ def build_outbound_rules_for(out_policies, ss_instance, my_mac):
         return rules
 
 
-def build_inbound_rules_for(participant_id, in_policies, supersets):
+def build_inbound_rules_for(participant_id, in_policies, ss_instance):
     "Given a subset of inbound policies, return all the resulting rules."
 
     rules = []
@@ -127,8 +131,8 @@ def build_inbound_rules_for(participant_id, in_policies, supersets):
         port_num = policy["action"]["fwd"]
 
         # match on the next-hop
-        vmac_bitmask = vmac_next_hop_mask(supersets)
-        vmac = vmac_next_hop_match(participant_id, supersets)
+        vmac_bitmask = vmac_next_hop_mask(ss_instance)
+        vmac = vmac_next_hop_match(participant_id, ss_instance)
 
 
         match_args = policy["match"]
@@ -136,7 +140,7 @@ def build_inbound_rules_for(participant_id, in_policies, supersets):
 
 
         port_num = policy["action"]["fwd"]
-        new_vmac = vmac_part_port_match(participant_id, port_num, supersets)
+        new_vmac = vmac_part_port_match(participant_id, port_num, ss_instance)
 
 
         actions = {"set_eth_dst":new_vmac, "fwd":"main"}
@@ -152,7 +156,7 @@ def build_inbound_rules_for(participant_id, in_policies, supersets):
 
 
 # initialize all inbound rules
-def init_inbound_rules(participant_id, policies, supersets):
+def init_inbound_rules(participant_id, policies, ss_instance):
     dp_msgs = {"type": "new",
                     "changes": []}
 
@@ -164,7 +168,7 @@ def init_inbound_rules(participant_id, policies, supersets):
 
         in_policies = policies['inbound']
 
-        rules = build_inbound_rules_for(participant_id, in_policies, supersets)
+        rules = build_inbound_rules_for(participant_id, in_policies, ss_instance)
 
         dp_msgs["changes"] = rules
 

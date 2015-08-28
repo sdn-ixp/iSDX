@@ -173,58 +173,60 @@ def clear_inactive_parts(prefixSets, activePeers):
 #
 
 # constructs a match VMAC for checking reachability
-def vmac_participant_match(superset_id, participant_index, supersets):
+def vmac_participant_match(superset_id, participant_index, ss_instance):
 
     # add superset identifier
-    vmac_bitstring = '{num:0{width}b}'.format(num=int(superset_id), width=(supersets.superset_id_size))
+    vmac_bitstring = '{num:0{width}b}'.format(num=int(superset_id), width=(ss_instance.id_size))
 
     # set bit of participant
     vmac_bitstring += '{num:0{width}b}'.format(num=1, width=(participant_index+1))
-    vmac_bitstring += '{num:0{width}b}'.format(num=0, width=(supersets.VMAC_size-len(vmac_bitstring)))
+
+    # padding
+    vmac_bitstring += '{num:0{width}b}'.format(num=0, width=(ss_instance.VMAC_size-len(vmac_bitstring)))
 
     # convert bitstring to hexstring and then to a mac address
-    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=supersets.VMAC_size/4)
-    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,supersets.VMAC_size/4,2)])
+    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=ss_instance.VMAC_size/4)
+    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,ss_instance.VMAC_size/4,2)])
 
     return vmac_addr
 
 # constructs the accompanying mask for reachability checks
-def vmac_participant_mask(participant_index, supersets):
+def vmac_participant_mask(participant_index, ss_instance):
     # a superset which is all 1's
-    superset_bits = (1 << supersets.superset_id_size) - 1
+    superset_bits = (1 << ss_instance.id_size) - 1
 
-    return vmac_participant_match(superset_bits, participant_index, supersets)
+    return vmac_participant_match(superset_bits, participant_index, ss_instance)
 
 
 # constructs a match VMAC for checking next-hop
-def vmac_next_hop_match(participant_name, supersets, inbound_bit = False):
+def vmac_next_hop_match(participant_name, ss_instance, inbound_bit = False):
 
     # add participant identifier
-    vmac_bitstring = '{num:0{width}b}'.format(num=participant_name, width=(supersets.VMAC_size))
+    vmac_bitstring = '{num:0{width}b}'.format(num=participant_name, width=(ss_instance.VMAC_size))
 
     # set the 'inbound policy required' bit
     if inbound_bit:
         vmac_bitstring = '1' + vmac_bitstring[1:]
 
     # convert bitstring to hexstring and then to a mac address
-    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=supersets.VMAC_size/4)
-    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,supersets.VMAC_size/4,2)])
+    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=ss_instance.VMAC_size/4)
+    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,ss_instance.VMAC_size/4,2)])
 
     return vmac_addr
 
 # returns a mask on just participant bits
-def vmac_next_hop_mask(supersets, inbound_bit = False):
-    part_bits_only = (1 << supersets.best_path_size) - 1
+def vmac_next_hop_mask(ss_instance, inbound_bit = False):
+    part_bits_only = (1 << ss_instance.best_path_size) - 1
 
-    bitmask = vmac_next_hop_match(part_bits_only, supersets, inbound_bit)
+    bitmask = vmac_next_hop_match(part_bits_only, ss_instance, inbound_bit)
 
     return bitmask
 
 
 # constructs stage-2 VMACs (for both matching and assignment)
-def vmac_part_port_match(participant_name, port_num, supersets, inbound_bit = False):
-    part_bits = supersets.best_path_size
-    remainder = supersets.VMAC_size - part_bits
+def vmac_part_port_match(participant_name, port_num, ss_instance, inbound_bit = False):
+    part_bits = ss_instance.best_path_size
+    remainder = ss_instance.VMAC_size - part_bits
 
     # padding and port identifier on the left
     vmac_bitstring_part1 = '{num:0{width}b}'.format(num=port_num, width=remainder)
@@ -238,26 +240,26 @@ def vmac_part_port_match(participant_name, port_num, supersets, inbound_bit = Fa
         vmac_bitstring = '1' + vmac_bitstring[1:]
 
     # convert bitstring to hexstring and then to a mac address
-    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=supersets.VMAC_size/4)
-    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,supersets.VMAC_size/4,2)])
+    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=ss_instance.VMAC_size/4)
+    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,ss_instance.VMAC_size/4,2)])
 
     return vmac_addr
 
 
 # returns a mask on participant and port bits
-def vmac_part_port_mask(supersets, inbound_bit = False):
-    part_port_size = supersets.best_path_size + supersets.port_size
+def vmac_part_port_mask(ss_instance, inbound_bit = False):
+    part_port_size = ss_instance.best_path_size + ss_instance.port_size
     part_port_bits = (1 << part_port_size) - 1
 
-    bitmask = vmac_next_hop_match(part_port_bits, supersets, inbound_bit)
+    bitmask = vmac_next_hop_match(part_port_bits, ss_instance, inbound_bit)
 
     return bitmask
 
 # looks like 100000000000000
-def vmac_only_first_bit(supersets):
+def vmac_only_first_bit(ss_instance):
 
     # return a match on participant 0 with inbound bit set to 1
-    return vmac_next_hop_match(0, supersets, inbound_bit=True)
+    return vmac_next_hop_match(0, ss_instance, inbound_bit=True)
 
 
 def get_all_participants_advertising(prefix, participants):
