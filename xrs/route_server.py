@@ -67,7 +67,7 @@ class route_server():
                 route = self.server.receiver_queue.get(True, 1)
                 route = json.loads(route)
 
-                if LOG: print self.idp, "Got route from ExaBGP."
+                if LOG: print self.idp, "Got route from ExaBGP.", route, type(route)
 
                 # Received BGP route advertisement from ExaBGP
                 for id, peer in self.participants.iteritems():

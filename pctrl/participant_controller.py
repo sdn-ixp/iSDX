@@ -187,10 +187,11 @@ class ParticipantController():
 
     def process_event(self, data):
         "Locally process each incoming network event"
-
+        print "Data received: ", data
         if 'bgp' in data:
             route = data['bgp']
             # Process the incoming BGP updates from XRS
+            print "BGP Route received: ",route, type(route)
             self.process_bgp_route(route)
 
         elif 'policy' in data:

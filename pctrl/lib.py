@@ -65,8 +65,8 @@ class PConfig(object):
 
         for part in config["Participants"]:
             for port in config["Participants"][part]["Ports"]:
-                nexthop = port["IP"]
-                nexthop_2_part[nexthop] = part
+                nexthop = str(port["IP"])
+                nexthop_2_part[nexthop] = int(part)
 
         return nexthop_2_part
 

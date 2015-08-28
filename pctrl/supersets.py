@@ -201,6 +201,7 @@ class SuperSets():
         nexthop_part = nexthop_2_part[next_hop]
 
 
+
         prefix_set = set(get_all_participants_advertising(pctrl, prefix))
 
         # find the superset it belongs to
@@ -226,13 +227,17 @@ class SuperSets():
             pad_len = self.mask_size - len(set_bitstring)
             set_bitstring += '0' * pad_len
 
+
+
         # bits for the ss ID is total - inbound bit - mask - next hop
         id_size = self.VMAC_size - 1 - self.mask_size - self.best_path_size
 
+        # debug
+        if LOG: print "****DEBUG: Next Hop part", type(nexthop_part), self.best_path_size, type(ss_id), id_size
+
         id_bitstring = '{num:0{width}b}'.format(num=ss_id, width=id_size)
 
-        nexthop_bitstring = '{num:0{width}b}'.format(num=nexthop_part,
-                                                    width=self.best_path_size)
+        nexthop_bitstring = '{num:0{width}b}'.format(num=nexthop_part, width=self.best_path_size)
 
         vmac_bitstring = '1' + id_bitstring + set_bitstring + nexthop_bitstring
 
