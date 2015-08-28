@@ -16,6 +16,7 @@ class SuperSets():
         self.max_initial_bits = 26
         self.best_path_size = 16
         self.VMAC_size = 48
+        self.port_size = 8
         if config_file is not None:
 
             if LOG: print pctrl.idp, "Initializing SuperSets with config file."
@@ -27,9 +28,13 @@ class SuperSets():
                 self.max_initial_bits = self.max_bits - 4
                 self.best_path_size =   int(config["Next Hop Bits"])
                 self.VMAC_size =        int(config["VMAC Size"])
+                self.port_size =        int(config["Port Bits"])
 
         else:
             if LOG: print pctrl.idp, "Initializing SuperSets WITHOUT config file."
+        if LOG:
+            print pctrl.idp, "Max bits:", self.max_bits, "Best path bits:", self.best_path_size
+            print pctrl.idp, "VMAC size:", self.VMAC_size, "Port size:", self.port_size
 
         # this is decided each time a recomputation occurs
         self.mask_size = 0
@@ -209,7 +214,6 @@ class SuperSets():
 
         # first part of the returned tuple is next hop
         route = bgp_instance.get_route('local', prefix)
-        print "::ROUTE::", route
         next_hop = route[1]
         if next_hop not in nexthop_2_part:
             if LOG: print "Next Hop", next_hop, "not found in get_vmac call!"

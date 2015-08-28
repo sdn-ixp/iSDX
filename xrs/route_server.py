@@ -92,7 +92,7 @@ class route_server():
                         if waiting == 30:
                             print ''
                         else:
-                            print ".",
+                            print '.',
                             sys.stdout.flush()
 
 

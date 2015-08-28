@@ -284,40 +284,56 @@ def get_all_participant_sets(xrs):
 
 if __name__ == '__main__':
     "--Unit testing--"
+
+    supersets = [[1,2], [2,3], [3,4]]
+
     class FakeSS():
         def __init__(self):
-            self.VMAC_size = 48
-            self.superset_id_size = 5
+            self.max_bits = 30
+            self.max_initial_bits = 26
             self.best_path_size = 16
-            self.port_size = 10
-            self.max_initial_bits = 20
-            self.bitsRequired = bitsRequired
+            self.VMAC_size = 48
+            self.port_size = 8
+
+            self.mask_size = 20
+            self.id_size = 10
+
+            self.supersets = supersets
 
     part_name = 5
     ss_id = 4
     port_num = 10
     part_index = 20
 
-    supersets = FakeSS()
-    print vmac_participant_match(ss_id, part_name, supersets)
-    print vmac_participant_mask(part_name, supersets)
-    supersets = [[1,2], [2,3], [3,4]]
+    ss_instance = FakeSS()
+    print "--next_hop vmacs--"
+    print vmac_next_hop_match(part_name, ss_instance)
+    print vmac_next_hop_mask(ss_instance)
+
     a = set([1,2])
     b = set([2,3,4])
-    print is_subset_of_superset(a, supersets)
-    print is_subset_of_superset(b, supersets)
-    print vmac_part_port_mask(supersets, True)
-    print vmac_part_port_match(part_name, port_num, supersets, True)
-    print vmac_part_port_match(part_name, port_num, supersets, False)
-    print vmac_next_hop_mask(supersets, True)
-    print vmac_next_hop_match(part_name, supersets, False)
-    print vmac_participant_match(ss_id, part_index, supersets)
-    print vmac_participant_mask(part_index, supersets)
+
+    print "--Is subset--"
+    print is_subset_of_superset(a, ss_instance.supersets)
+    print is_subset_of_superset(b, ss_instance.supersets)
+
+    print "--part_port vmacs--"
+    print vmac_part_port_mask(ss_instance, True)
+    print vmac_part_port_match(part_name, port_num, ss_instance, True)
+    print vmac_part_port_match(part_name, port_num, ss_instance, False)
+
+    print "--next_hop vmacs--"
+    print vmac_next_hop_mask(ss_instance, True)
+    print vmac_next_hop_match(part_name, ss_instance, False)
+
+    print "--reachability vmacs--"
+    print vmac_participant_match(ss_id, part_index, ss_instance)
+    print vmac_participant_mask(part_index, ss_instance)
 
     activePeers = [1,3,4,5]
     print clear_inactive_parts(supersets, activePeers)
 
-    print vmac_only_first_bit(supersets)
+    print vmac_only_first_bit(ss_instance)
 
     supersets = [[1,2,3], [2,3,4,5], [5,6], [4,5,6]]
     weights = {1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7}
@@ -330,7 +346,7 @@ if __name__ == '__main__':
 
     print rulesRequired(supersets, weights)
     print bitsRequired(supersets)
-    supersets = minimize_ss_rules_greedy(supersets, weights, supersets.max_initial_bits)
+    supersets = minimize_ss_rules_greedy(supersets, weights, ss_instance.max_initial_bits)
     print supersets
     print rulesRequired(supersets, weights)
     print bitsRequired(supersets)

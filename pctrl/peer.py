@@ -42,15 +42,11 @@ class BGPPeer():
 
             if routes:
                 best_route = best_path_selection(routes)
-                print "## Best Route after Selection: ", best_route
                 # TODO: can be optimized? check to see if current route == best_route?
                 prefix = best_route['prefix']
                 self.delete_route("local",announce_route['prefix'])
                 self.add_route("local", prefix, best_route)
 
-                # DEBUG only...remove later
-                best_route = self.rib["local"][prefix]
-                print "## DP: DEBUG: best route: ", best_route
             else:
                 print "## This should not happen"
 
@@ -119,7 +115,6 @@ class BGPPeer():
                 if ('ipv4 unicast' in announce):
                     for next_hop in announce['ipv4 unicast'].keys():
                         for prefix in announce['ipv4 unicast'][next_hop].keys():
-                            print "::::PREFIX:::::", prefix, type(prefix)
                             self.rib["input"][prefix] = (next_hop,
                                                          origin,
                                                          as_path,
@@ -204,7 +199,6 @@ class BGPPeer():
             best_route = self.rib["local"][prefix]
             #best_route["next_hop"] = str(prefix_2_VNH[prefix])
 
-            print "## DEBUG: best route: ", best_route
 
             if ('announce' in update):
                 # Check if best path has changed for this prefix
