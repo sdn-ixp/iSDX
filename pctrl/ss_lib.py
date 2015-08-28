@@ -71,7 +71,7 @@ def minimize_ss_rules_greedy(peerSets, ruleCounts, max_bits):
             for set2 in peerSets:
                 if (set1 == set2):
                     continue
-                
+
                 unionSize = len(set1.union(set2))
 
                 # if the merge would cause us to exceed the bit limit
@@ -83,7 +83,7 @@ def minimize_ss_rules_greedy(peerSets, ruleCounts, max_bits):
                 impact = 0
                 for part in set1.intersection(set2):
                     impact += ruleCounts[part]
-                
+
                 if (impact > bestImpact):
                     bestImpact = impact
                     bestSet1 = set1
@@ -101,7 +101,7 @@ def minimize_ss_rules_greedy(peerSets, ruleCounts, max_bits):
     return peerSets
 
 def best_ss_to_expand_greedy(new_set, supersets, ruleWeights, max_mask):
-    """ Returns index of the best superset to expand, given the rule 
+    """ Returns index of the best superset to expand, given the rule
         weights and the maximum allowed mask size. -1 if none possible.
     """
 
@@ -109,7 +109,7 @@ def best_ss_to_expand_greedy(new_set, supersets, ruleWeights, max_mask):
     bestCost = float('inf')
 
     new_set = set(new_set)
-    
+
     for superset in supersets:
         # if this merge would exceed the current mask size limit, skip it
         if len(new_set.union(superset)) > max_mask:
@@ -168,16 +168,16 @@ def clear_inactive_parts(prefixSets, activePeers):
 
 
 
-#                
+#
 ### VMAC AND VMAC MASK BUILDERS
 #
 
-# constructs a match VMAC for checking reachability 
+# constructs a match VMAC for checking reachability
 def vmac_participant_match(superset_id, participant_index, supersets):
-    
+
     # add superset identifier
     vmac_bitstring = '{num:0{width}b}'.format(num=int(superset_id), width=(supersets.superset_id_size))
-        
+
     # set bit of participant
     vmac_bitstring += '{num:0{width}b}'.format(num=1, width=(participant_index+1))
     vmac_bitstring += '{num:0{width}b}'.format(num=0, width=(supersets.VMAC_size-len(vmac_bitstring)))
@@ -185,7 +185,7 @@ def vmac_participant_match(superset_id, participant_index, supersets):
     # convert bitstring to hexstring and then to a mac address
     vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=supersets.VMAC_size/4)
     vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,supersets.VMAC_size/4,2)])
-        
+
     return vmac_addr
 
 # constructs the accompanying mask for reachability checks
@@ -198,7 +198,7 @@ def vmac_participant_mask(participant_index, supersets):
 
 # constructs a match VMAC for checking next-hop
 def vmac_next_hop_match(participant_name, supersets, inbound_bit = False):
-        
+
     # add participant identifier
     vmac_bitstring = '{num:0{width}b}'.format(num=participant_name, width=(supersets.VMAC_size))
 
@@ -209,7 +209,7 @@ def vmac_next_hop_match(participant_name, supersets, inbound_bit = False):
     # convert bitstring to hexstring and then to a mac address
     vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=supersets.VMAC_size/4)
     vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,supersets.VMAC_size/4,2)])
-            
+
     return vmac_addr
 
 # returns a mask on just participant bits
@@ -260,28 +260,24 @@ def vmac_only_first_bit(supersets):
     return vmac_next_hop_match(0, supersets, inbound_bit=True)
 
 
-
 def get_all_participants_advertising(prefix, participants):
     participant_set = set()
-   
+
     for participant_name in participants:
         route = participants[participant_name].get_route('input', prefix)
         if route:
             participant_set.add(participant_name)
-            
+
     return participant_set
 
 
 def get_all_participant_sets(xrs):
     participant_sets = []
-     
+
     for prefix in xrs.prefix_2_VNH:
         participant_sets.append(get_all_participants_advertising(prefix, xrs.participants))
-            
-    return participant_sets  
 
-
-
+    return participant_sets
 
 
 if __name__ == '__main__':

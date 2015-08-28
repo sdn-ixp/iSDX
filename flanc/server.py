@@ -31,7 +31,7 @@ class Server():
         while self.receive:
             conn = self.listener.accept()
             self.logger.info('server: accepted connection from ' + str(self.listener.last_accepted))
-            
+
             msg = None
             while msg is None:
                 try:
@@ -40,7 +40,7 @@ class Server():
                     pass
             self.logger.info('server: received message')
             self.refmon.process_flow_mods(json.loads(msg))
-
+            print msg
             conn.close()
             self.logger.info('server: closed connection')
 

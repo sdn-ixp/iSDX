@@ -42,8 +42,8 @@ class rib():
 
         with lock():
             cursor = self.db.cursor()
-            print '''insert into ''' + self.name + ''' (prefix, next_hop, origin, as_path, communities, med,atomic_aggregate) values(?,?,?,?,?,?,?)''',(key,item[0],item[1],item[2],item[3],item[4],item[5])
-            print "Add: ", key, item
+            #print '''insert into ''' + self.name + ''' (prefix, next_hop, origin, as_path, communities, med,atomic_aggregate) values(?,?,?,?,?,?,?)''',(key,item[0],item[1],item[2],item[3],item[4],item[5])
+            #print "Add: ", key, item
             key = str(key)
             if (isinstance(item,tuple) or isinstance(item,list)):
                 cursor.execute('insert into ' + self.name + '(prefix, next_hop, origin, as_path, communities, med,atomic_aggregate) values("' + key + '","' + str(item[0]) +'","'+ str(item[1]) +'","'+ str(item[2])+'","'+ str(item[3])+'","'+ str(item[4])+'","'+ str(item[5])+'");')
@@ -67,7 +67,7 @@ class rib():
 
         with lock():
             cursor = self.db.cursor()
-            print "## DEBUG: Binding Param: ", self.name, key, type(key)
+            #print "## DEBUG: Binding Param: ", self.name, key, type(key)
             key = str(key)
             cursor.execute('select * from ' + self.name + ' where prefix = "' + key + '"')
 

@@ -140,9 +140,9 @@ class ParticipantController():
 
         # it is crucial that dp_queued is traversed chronologically
         for flowmod in self.dp_queued:
-
+            print "Flowmods to push 1:", flowmod
             self.fm_builder.add_flow_mod(**flowmod)
-
+            print "Flowmods to push 2:", flowmod
             self.dp_pushed.append(flowmod)
 
         self.dp_queued = []
@@ -308,8 +308,11 @@ class ParticipantController():
             flow_msgs = update_outbound_rules(ss_changes, self.policies,
                                               self.supersets, self.port0_mac)
 
+
+            if LOG: print "Flow msg:", flow_msgs
             "Dump the new rules into the dataplane queue."
             self.dp_queued.extend(flow_msgs)
+            self.push_dp()
 
 
         ################## END SUPERSET RESPONSE ##################

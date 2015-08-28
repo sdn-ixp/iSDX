@@ -22,7 +22,7 @@ INBOUND_MISS_PRIORITY = 1
 # create new outbound rules in response to superset changes
 def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
     rules = []
-
+    print "$$$$$$ OUTBOUND : ", policies, sdx_msgs
     if 'outbound' not in policies:
         return rules
 
@@ -42,6 +42,8 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
 
 
     updates = sdx_msgs["changes"]
+    print "$$$$$$ OUTBOUND Updates: ", updates
+
     for update in updates:
         participant_id = update["participant_id"]
         superset_id = update["superset"]
@@ -65,12 +67,10 @@ def update_outbound_rules(sdx_msgs, policies, supersets, my_mac):
             rule = {"rule_type":"outbound", "priority":OUTBOUND_HIT_PRIORITY,
                     "match":match_args , "action":actions, "mod_type":"insert",
                     "cookie":(policy["cookie"],2**16-1)}
-
+            print "$$$$$$OUTBOUND Rules: ", rule
             rules.append(rule)
 
     return rules
-
-
 
 
 def build_outbound_rules_for(out_policies, ss_instance, my_mac):
@@ -189,7 +189,7 @@ def msg_clear_all_outbound(policies, port0_mac):
     for cookie in cookies:
         mod = {"rule_type":"outbound", "priority":0,
                 "match":match_args , "action":{},
-                "cookie":cookie, "mod_type":"remove"}
+                "cookie":(cookie, 2**16-1), "mod_type":"remove"}
         mods.append(mod)
 
     return mods
