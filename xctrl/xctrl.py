@@ -22,7 +22,7 @@ class xCtrl(object):
         self.config = Config(config_file)
 
         #self.client = FlowModSender(self.config.refmon["url"]) # REST API
-        self.client = RefMonClient(self.config.refmon["address"], self.config.refmon["port"], self.config.refmon["key"])
+        self.client = RefMonClient(self.config.refmon["IP"], self.config.refmon["Port"], self.config.refmon["key"])
 
         if self.config.vmac_mode == 0:
             if self.config.mode == 0:

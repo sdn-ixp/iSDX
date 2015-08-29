@@ -35,29 +35,29 @@ class Config(object):
         config = json.load(open(config_file, 'r'))
 
         # read from file
-        if "fabric mode" in config:
-            if config["fabric mode"] == "multi-switch":
+        if "Mode" in config:
+            if config["Mode"] == "Multi-Switch":
                 self.mode = 0
-            elif config["fabric mode"] == "multi-table":
+            elif config["Mode"] == "Multi-Table":
                 self.mode = 1
+        if "RefMon Settings" in config:
+            if "fabric options" in config["RefMon Settings"]:
+                if self.mode == 1 and "tables" in config["RefMon Settings"]["fabric options"]:
+                    self.tables = config["RefMon Settings"]["fabric options"]["tables"]
+                if self.mode == 0 and "dpids" in config["RefMon Settings"]["fabric options"]:
+                    self.dpids = config["RefMon Settings"]["fabric options"]["dpids"]
+                    for k,v in self.dpids.iteritems():
+                        self.dpid_2_name[v] = k
+                if "dp alias" in config["RefMon Settings"]["fabric options"]:
+                    self.dp_alias = config["RefMon Settings"]["fabric options"]["dp alias"]
+                if "OF version" in config["RefMon Settings"]["fabric options"]:
+                    self.ofv = config["RefMon Settings"]["fabric options"]["OF version"]
 
-        if "fabric options" in config:
-            if self.mode == 1 and "tables" in config["fabric options"]:
-                self.tables = config["fabric options"]["tables"]
-            if self.mode == 0 and "dpids" in config["fabric options"]:
-                self.dpids = config["fabric options"]["dpids"]
-                for k,v in self.dpids.iteritems():
-                    self.dpid_2_name[v] = k
-            if "dp alias" in config["fabric options"]:
-                self.dp_alias = config["fabric options"]["dp alias"]
-            if "OF version" in config["fabric options"]:
-                self.ofv = config["fabric options"]["OF version"]
+            if "fabric connections" in config["RefMon Settings"]:
+                self.datapath_ports = config["RefMon Settings"]["fabric connections"]
 
-        if "fabric connections" in config:
-            self.datapath_ports = config["fabric connections"]
-
-        if "server" in config:
-            self.server = config["server"]
+        if "RefMon Server" in config:
+            self.server = config["RefMon Server"]
         else:
             raise InvalidConfigError(config)
 

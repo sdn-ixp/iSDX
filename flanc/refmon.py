@@ -56,7 +56,7 @@ class RefMon(app_manager.RyuApp):
             self.controller = MultiTableController(self.config)
 
         # start server receiving flowmod requests
-        self.server = Server(self, self.config.server["address"], self.config.server["port"], self.config.server["key"])
+        self.server = Server(self, self.config.server["IP"], self.config.server["Port"], self.config.server["key"])
         self.server.start()
 
     def close(self):
@@ -98,4 +98,3 @@ class RefMon(app_manager.RyuApp):
 
                     self.controller.process_flow_mod(fm)
 
-        return "TEST"

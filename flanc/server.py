@@ -40,7 +40,7 @@ class Server():
                     pass
             self.logger.info('server: received message')
             self.refmon.process_flow_mods(json.loads(msg))
-            print msg
+
             conn.close()
             self.logger.info('server: closed connection')
 
