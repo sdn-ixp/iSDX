@@ -9,14 +9,14 @@ $ sudo ./sdx_mininext.py
 ## Run RefMon
 
 ```bash
-$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config ~/sdx-ryu/examples/test-ms/config/refmon.cfg
+$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config ~/sdx-ryu/examples/test-ms/controller/sdx_config/sdx_global.cfg
 ```
 
 ## Run xctrl
 
 ```bash
 $ cd ~/sdx-ryu/xctrl/
-$ ./xctrl.py ~/sdx-ryu/examples/test-ms/config/xctrl-gss.cfg
+$ ./xctrl.py ~/sdx-ryu/examples/test-ms/controller/sdx_config/sdx_global.cfg
 ```
 
 ## Run arpproxy
