@@ -11,7 +11,7 @@ import struct
 import argparse
 
 from threading import Thread,Event
-
+from netaddr import IPNetwork, IPAddress
 from multiprocessing.connection import Listener, Client
 
 from utils import parse_packet, parse_eth_frame, parse_arp_packet, craft_arp_packet, craft_eth_frame, craft_garp_response
@@ -32,9 +32,12 @@ class ArpProxy():
         self.raw_socket = None
         self.listener_garp = None
         self.garp_socket = None
+        self.interface = None
 
         self.participants = {}
         self.portmac_2_participant = {}
+
+        self.vnhs = None
 
         # info about non-sdn participants
         # TODO: Create a mapping between actual interface IP addresses
@@ -62,18 +65,24 @@ class ArpProxy():
             else:
                 self.vmac_mode = MDS
 
+            self.vnhs = IPNetwork(config["VNHs"])
+
             tmp = config["ARP Proxy"]["GARP_SOCKET"]
             self.garp_socket = tuple([tmp[0], int(tmp[1])])
 
+            self.interface = config["ARP Proxy"]["Interface"]
+
             for participant_id in config["Participants"]:
                 participant = config["Participants"][participant_id]
+
+                participant_id = int(participant_id)
 
                 self.participants[participant_id] = {}
                 # Create Persistent Client Object
                 #self.participants[participant_id]["eh_socket"] = Client(tuple([participant["EH_SOCKET"][0], int(participant["EH_SOCKET"][1])]), authkey = None)
                 self.participants[participant_id]["eh_socket"] = tuple([participant["EH_SOCKET"][0], int(participant["EH_SOCKET"][1])])
                 for i in range(0, len(participant["Ports"])):
-                    self.portmac_2_participant[participant["Ports"][i]['MAC']] = int(participant_id)
+                    self.portmac_2_participant[participant["Ports"][i]['MAC']] = participant_id
 
 
     def set_arp_listener(self):
@@ -82,7 +91,7 @@ class ArpProxy():
 
         try:
             self.raw_socket = socket.socket( socket.AF_PACKET , socket.SOCK_RAW , socket.ntohs(ETH_TYPE_ARP))
-            self.raw_socket.bind(('eth0', 0))
+            self.raw_socket.bind((self.interface, 0))
             self.raw_socket.settimeout(1.0)
         except socket.error as msg:
             print 'Failed to create socket. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
@@ -106,26 +115,27 @@ class ArpProxy():
                     requester_srcmac = eth_frame["src_mac"]
                     requested_ip = arp_packet["dst_ip"]
                     # Send the ARP request message to respective controller and forget about it
-                    self.send_arp_request(requester_srcmac, requested_ip)
+                    if IPAddress(requested_ip) in self.vnhs:
+                        self.send_arp_request(requester_srcmac, requested_ip)
+    
+                        # TODO: If the requested IP address belongs to a non-SDN participant
+                        # then refer the structure `self.nonSDN_nhip_2_nhmac` and
+                        # send an immediate ARP response.
+                        """
+                        response_vmac = self.get_vmac_default(requester_srcmac, requested_ip)
+                        if response_vmac != "":
+                            if LOG:
+                                print "ARP-PROXY: reply with VMAC "+response_vmac
 
-                    # TODO: If the requested IP address belongs to a non-SDN participant
-                    # then refer the structure `self.nonSDN_nhip_2_nhmac` and
-                    # send an immediate ARP response.
-                    """
-                    response_vmac = self.get_vmac_default(requester_srcmac, requested_ip)
-                    if response_vmac != "":
-                        if LOG:
-                            print "ARP-PROXY: reply with VMAC "+response_vmac
-
-                        data = self.craft_arp_packet(arp_packet, response_vmac)
-                        eth_packet = self.craft_eth_frame(eth_frame, response_vmac, data)
-                        self.raw_socket.send(''.join(eth_packet))
-                    """
+                            data = self.craft_arp_packet(arp_packet, response_vmac)
+                            eth_packet = self.craft_eth_frame(eth_frame, response_vmac, data)
+                            self.raw_socket.send(''.join(eth_packet))
+                        """
 
             except socket.timeout:
-                LOG = False
                 if LOG:
-                    print 'Socket Timeout Occured'
+                    pass
+                    #print 'Socket Timeout Occured'
 
 
     def set_garp_listener(self):
@@ -166,16 +176,19 @@ class ArpProxy():
 
     def send_arp_request(self, requester_srcmac, requested_ip):
         "Get the VMAC for the arp request message"
-        requester_id = self.portmac_2_participant[requester_srcmac]
-        if requester_id in self.participants:
-            # ARP request is sent by participant with its own SDN controller
-            eh_socket = Client(self.participants[requester_id]["eh_socket"])
-            data = {}
-            data['arp_request'] = requested_ip
-            eh_socket.send(json.dumps(data))
-            recv = eh_socket.recv()
-            eh_socket.close()
-            return recv
+        if requester_srcmac in self.portmac_2_participant:
+            requester_id = self.portmac_2_participant[requester_srcmac]
+            if requester_id in self.participants:
+                # ARP request is sent by participant with its own SDN controller
+                if LOG:
+                    print "relay ARP-REQUEST to participant "+str(requester_id)
+                eh_socket = Client(self.participants[requester_id]["eh_socket"])
+                data = {}
+                data['arp_request'] = requested_ip
+                eh_socket.send(json.dumps(data))
+                recv = eh_socket.recv()
+                eh_socket.close()
+                return recv
 
 
     def get_vmac_default(self, requester_id):
