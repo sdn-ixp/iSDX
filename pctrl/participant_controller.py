@@ -125,7 +125,12 @@ class ParticipantController():
 
         if LOG: print self.idp, "Initializing inbound rules"
 
-        rule_msgs = init_inbound_rules(self.id, self.policies, self.supersets)
+        final_switch = "main-in"
+        if self.cfg.dp_mode == MULTITABLE:
+            final_switch = "main-out"
+
+        rule_msgs = init_inbound_rules(self.id, self.policies, 
+                                        self.supersets, final_switch)
 
         if "changes" in rule_msgs:
             self.dp_queued.extend(rule_msgs["changes"])
