@@ -67,7 +67,7 @@ def update_outbound_rules(sdx_msgs, policies, ss_instance, my_mac):
             match_args["eth_dst"] = (vmac, vmac_bitmask)
             match_args["eth_src"] = my_mac
 
-            actions = {"set_eth_dst":next_hop_mac, "fwd":"inbound"}
+            actions = {"set_eth_dst":next_hop_mac, "fwd":["inbound"]}
 
             rule = {"rule_type":"outbound", "priority":OUTBOUND_HIT_PRIORITY,
                     "match":match_args , "action":actions, "mod_type":"insert",
@@ -107,7 +107,7 @@ def build_outbound_rules_for(out_policies, ss_instance, my_mac):
             match_args["eth_dst"] = (vmac, vmac_bitmask)
             match_args["eth_src"] = my_mac
 
-            actions = {"set_eth_dst":next_hop_mac, "fwd":"inbound"}
+            actions = {"set_eth_dst":next_hop_mac, "fwd":["inbound"]}
 
             rule = {"rule_type":"outbound", "priority":OUTBOUND_HIT_PRIORITY,
                     "match":match_args , "action":actions, "mod_type":"insert",
@@ -118,7 +118,7 @@ def build_outbound_rules_for(out_policies, ss_instance, my_mac):
         return rules
 
 
-def build_inbound_rules_for(participant_id, in_policies, ss_instance):
+def build_inbound_rules_for(participant_id, in_policies, ss_instance, final_switch):
     "Given a subset of inbound policies, return all the resulting rules."
 
     rules = []
@@ -143,11 +143,11 @@ def build_inbound_rules_for(participant_id, in_policies, ss_instance):
         new_vmac = vmac_part_port_match(participant_id, port_num, ss_instance)
 
 
-        actions = {"set_eth_dst":new_vmac, "fwd":"main"}
+        actions = {"set_eth_dst":new_vmac, "fwd":[final_switch]}
 
         rule = {"rule_type":"inbound", "priority":INBOUND_HIT_PRIORITY,
                 "match":match_args, "action":actions, "mod_type":"insert",
-                "cookie":(policy["cookie"],2**16-1)}
+                "cookie":(policy["cookie"],2**16-1)}    
 
         rules.append(rule)
 
@@ -156,7 +156,7 @@ def build_inbound_rules_for(participant_id, in_policies, ss_instance):
 
 
 # initialize all inbound rules
-def init_inbound_rules(participant_id, policies, ss_instance):
+def init_inbound_rules(participant_id, policies, ss_instance, final_switch):
     dp_msgs = {"type": "new",
                     "changes": []}
 
@@ -168,7 +168,8 @@ def init_inbound_rules(participant_id, policies, ss_instance):
 
         in_policies = policies['inbound']
 
-        rules = build_inbound_rules_for(participant_id, in_policies, ss_instance)
+        rules = build_inbound_rules_for(participant_id, in_policies, 
+                                        ss_instance, final_switch)
 
         dp_msgs["changes"] = rules
 

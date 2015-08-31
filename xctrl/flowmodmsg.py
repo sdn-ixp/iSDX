@@ -71,7 +71,7 @@ class FlowModMsgBuilder(object):
 #                         "udp_dst" : 22, 
 #                        },
 #              "action" : {
-#                         "fwd": "inbound",
+#                         "fwd": ["inbound"/"outbound"/"main-in"/main-out"],
 #                         "set_eth_src": "80:23:ff:98:10:01",
 #                         "set_eth_dst": ("00:00:00:00:00:01","00:00:00:00:03:ff")
 #                         }
@@ -80,7 +80,7 @@ class FlowModMsgBuilder(object):
 #              "mod_type": "insert/remove",
 #              "rule_type": "inbound/outbound/main",
 #              "match" : {"tcp_dst" : 80},
-#              "action" : {"fwd": 3}
+#              "action" : {"fwd": [3]}
 #            }
 #            ...]
 #    }
