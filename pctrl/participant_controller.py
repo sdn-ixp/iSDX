@@ -381,7 +381,7 @@ if __name__ == '__main__':
     # locate config file
     # TODO: Separate the config files for each participant
     base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                "..","examples",args.dir,"controller","sdx_config"))
+                                "..","examples",args.dir,"config"))
     config_file = os.path.join(base_path, "sdx_global.cfg")
 
     # locate the participant's policy file as well
@@ -392,7 +392,7 @@ if __name__ == '__main__':
 
 
     policy_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                            "..","examples",args.dir,"controller","participant_policies"))
+                            "..","examples",args.dir,"policies"))
 
     policy_file = os.path.join(policy_path, policy_filename)
 

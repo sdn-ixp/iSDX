@@ -18,11 +18,11 @@ $ sudo ./sdx_mininext.py
 
 ```bash
 $ cd ~/sdx-ryu/xctrl/
-$ ./xctrl.py ~/sdx-ryu/examples/test-mt/config/xctrl-gss.cfg
+$ ./xctrl.py ~/sdx-ryu/examples/test-mt/config/sdx_global.cfg
 ```
 
 ## Run RefMon
 
 ```bash
-$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config ~/sdx-ryu/examples/test-mt/config/refmon.cfg
+$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config ~/sdx-ryu/examples/test-mt/config/sdx_global.cfg
 ```

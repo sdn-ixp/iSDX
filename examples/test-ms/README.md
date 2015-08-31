@@ -9,14 +9,14 @@ $ sudo ./sdx_mininext.py
 ## Run RefMon
 
 ```bash
-$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config ~/sdx-ryu/examples/test-ms/controller/sdx_config/sdx_global.cfg
+$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config ~/sdx-ryu/examples/test-ms/config/sdx_global.cfg
 ```
 
 ## Run xctrl
 
 ```bash
 $ cd ~/sdx-ryu/xctrl/
-$ ./xctrl.py ~/sdx-ryu/examples/test-ms/controller/sdx_config/sdx_global.cfg
+$ ./xctrl.py ~/sdx-ryu/examples/test-ms/config/sdx_global.cfg
 ```
 
 ## Run arpproxy
@@ -43,7 +43,7 @@ $ sudo python participant_controller.py test-ms 3
 ```
 
 ## Run ExaBGP
-exabgp ~/sdx-ryu/examples/test-ms/controller/sdx_config/bgp.conf
+exabgp ~/sdx-ryu/examples/test-ms/config/bgp.conf
 
 ### Mininet with SDNIP
 

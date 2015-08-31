@@ -206,7 +206,7 @@ class ArpProxy():
 
 def main(argv):
     # locate config file
-    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"controller","sdx_config"))
+    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"config"))
     config_file = os.path.join(base_path, "sdx_global.cfg")
 
     # start arp proxy
