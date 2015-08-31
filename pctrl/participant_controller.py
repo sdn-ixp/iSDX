@@ -192,8 +192,10 @@ class ParticipantController():
 
     def process_event(self, data):
         "Locally process each incoming network event"
-        #if LOG: print self.idp, "Data received: ", data
+
+
         if 'bgp' in data:
+            if LOG: print self.idp, "Event Received: BGP Update."
             route = data['bgp']
             # Process the incoming BGP updates from XRS
             #print self.idp, "BGP Route received: ",route, type(route)
@@ -201,12 +203,17 @@ class ParticipantController():
 
         elif 'policy' in data:
             # Process the event requesting change of participants' policies
+            if LOG: print self.idp, "Event Received: Policy change."
             change_info = data['policy']
             self.process_policy_changes(change_info)
 
         elif 'arp' in data:
             requested_vnh = data['arp']
+            if LOG: print self.idp, "Event Received: ARP request for IP", requested_vnh
             self.process_arp_request(requested_vnh)
+
+        else:
+            if LOG: print self.idp, "UNKNOWN EVENT TYPE RECEIVED:", data
 
 
     def process_policy_changes(self, change_info):
@@ -266,6 +273,8 @@ class ParticipantController():
                           "vmac":vmac,
                           "dstip":part_ip,
                           "dstmac":part_mac}
+
+            if LOG: print self.idp, "Sending ARP Response:", arp_fields
 
             self.arp_client.send(json.dumps(arp_fields))
 
