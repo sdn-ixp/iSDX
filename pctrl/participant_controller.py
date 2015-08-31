@@ -16,6 +16,7 @@ from peer import BGPPeer as BGPPeer
 from supersets import SuperSets
 from ss_rule_scheme import *
 from lib import *
+from ss_lib import *
 
 sys.path.insert(0, '../xctrl/')
 from flowmodmsg import FlowModMsgBuilder
@@ -208,9 +209,9 @@ class ParticipantController():
             self.process_policy_changes(change_info)
 
         elif 'arp' in data:
-            requested_vnh = data['arp']
+            (requester_srcmac, requested_vnh) = tuple(data['arp'])
             if LOG: print self.idp, "Event Received: ARP request for IP", requested_vnh
-            self.process_arp_request(requested_vnh)
+            self.process_arp_request(requester_srcmac, requested_vnh)
 
         else:
             if LOG: print self.idp, "UNKNOWN EVENT TYPE RECEIVED:", data
@@ -258,25 +259,32 @@ class ParticipantController():
         return 0
 
 
-    def process_arp_request(self, vnh):
+    def process_arp_request(self, part_mac, vnh):
         vmac = ""
         if self.cfg.vmac_mode == SUPERSETS:
             vmac = self.supersets.get_vmac(self, vnh)
         else:
             vmac = "whoa" # MDS vmac goes here
 
-        # send an arp response to each of our routers
-        for port in self.cfg.ports:
-            part_ip = port["IP"]
-            part_mac = port["MAC"]
-            arp_fields = {"vnhip":vnh,
-                          "vmac":vmac,
-                          "dstip":part_ip,
-                          "dstmac":part_mac}
 
-            if LOG: print self.idp, "Sending ARP Response:", arp_fields
+        # if this is gratuitous, send a reply to the part's ID
+        if part_mac is None:
+            part_mac = vmac_next_hop_match(self.id, self.supersets, False)
 
-            self.arp_client.send(json.dumps(arp_fields))
+
+        # fill in the IP field with the first port IP
+        # this shouldn't matter (since we fwd ARPs based upon mac)
+        part_ip = self.cfg.ports[0]["IP"]
+
+        arp_fields = {"vnhip":vnh,
+                      "vmac":vmac,
+                      "dstip":part_ip,
+                      "dstmac":part_mac}
+
+
+        if LOG: print self.idp, "Sending ARP Response:", arp_fields
+
+        self.arp_client.send(json.dumps(arp_fields))
 
 
     def process_bgp_route(self, route):
@@ -347,7 +355,7 @@ class ParticipantController():
 
         # Send gratuitous ARP responses for all them
         for vnh in changed_vnhs:
-            self.process_arp_request(vnh)
+            self.process_arp_request(None, vnh)
 
         # Tell Route Server that it needs to announce these routes
         for announcement in announcements:

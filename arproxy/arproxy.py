@@ -73,7 +73,6 @@ class ArpProxy():
             self.garp_socket = tuple([tmp[0], int(tmp[1])])
 
             self.interface = config["ARP Proxy"]["Interface"]
-            self.interface = tuple(str(self.interface[0]), int(self.interface[1]))
 
             for participant_id in config["Participants"]:
                 participant = config["Participants"][participant_id]
@@ -154,7 +153,7 @@ class ArpProxy():
         if LOG: print idp, "Gratuitous ARP Handler started "
         while True:
             conn_ah = self.listener_garp.accept()
-            print "GARP: connection accepted"
+            if LOG: print idp, "Connection from a pctrl accepted."
             tmp = conn_ah.recv()
             self.process_garp(json.loads(tmp))
             reply = "Gratuitous ARP response processed"
@@ -174,6 +173,7 @@ class ArpProxy():
         if LOG: print idp, "GARP received: ", data
         garp_message = craft_garp_response(data['vnhip'], data['dstip'],
                                         data['dstmac'], data['vmac'])
+        if LOG: print idp, "Sending GARP packet:", garp_message
         self.raw_socket.send(garp_message)
 
 
@@ -187,7 +187,7 @@ class ArpProxy():
                     print idp, "relay ARP-REQUEST to participant "+str(requester_id)
                 eh_socket = Client(self.participants[requester_id]["eh_socket"])
                 data = {}
-                data['arp_request'] = requested_ip
+                data['arp'] = [requester_srcmac, requested_ip]
                 eh_socket.send(json.dumps(data))
                 recv = eh_socket.recv()
                 eh_socket.close()
