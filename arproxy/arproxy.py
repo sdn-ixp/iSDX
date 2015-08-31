@@ -18,10 +18,12 @@ from utils import parse_packet, parse_eth_frame, parse_arp_packet, craft_arp_pac
 
 ETH_BROADCAST = 'ff:ff:ff:ff:ff:ff'
 ETH_TYPE_ARP = 0x0806
-LOG = True
 
 SUPERSETS = 0
 MDS       = 1
+
+LOG = True
+idp = "ARP:"
 
 
 class ArpProxy():
@@ -71,6 +73,7 @@ class ArpProxy():
             self.garp_socket = tuple([tmp[0], int(tmp[1])])
 
             self.interface = config["ARP Proxy"]["Interface"]
+            self.interface = tuple(str(self.interface[0]), int(self.interface[1]))
 
             for participant_id in config["Participants"]:
                 participant = config["Participants"][participant_id]
@@ -108,7 +111,7 @@ class ArpProxy():
 
                 arp_type = struct.unpack("!h", arp_packet["oper"])[0]
                 if LOG:
-                    print "ARP-PROXY: received ARP-" + ("REQUEST" if (arp_type == 1) else "REPLY") +" SRC: "+eth_frame["src_mac"]+" / "+arp_packet["src_ip"]+" "+"DST: "+eth_frame["dst_mac"]+" / "+arp_packet["dst_ip"]
+                    print idp, "Received ARP-" + ("REQUEST" if (arp_type == 1) else "REPLY") +" SRC: "+eth_frame["src_mac"]+" / "+arp_packet["src_ip"]+" "+"DST: "+eth_frame["dst_mac"]+" / "+arp_packet["dst_ip"]
 
                 if arp_type == 1:
                     # check if the arp request stems from one of the participants
@@ -140,7 +143,7 @@ class ArpProxy():
 
     def set_garp_listener(self):
         "Set listener for gratuitous ARPs from the participants' controller"
-        print "Starting the Gratuitous ARP listener"
+        if LOG: print idp, "Starting the Gratuitous ARP listener"
         self.listener_garp = Listener(self.garp_socket, authkey=None)
         ps_thread = Thread(target=self.start_garp_handler)
         ps_thread.daemon = True
@@ -148,7 +151,7 @@ class ArpProxy():
 
 
     def start_garp_handler(self):
-        print "Gratuitous ARP Handler started "
+        if LOG: print idp, "Gratuitous ARP Handler started "
         while True:
             conn_ah = self.listener_garp.accept()
             print "GARP: connection accepted"
@@ -168,7 +171,7 @@ class ArpProxy():
             - dstmac: Mac address of the interface for which this response is crafted
             - dstip: IP address of the target interface (?)
         """
-        print "GARP received: ", data
+        if LOG: print idp, "GARP received: ", data
         garp_message = craft_garp_response(data['vnhip'], data['dstip'],
                                         data['dstmac'], data['vmac'])
         self.raw_socket.send(garp_message)
@@ -181,7 +184,7 @@ class ArpProxy():
             if requester_id in self.participants:
                 # ARP request is sent by participant with its own SDN controller
                 if LOG:
-                    print "relay ARP-REQUEST to participant "+str(requester_id)
+                    print idp, "relay ARP-REQUEST to participant "+str(requester_id)
                 eh_socket = Client(self.participants[requester_id]["eh_socket"])
                 data = {}
                 data['arp_request'] = requested_ip
@@ -208,6 +211,8 @@ def main(argv):
     # locate config file
     base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"config"))
     config_file = os.path.join(base_path, "sdx_global.cfg")
+
+    if LOG: print idp, "Launching ARP Proxy with config file", config_file
 
     # start arp proxy
     sdx_ap = ArpProxy(config_file)
