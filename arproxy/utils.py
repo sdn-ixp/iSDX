@@ -62,8 +62,16 @@ def craft_eth_frame(frame, dst_mac, data):
     return eth_frame
 
 
-def craft_garp_response(vnhip, dstip, vmac_addr, dst_mac):
+
+def craft_garp_response(SPA, TPA, SHA, THA, eth_src, eth_dst):
     "Craft Gratuitous ARP Response Message"
+    """
+    Format ARP reply:
+    eth_src = VMAC, eth_dst = requester_mac, SHA = VMAC, SPA = vnhip, THA = requester_mac, TPA = requester_ip
+
+    Format gratuitous ARP:
+    eth_src = VMAC, eth_dst = 00..00<part_id>, SHA = VMAC, SPA = vnhip, THA = VMAC, TPA = vnhip
+    """
     arp_packet = [
         # HTYPE
         struct.pack("!h", 1),
@@ -76,19 +84,19 @@ def craft_garp_response(vnhip, dstip, vmac_addr, dst_mac):
         # OPER (reply)
         struct.pack("!h", 2),
         # SHA
-        binascii.unhexlify(vmac_addr.replace(':', '')),
+        binascii.unhexlify(SHA.replace(':', '')),
         # SPA
-        socket.inet_aton(str(vnhip)),
+        socket.inet_aton(str(SPA)),
         # THA
-        binascii.unhexlify(vmac_addr.replace(':', '')),
+        binascii.unhexlify(THA.replace(':', '')),
         # TPA
-        socket.inet_aton(str(vnhip))
+        socket.inet_aton(str(TPA))
     ]
     eth_frame = [
         # Destination address:
-        binascii.unhexlify(dst_mac.replace(':', '')),
+        binascii.unhexlify(eth_dst.replace(':', '')),
         # Source address:
-        binascii.unhexlify(vmac_addr.replace(':', '')),
+        binascii.unhexlify(eth_src.replace(':', '')),
         # Protocol
         struct.pack("!h", ETH_TYPE_ARP),
         # Data

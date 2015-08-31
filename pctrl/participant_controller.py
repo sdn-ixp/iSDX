@@ -259,6 +259,8 @@ class ParticipantController():
         return 0
 
 
+
+
     def process_arp_request(self, part_mac, vnh):
         vmac = ""
         if self.cfg.vmac_mode == SUPERSETS:
@@ -267,22 +269,38 @@ class ParticipantController():
             vmac = "whoa" # MDS vmac goes here
 
 
+
         # if this is gratuitous, send a reply to the part's ID
         if part_mac is None:
-            part_mac = vmac_next_hop_match(self.id, self.supersets, False)
+            gratuitous = True
+            # set fields appropriately for gratuitous arps
+            eth_dst = vmac_next_hop_match(self.id, self.supersets, False)
+            tpa = vnh
+            tha = vmac
 
 
-        # fill in the IP field with the first port IP
-        # this shouldn't matter (since we fwd ARPs based upon mac)
-        part_ip = self.cfg.ports[0]["IP"]
+        else: # if it wasn't gratuitous
+            gratuitous = False
+            # dig up the IP of the target participant
+            for port in self.cfg.ports:
+                if part_mac == port["MAC"]:
+                    part_ip = port["IP"]
+                    break
+            # set field appropriately for arp responses
+            eth_dst = part_mac
+            tpa = part_ip
+            tha = part_mac
 
-        arp_fields = {"vnhip":vnh,
-                      "vmac":vmac,
-                      "dstip":part_ip,
-                      "dstmac":part_mac}
 
+        arp_fields = {  'SPA':vnh,     'TPA':tpa, 
+                        'SHA':vmac,     'THA':tha, 
+                        'eth_src':vmac, 'eth_dst':eth_dst}
 
-        if LOG: print self.idp, "Sending ARP Response:", arp_fields
+        if LOG: 
+            if gratuitous:
+                print self.idp, "Sending Gratuitious ARP:", arp_fields
+            else:
+                print self.idp, "Sending ARP Response:", arp_fields
 
         self.arp_client.send(json.dumps(arp_fields))
 
@@ -363,6 +381,7 @@ class ParticipantController():
             self.send_announcement(announcement)
 
         return reply
+
 
 
     def send_announcement(self, announcement):

@@ -141,8 +141,8 @@ class ArpProxy():
 
 
     def set_garp_listener(self):
-        "Set listener for gratuitous ARPs from the participants' controller"
-        if LOG: print idp, "Starting the Gratuitous ARP listener"
+        "Set listener for ARP replies from the participants' controller"
+        if LOG: print idp, "Starting the ARP  listener"
         self.listener_garp = Listener(self.garp_socket, authkey=None)
         ps_thread = Thread(target=self.start_garp_handler)
         ps_thread.daemon = True
@@ -150,7 +150,7 @@ class ArpProxy():
 
 
     def start_garp_handler(self):
-        if LOG: print idp, "Gratuitous ARP Handler started "
+        if LOG: print idp, "ARP Response Handler started "
         while True:
             conn_ah = self.listener_garp.accept()
             if LOG: print idp, "Connection from a pctrl accepted."
@@ -171,8 +171,8 @@ class ArpProxy():
             - dstip: IP address of the target interface (?)
         """
         if LOG: print idp, "GARP received: ", data
-        garp_message = craft_garp_response(data['vnhip'], data['dstip'],
-                                        data['dstmac'], data['vmac'])
+        garp_message = craft_garp_response(**data)
+
         if LOG: print idp, "Sending GARP packet:", garp_message
         self.raw_socket.send(garp_message)
 
