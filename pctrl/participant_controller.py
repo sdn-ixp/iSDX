@@ -18,10 +18,13 @@ from ss_rule_scheme import *
 from lib import *
 from ss_lib import *
 
+import time
+
 sys.path.insert(0, '../xctrl/')
 from flowmodmsg import FlowModMsgBuilder
 
 LOG = True
+TIMING = True
 
 MULTISWITCH = 0
 MULTITABLE  = 1
@@ -307,6 +310,8 @@ class ParticipantController():
 
     def process_bgp_route(self, route):
         "Process each incoming BGP advertisement"
+        start = time.time()
+
         reply = ''
         # Map to update for each prefix in the route advertisement.
         updates = self.bgp_instance.update(route)
@@ -318,11 +323,25 @@ class ParticipantController():
             self.bgp_instance.decision_process_local(update)
             self.vnh_assignment(update)
 
+        if TIMING:
+            elapsed = time.time() - start
+            print self.idp, "Time taken for decision process:", elapsed
+            start = time.time()
+
+
         if self.cfg.vmac_mode == 0:
         ################## SUPERSET RESPONSE TO BGP ##################
             # update supersets
             "Map the set of BGP updates to a list of superset expansions."
             ss_changes, ss_changed_prefs = self.supersets.update_supersets(self, updates)
+
+            if TIMING:
+                elapsed = time.time() - start
+                print self.idp, "Time taken to update supersets:", elapsed
+                start = time.time()
+
+
+
             # ss_changed_prefs are prefixes for which the VMAC bits have changed
             # these prefixes must have gratuitous arps sent
             garp_required_vnhs = [self.prefix_2_VNH[prefix] for prefix in ss_changed_prefs]
@@ -352,6 +371,12 @@ class ParticipantController():
                 self.dp_queued.extend(flow_msgs)
 
 
+            if TIMING:
+                elapsed = time.time() - start
+                print self.idp, "Time taken to deal with ss_changes:", elapsed
+                start = time.time()
+
+
         ################## END SUPERSET RESPONSE ##################
 
         else:
@@ -360,6 +385,12 @@ class ParticipantController():
 
 
         self.push_dp()
+
+
+        if TIMING:
+            elapsed = time.time() - start
+            print self.idp, "Time taken to push dp msgs:", elapsed
+            start = time.time()
 
 
         changed_vnhs, announcements = self.bgp_instance.bgp_update_peers(updates,
@@ -379,6 +410,13 @@ class ParticipantController():
         for announcement in announcements:
             # TODO: Complete the logic for this function
             self.send_announcement(announcement)
+
+
+        if TIMING:
+            elapsed = time.time() - start
+            print self.idp, "Time taken to send garps/announcements:", elapsed
+            start = time.time()
+
 
         return reply
 
