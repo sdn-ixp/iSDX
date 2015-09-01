@@ -128,7 +128,8 @@ class rib():
 
             cursor = self.db.cursor()
 
-            cursor.execute('''delete from ''' + self.name + ''' where prefix = ?''', (key,))
+            #cursor.execute('''delete from ''' + self.name + ''' where prefix = ?''', (key,))
+            cursor.execute('''delete from ''' + self.name + ''' where prefix = "''' + key + '"')
 
     def delete_all(self):
 
