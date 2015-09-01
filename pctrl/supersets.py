@@ -12,7 +12,7 @@ LOG = True
 
 class SuperSets():
     def __init__(self, pctrl, config_file = None):
-        self.max_bits = 30
+        self.max_bits = 31
         self.max_initial_bits = 26
         self.best_path_size = 16
         self.VMAC_size = 48
@@ -24,11 +24,14 @@ class SuperSets():
             with open(config_file, 'r') as f:
                 config = json.load(f)
                 config = config["VMAC"]["Options"]
-                self.max_bits =         int(config["Superset Bits"])
-                self.max_initial_bits = self.max_bits - 4
+                #self.max_bits =         int(config["Superset Bits"])
+                #self.max_initial_bits = self.max_bits - 4
                 self.best_path_size =   int(config["Next Hop Bits"])
                 self.VMAC_size =        int(config["VMAC Size"])
                 self.port_size =        int(config["Port Bits"])
+
+                self.max_bits = self.VMAC_size - self.best_path_size - 1
+                self.max_initial_bits = self.max_bits - 4
 
         else:
             if LOG: print pctrl.idp, "Initializing SuperSets WITHOUT config file."
@@ -182,11 +185,13 @@ class SuperSets():
             self.supersets[i] = list(self.supersets[i])
 
         # fix the mask size after a recomputation event
-        self.mask_size = self.max_bits
+        self.mask_size = self.max_bits - 1
+        self.id_size = 1
+
+        # if there is more than one superset, set the field sizes appropriately
         if len(self.supersets) > 1:
-            self.mask_size -= math.ceil(math.log(len(self.supersets)-1, 2))
-        # also fix the ID size, which is the leftover bits
-        self.id_size = self.max_bits - self.mask_size
+            self.id_size = int(math.ceil(math.log(len(self.supersets), 2)))
+            self.mask_size -= self.id_size
 
         if LOG: 
             print "done.~"
@@ -263,6 +268,9 @@ class SuperSets():
         nexthop_bitstring = '{num:0{width}b}'.format(num=nexthop_part, width=self.best_path_size)
 
         vmac_bitstring = '1' + id_bitstring + set_bitstring + nexthop_bitstring
+
+        if len(vmac_bitstring) != 48:
+            print "BAD VMAC SIZE!! FIELDS ADD UP TO", len(vmac_bitstring)
 
         # convert bitstring to hexstring and then to a mac address
         vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=self.VMAC_size/4)

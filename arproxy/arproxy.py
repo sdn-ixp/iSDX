@@ -163,17 +163,24 @@ class ArpProxy():
 
     def process_garp(self, data):
         """
-        Process the incoming Gratuitous ARP response:
-        Structure of ARP Response coming from the Participant Controller:
-            - srcip/vnhip: VNH IP address for which the ARP response is created
-            - srcmac/vmac: VMAC that is the MAC address corresponding to the VNH IP address
-            - dstmac: Mac address of the interface for which this response is crafted
-            - dstip: IP address of the target interface (?)
-        """
-        if LOG: print idp, "GARP received: ", data
-        garp_message = craft_garp_response(**data)
+        Process the incoming ARP data from the Participant Controller:
+        -Format ARP Reply:
+            eth_src = VMAC, eth_dst = requester_mac, 
+            SHA = VMAC, SPA = vnhip, 
+            THA = requester_mac, TPA = requester_ip
 
-        if LOG: print idp, "Sending GARP packet:", garp_message
+        -Format Gratuitous ARP:
+            eth_src = VMAC, eth_dst = 00..00<part_id>, 
+            SHA = VMAC, SPA = vnhip, 
+            THA = VMAC, TPA = vnhip
+        """
+        if LOG: 
+            if data["THA"] == data["eth_dst"]:
+                print idp, "ARP Reply relayed:", data
+            else:
+                print idp, "Gratuitous ARP relayed:", data
+
+        garp_message = craft_garp_response(**data)
         self.raw_socket.send(garp_message)
 
 

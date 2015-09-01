@@ -172,9 +172,16 @@ def clear_inactive_parts(prefixSets, activePeers):
 ### VMAC AND VMAC MASK BUILDERS
 #
 
+def bitstring_2_mac(vmac_bitstring, ss_instance):
+    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=ss_instance.VMAC_size/4)
+    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,ss_instance.VMAC_size/4,2)])
+
+    return vmac_addr
+
 # constructs a match VMAC for checking reachability
 def vmac_participant_match(superset_id, participant_index, ss_instance, inbound_bit = False):
-
+    print "DEBUG:", "SS_ID:", superset_id, "BIT_POS:", participant_index
+    print "DEBUG:", "ID SIZE:", ss_instance.id_size, "MASK SIZE:", ss_instance.mask_size
     # inbound bit
     vmac_bitstring = '0'
     # this should never happen but maybe someone will need it!
@@ -200,10 +207,7 @@ def vmac_participant_match(superset_id, participant_index, ss_instance, inbound_
     vmac_bitstring = vmac_bitstring_part1 + vmac_bitstring_part2 + vmac_bitstring_part3
 
     # convert bitstring to hexstring and then to a mac address
-    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=ss_instance.VMAC_size/4)
-    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,ss_instance.VMAC_size/4,2)])
-
-    return vmac_addr
+    return bitstring_2_mac(vmac_bitstring, ss_instance)
 
 
 # constructs the accompanying mask for reachability checks
@@ -225,10 +229,7 @@ def vmac_next_hop_match(participant_name, ss_instance, inbound_bit = False):
         vmac_bitstring = '1' + vmac_bitstring[1:]
 
     # convert bitstring to hexstring and then to a mac address
-    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=ss_instance.VMAC_size/4)
-    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,ss_instance.VMAC_size/4,2)])
-
-    return vmac_addr
+    return bitstring_2_mac(vmac_bitstring, ss_instance)
 
 # returns a mask on just participant bits
 def vmac_next_hop_mask(ss_instance, inbound_bit = False):
@@ -256,10 +257,7 @@ def vmac_part_port_match(participant_name, port_num, ss_instance, inbound_bit = 
         vmac_bitstring = '1' + vmac_bitstring[1:]
 
     # convert bitstring to hexstring and then to a mac address
-    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=ss_instance.VMAC_size/4)
-    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,ss_instance.VMAC_size/4,2)])
-
-    return vmac_addr
+    return bitstring_2_mac(vmac_bitstring, ss_instance)
 
 
 # returns a mask on participant and port bits
@@ -336,10 +334,7 @@ def get_vmac_test(prefix_set, ss_instance):
     vmac_bitstring = '1' + id_bitstring + set_bitstring + nexthop_bitstring
 
     # convert bitstring to hexstring and then to a mac address
-    vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=self.VMAC_size/4)
-    vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,self.VMAC_size/4,2)])
-
-    return vmac_addr
+    return bitstring_2_mac(vmac_bitstring, ss_instance)
 
 
 
