@@ -77,7 +77,7 @@ mininext> c2 iperf -s -B 140.0.0.1 -p 4322 &
 mininext> a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2  
 ```
 
-### Cleanup
+## Cleanup
 In the `pctrl` directory, run the `clean` script. 
 ```bash
 $ cd ~/sdx-ryu/pctrl/
