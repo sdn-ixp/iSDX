@@ -37,9 +37,7 @@ $ sudo python route_server.py test-ms
 
 ```bash
 $ cd ~/sdx-ryu/pctrl/
-$ sudo python participant_controller.py test-ms 1
-$ sudo python participant_controller.py test-ms 2
-$ sudo python participant_controller.py test-ms 3
+$ sh run_pctrlr.sh
 ```
 
 ## Run ExaBGP
@@ -77,6 +75,13 @@ and Inbound policy of c: match(tcp_port=4322) >> fwd(c2)
 ```bash
 mininext> c2 iperf -s -B 140.0.0.1 -p 4322 &  
 mininext> a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2  
+```
+
+### Cleanup
+In the `pctrl` directory, run the `clean` script. 
+```bash
+$ cd ~/sdx-ryu/pctrl/
+$ sh clean.sh
 ```
 
 ### Note
