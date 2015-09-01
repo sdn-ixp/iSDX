@@ -241,9 +241,9 @@ class SuperSets():
                 ss_id = i
                 break
         if ss_id == -1:
-            if LOG: print pctrl.idp, "Prefix", prefix, "doesn't belong to any superset? >>"
-            if LOG: print pctrl.idp, ">> Supersets:", self.SuperSets
-            if LOG: print pctrl.idp, ">> Set of prefix", prefix, "=", prefix_set
+            if LOG: print pctrl.idp, "In get_vmac: Prefix", prefix, "doesn't belong to any superset (This should never happen) >>"
+            if LOG: print pctrl.idp, ">> Supersets at the moment of failure:", self.supersets
+            if LOG: print pctrl.idp, ">> Set of advertisers of prefix", prefix, "is", prefix_set
             return vmac_addr
 
 
