@@ -269,6 +269,7 @@ class SuperSets():
 
         vmac_bitstring = '1' + id_bitstring + set_bitstring + nexthop_bitstring
 
+
         if len(vmac_bitstring) != 48:
             print "BAD VMAC SIZE!! FIELDS ADD UP TO", len(vmac_bitstring)
 

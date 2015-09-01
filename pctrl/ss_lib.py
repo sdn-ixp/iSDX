@@ -180,31 +180,28 @@ def bitstring_2_mac(vmac_bitstring, ss_instance):
 
 # constructs a match VMAC for checking reachability
 def vmac_participant_match(superset_id, participant_index, ss_instance, inbound_bit = False):
-    print "DEBUG:", "SS_ID:", superset_id, "BIT_POS:", participant_index
-    print "DEBUG:", "ID SIZE:", ss_instance.id_size, "MASK SIZE:", ss_instance.mask_size
+    
     # inbound bit
-    vmac_bitstring = '0'
+    in_bit = '0'
     # this should never happen but maybe someone will need it!
     if inbound_bit:
-        vmac_bitstring = '1'
+        in_bit = '1'
 
-    # add superset identifier
+    # first chunk is the superset identifier
     vmac_bitstring_part1 = '{num:0{width}b}'.format(num=int(superset_id), width=(ss_instance.id_size))
-    #print "identifier:", vmac_bitstring_part1,
 
-    # set bit of participant
+    # second chunk is the bit corresponding to the participant reachability check
     mask_bits = ['0'] * ss_instance.mask_size
     mask_bits[participant_index] = '1'
     vmac_bitstring_part2 =  ''.join(mask_bits)
-    #print "mask bits:", vmac_bitstring_part2
 
-    # padding is vmac_size minus current buildstring size
-    current_size = len(vmac_bitstring_part1) + len(vmac_bitstring_part2)
+    # final chunk is padding which is vmac_size minus current buildstring size
+    current_size = len(in_bit) + len(vmac_bitstring_part1) + len(vmac_bitstring_part2)
     padding_size = ss_instance.VMAC_size - current_size
     vmac_bitstring_part3 = '0' * padding_size
-    #print "padding:", vmac_bitstring_part3
 
-    vmac_bitstring = vmac_bitstring_part1 + vmac_bitstring_part2 + vmac_bitstring_part3
+    # add the inbound bit and the three chunks together
+    vmac_bitstring = in_bit + vmac_bitstring_part1 + vmac_bitstring_part2 + vmac_bitstring_part3
 
     # convert bitstring to hexstring and then to a mac address
     return bitstring_2_mac(vmac_bitstring, ss_instance)
