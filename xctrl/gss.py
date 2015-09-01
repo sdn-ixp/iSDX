@@ -167,7 +167,7 @@ class GSS(object):
     def handle_inbound(self, rule_type):
         vmac = self.vmac_builder.only_first_bit()
         match = {"eth_dst": (vmac, vmac)}
-        action = {"fwd": ["inbound"]}
+        action = {"fwd": ["outbound"]}
         self.fm_builder.add_flow_mod("insert", rule_type, INBOUND_BIT_PRIORITY, match, action)
 
     def match_any_fwd(self, rule_type, dst):

@@ -110,6 +110,7 @@ class FlowMod():
     def make_instructions(self):
         temp_instructions = []
         temp_goto_instructions = []
+        temp_fwd_actions = []
         temp_actions = []
 
         for action, value in self.actions.iteritems():
@@ -117,21 +118,24 @@ class FlowMod():
                 if self.config.tables:
                     for port in value:
                         if isinstance( port, int ) or port.isdigit():
-                            temp_actions.append(self.parser.OFPActionOutput(int(port)))
+                            temp_fwd_actions.append(self.parser.OFPActionOutput(int(port)))
                         else:
                             temp_goto_instructions.append(self.parser.OFPInstructionGotoTable(self.config.tables[port]))
                 else:
                     for port in value:
                         if isinstance( port, int ) or port.isdigit():
-                            temp_actions.append(self.parser.OFPActionOutput(int(port)))
+                            temp_fwd_actions.append(self.parser.OFPActionOutput(int(port)))
                         else:
                             if port in self.config.dp_alias:
                                 port = self.config.dp_alias[port]
-                            temp_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][port]))
+                            temp_fwd_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][port]))
             elif action == "set_eth_src":
                 temp_actions.append(self.parser.OFPActionSetField(eth_src=value))
             elif action == "set_eth_dst":
                 temp_actions.append(self.parser.OFPActionSetField(eth_dst=value))
+
+        if temp_fwd_actions:
+            temp_actions.extend(temp_fwd_actions)
 
         if temp_actions:
             temp_instructions = [self.parser.OFPInstructionActions(self.config.ofproto.OFPIT_APPLY_ACTIONS, temp_actions)]
