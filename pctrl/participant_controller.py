@@ -41,6 +41,9 @@ class ParticipantController():
         # print ID for logging
         self.idp = "P_" + str(self.id) + ":"
 
+        # used to signal termination
+        self.run = True
+
         # Initialize participant params
         self.cfg = PConfig(config_file, self.id)
         # Vmac encoding mode
@@ -162,6 +165,12 @@ class ParticipantController():
         "Stop the Participants' SDN Controller"
         if LOG: print self.idp, "Stopping Controller."
 
+        # Signal Termination and close blocking listener
+        self.run = False
+        conn = Client(self.cfg.get_eh_info(), authkey=None)
+        conn.send("terminate")
+        conn.close()
+
         # TODO: confirm that this isn't silly
         self.xrs_client = None
         self.refmon_client = None
@@ -174,25 +183,28 @@ class ParticipantController():
     def start_eh(self):
         '''Socket listener for network events '''
         if LOG: print self.idp, "Event Handler started."
-        while True:
+        while self.run:
             if LOG: print self.idp, "EH waiting for connection..."
             conn_eh = self.listener_eh.accept()
-            if LOG: print self.idp, "EH established connection..."
+
             tmp = conn_eh.recv()
-            data = json.loads(tmp)
 
-            if LOG: print self.idp, "Event received of type", data.keys()
+            if tmp != "terminate":
+                if LOG: print self.idp, "EH established connection..."
 
-            # Starting a thread for independently processing each incoming network event
-            event_processor_thread = Thread(target = self.process_event, args = [data])
-            event_processor_thread.daemon = True
-            event_processor_thread.start()
+                data = json.loads(tmp)
 
-            # Send a message back to the sender.
-            reply = "Event Received"
-            conn_eh.send(reply)
+                if LOG: print self.idp, "Event received of type", data.keys()
+
+                # Starting a thread for independently processing each incoming network event
+                event_processor_thread = Thread(target = self.process_event, args = [data])
+                event_processor_thread.daemon = True
+                event_processor_thread.start()
+
+                # Send a message back to the sender.
+                reply = "Event Received"
+                conn_eh.send(reply)
             conn_eh.close()
-
 
     def process_event(self, data):
         "Locally process each incoming network event"
