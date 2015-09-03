@@ -4,6 +4,8 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 import json
+import argparse
+
 from time import time
 from threading import Thread
 from multiprocessing import Queue
@@ -13,7 +15,7 @@ from multiprocessing.connection import Listener
 class RefLog():
 
     def __init__(self, address, port, key, logfile):
-        self.listener = Listener((address, port))
+        self.listener = Listener((address, int(port)))
         
         self.log = open(logfile, "w")
 
@@ -40,12 +42,11 @@ class RefLog():
 
     def stop(self):
         self.receive = False
-	    self.receiver.join(1)
         self.log.close()
         
         
 def main(argv):
-    reflog_instance = RefLog(address, port, key, logfile)
+    reflog_instance = RefLog(args.ip, args.port, args.key, args.logfile)
 
     rl_thread = Thread(target=reflog_instance.start)
     rl_thread.daemon = True
@@ -55,7 +56,7 @@ def main(argv):
         try:
             rl_thread.join(1)
         except KeyboardInterrupt:
-            rl_thread.stop() 
+            reflog_instance.stop() 
 
 
 ''' main '''
@@ -64,7 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('ip', help='ip address of the refmon')
     parser.add_argument('port', help='port of the refmon')
     parser.add_argument('key', help='authkey of the refmon')
-    parser.add_argument('input', help='log output file')
+    parser.add_argument('logfile', help='log file')
     args = parser.parse_args()
 
     main(args)
