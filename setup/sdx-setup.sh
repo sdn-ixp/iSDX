@@ -19,9 +19,9 @@ sudo pip install requests
 
 # Install SDX
 cd ~
-git clone https://github.com/sdn-ixp/sdx-ryu.git
-cd sdx-ryu
-sudo chmod 755 xrs/client.py xrs/route_server.py examples/simple/mininet/sdx_mininext.py
+git clone https://github.com/sdn-ixp/sdx-parallel.git
+cd sdx-parallel
+sudo chmod 755 xrs/client.py xrs/route_server.py
 mkdir xrs/ribs
 cd ~
 

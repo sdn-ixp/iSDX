@@ -25,7 +25,7 @@ Vagrant.configure("2") do |config|
   config.ssh.forward_x11 = true
 
 
-  config.vm.synced_folder ".", "/home/vagrant/sdx-ryu", type: "rsync",
+  config.vm.synced_folder ".", "/home/vagrant/sdx-parallel", type: "rsync",
     rsync__exclude: ".git/"
 
 end
