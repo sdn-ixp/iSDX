@@ -26,3 +26,12 @@ There are two sample config files provided:
 * refmon_ms.cfg - a config file for an SDX using Supersets and Multiple-Switches
 
 * refmon_mt.cfg - a config file for an SDX using Supersets and Multiple-Tables
+
+
+# FLANC - Reference Monitor Logger
+
+This script saves every flowmod with a timestamp to the specified file (e.g. test.log)
+
+```bash
+$ ./reflog.py localhost 5555 sdx test.log
+```
