@@ -16,7 +16,7 @@ from multiprocessing.connection import Client
 class ExaBGPEmulator(object):
     def __init__(self, address, port, authkey, input_file, debug = False):
         self.logger = logging.getLogger('xbgp')
-        if False:
+        if debug:
             self.logger.setLevel(logging.DEBUG)
         self.logger.debug('init')
 
@@ -114,7 +114,7 @@ class ExaBGPEmulator(object):
                             
                         self.update_queue.put(tmp)
                         
-                        if self.update_queue.qsize() > 1000:
+                        while self.update_queue.qsize() > 1000:
                             
                             self.logger.debug('queue is full - taking a break')
 
@@ -191,7 +191,7 @@ def main(argv):
     # logging - log level
     logging.basicConfig(level=logging.INFO)
 
-    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input)
+    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input, True)
 
     eb_thread = Thread(target=exabgp_instance.start)
     eb_thread.start()
