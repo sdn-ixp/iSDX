@@ -185,7 +185,6 @@ class route_server():
         recv = conn.recv()
         conn.close()
 
-
     def stop(self):
 
         if LOG: print self.idp, "Stopping."

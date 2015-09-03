@@ -2,125 +2,208 @@
 #  Author:
 #  Rudiger Birkner(ETH Zurich)
 
-from time import sleep, time
+import logging
+import argparse
+import json
+
+from time import sleep, time, strptime, mktime
 from threading import Thread
+from netaddr import IPAddress
 from multiprocessing import Queue
+from Queue import Empty
 from multiprocessing.connection import Client
 
 class ExaBGPEmulator(object):
-    def __init__(self, address, port, authkey, input_file):
+    def __init__(self, address, port, authkey, input_file, debug = False):
+        self.logger = logging.getLogger('xbgp')
+        if False:
+            self.logger.setLevel(logging.DEBUG)
+        self.logger.debug('init')
+
         self.input_file = input_file
         
         self.real_start_time = time()
         self.simulation_start_time = 0 
+
+        self.fp_thread = None
+        self.us_thread = None
         
         self.run = True
         
         self.update_queue = Queue()
         
-        self.conn = Client((address, port), authkey=authkey)
+        self.conn = Client((address, int(port)), authkey=authkey)
 
-    def file_processor():
+    def file_processor(self):
         with open(self.input_file) as infile:
+            tmp = {}
+            next_hop = ""
+            flag = 0
+            
             for line in infile:
-                if line.startswith("TIME") and flag == 0:
+                if line.startswith("TIME"):
+                
                     flag = 1
-                    tmp = {}
-                    x = line.split("\n")[0].split(": ")
-                    tmp[x[0]] = x[1]
+                    
+                    tmp = {"exabgp": "3.4.8", "type": "update"}
+                    next_hop = ""
+                    
+                    x = line.split("\n")[0].split(": ")[1]
+                    time = mktime(strptime(x, "%m/%d/%y %H:%M:%S"))
+                    tmp["time"] = int(time)
                     
                 elif flag == 1:
-                    x = line.split("\n")[0].split(": ")
-                    if len(x) >= 2:
-                        tmp[x[0]] = x[1]
-                    if 'Keepalive' in line:
+                    if 'Keepalive' in line or line.startswith("\n"):
                         # Only process Update Messages
-                        tmp = {}
                         flag = 0
-                    elif line.startswith("ANNOUNCE"):
-                        tmp["ANNOUNCE"] = []
-                        flag = 2
-                    elif line.startswith("WITHDRAW"):
-                        tmp["WITHDRAW"] = []
-                        flag = 2
+
+                    else:
+                        x = line.split("\n")[0].split(": ")
+
+                        if "neighbor" not in tmp:
+                             tmp["neighbor"] = {"address": {}, "asn": {}, "message": {"update": {}}}
+                        
+                        elif line.startswith("FROM"):
+                            x = x[1].split(" ")
+                            if IPAddress(x[0]).version == 4:
+                                tmp["neighbor"]["ip"] = x[0]
+                                tmp["neighbor"]["address"]["peer"] = x[0]
+                                tmp["neighbor"]["asn"]["peer"] = x[1][2:]
+                            else:
+                                flag = 0
+                        elif line.startswith("TO"):
+                            x = x[1].split(" ")
+                            if IPAddress(x[0]).version == 4:
+                                tmp["neighbor"]["address"]["local"] = x[0]
+                                tmp["neighbor"]["asn"]["local"] = x[1][2:]                          
+                            else:
+                                flag = 0                        
+                        elif line.startswith("ORIGIN"):
+                            if "attribute" not in tmp["neighbor"]["message"]["update"]:
+                                tmp["neighbor"]["message"]["update"]["attribute"] = {}
+                            tmp["neighbor"]["message"]["update"]["attribute"]["origin"] = x[1].lower()
+                        
+                        elif line.startswith("ASPATH"):
+                            if "attribute" not in tmp["neighbor"]["message"]["update"]:
+                                tmp["neighbor"]["message"]["update"]["attribute"] = {}
+                            tmp["neighbor"]["message"]["update"]["attribute"]["as-path"] = "[ " + x[1] + " ]"
+                            
+                        elif line.startswith("MULTI_EXIT_DISC"):
+                            if "attribute" not in tmp["neighbor"]["message"]["update"]:
+                                tmp["neighbor"]["message"]["update"]["attribute"] = {}
+                            tmp["neighbor"]["message"]["update"]["attribute"]["med"] = x[1]
+                            
+                        elif line.startswith("NEXT_HOP"):
+                            if "announce" not in tmp["neighbor"]["message"]["update"]:
+                                tmp["neighbor"]["message"]["update"]["announce"] = {}
+                            tmp["neighbor"]["message"]["update"]["announce"] = {"ipv4 unicast": {x[1]: {}}}
+                            next_hop = x[1]
+                            
+                        elif line.startswith("ANNOUNCE"):
+                            if "announce" not in tmp["neighbor"]["message"]["update"]:
+                                tmp["neighbor"]["message"]["update"]["announce"] = {"ipv4 unicast": {}}
+                            flag = 2
+                        elif line.startswith("WITHDRAW"):
+                            tmp["neighbor"]["message"]["update"]["withdraw"] = {"ipv4 unicast": {}}
+                            flag = 2
 
                 elif flag == 2:
                     if line.startswith("\n"):
-                        self.update_queue.put(tmp)
-                        
-                        if self.update_queue.qsize() > 50:
-                            sleep(sleep_time(tmp["time"])/2)
-                            
                         if not self.run:
                             break
+                            
+                        self.update_queue.put(tmp)
+                        
+                        if self.update_queue.qsize() > 1000:
+                            
+                            self.logger.debug('queue is full - taking a break')
+
+                            sleep(self.sleep_time(tmp["time"])/2)
                             
                         flag = 0
                     else:
                         x = line.split("\n")[0].split()[0]
-                        if "ANNOUNCE" in tmp:
-                            tmp["ANNOUNCE"].append(x)
+                        if "announce" in tmp["neighbor"]["message"]["update"]:
+                            tmp["neighbor"]["message"]["update"]["announce"]["ipv4 unicast"][next_hop][x] = {}
                         else:
-                            tmp["WITHDRAW"].append(x)
+                            tmp["neighbor"]["message"]["update"]["withdraw"]["ipv4 unicast"][x] = {}
              
         self.run = False
                 
-    def bgp_update_sender():
+    def bgp_update_sender(self):
         while self.run:
-            bgp_update = self.update_queue.get()        
-              
-            if simulation_start_time == 0:
+            try:
+                bgp_update = self.update_queue.get(True, 1)        
+            except Empty:
+                continue
+
+            if self.simulation_start_time == 0:
                 self.real_start_time = time()
                 self.simulation_start_time = bgp_update["time"]
+
+            sleep_time = self.sleep_time(bgp_update["time"])
+
+            self.logger.debug('sleep for ' + str(sleep_time) + ' seconds')
                 
-            sleep(sleep_time(bgp_update["time"]))
+            sleep(sleep_time)
             
             self.send_update(bgp_update)
 
-    def sleep_time(update_time):
+    def sleep_time(self, update_time):
         time_diff = update_time - self.simulation_start_time
         wake_up_time = self.real_start_time + time_diff
         sleep_time = wake_up_time - time()
         
-        return sleep_time
+        if sleep_time < 0:
+            sleep_time = 0
+
+        return sleep_time      
         
-    def parse_update():
-        update = {"exabgp": "3.4.8"}
-        update["time"] = None
-        update["type"] = None
-        update["neighbor"] = {}
+    def send_update(self, update):
+        self.conn.send(json.dumps(update))
         
+    def start(self): 
+        self.logger.debug('start file processor')
+        self.fp_thread = Thread(target=self.file_processor)
+        self.fp_thread.start()
         
-    def send_update():
-        self.conn.send(line)
+        self.logger.debug('start update sender')
+        self.us_thread = Thread(target=self.bgp_update_sender)
+        self.us_thread.start()
         
-    def start(): 
-        fp_thread = Thread(target=self.file_processor())
-        fp_thread.daemon = True
-        fp_thread.start()
-        
-        us_thread = Thread(target=self.bgp_update_sender())
-        us_thread.daemon = True
-        us_thread.start()
-        
-    def stop():
+    def stop(self):
+        self.logger.debug('terminate')
+
         self.run = False
-        fp_thread.join()
-        us_thread.join()
+
+        self.us_thread.join()
+        self.logger.debug('bgp update sender terminated')
+
+        self.fp_thread.join()
+        self.logger.debug('file processor terminated')
+
+        self.update_queue.close()
+
         self.conn.close()
 
+
 def main(argv):
-    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.authkey, args.input)
+    # logging - log level
+    logging.basicConfig(level=logging.INFO)
+
+    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input)
 
     eb_thread = Thread(target=exabgp_instance.start)
-    eb_thread.daemon = True
     eb_thread.start()
-    
-    while eb_thread.is_alive():
+
+    while exabgp_instance.run:
         try:
-            eb_thread.join(1)
+            sleep(0.5)
         except KeyboardInterrupt:
-            eb_thread.stop()        
-        
+            exabgp_instance.stop()        
+    
+    eb_thread.join()    
+
 ''' main '''
 if __name__ == '__main__':
 
@@ -132,9 +215,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(args)
-    
-    
-#{ "exabgp": "3.4.8", "time": 1437908090, "host" : "sdx-ryu", "pid" : "29575", "ppid" : "21680", "counter": 1, "type": "update", "neighbor": { "ip": "172.0.0.1", "address": { "local": "172.0.255.254", "peer": "172.0.0.1"}, "asn": { "local": "65000", "peer": "100"}, "message": { "update": { "attribute": { "origin": "igp", "as-path": [ 100 ], "confederation-path": [], "med": 0 }, "announce": { "ipv4 unicast": { "172.0.0.1": { "20.0.0.0/8": {  } } } } } }} }
-#{ "exabgp": "3.4.8", "time": 1437908279, "host" : "sdx-ryu", "pid" : "29575", "ppid" : "21680", "counter": 1, "type": "notification", "notification": "shutdown"}
-#{ "exabgp": "3.4.8", "time": 1437908274, "host" : "sdx-ryu", "pid" : "29575", "ppid" : "21680", "counter": 5, "type": "update", "neighbor": { "ip": "172.0.0.3", "address": { "local": "172.0.255.254", "peer": "172.0.0.3"}, "asn": { "local": "65000", "peer": "300"}, "message": { "update": { "withdraw": { "ipv4 unicast": { "10.0.0.0/8": {  }, "20.0.0.0/8": {  }, "30.0.0.0/8": {  } } } } }} }
-
