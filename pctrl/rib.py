@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #  Author:
 #  Muhammad Shahbaz (muhammad.shahbaz@gatech.edu)
+#  Arpit Gupta (arpitg@cs.princeton.edu)
 
 import os
 import sqlite3
@@ -12,6 +13,7 @@ class rib():
 
         with lock():
             # Create a database in RAM
+            # TODO: No hardcoding.... :(
             self.db = sqlite3.connect('/home/vagrant/sdx-ryu/xrs/ribs/'+ip+'.db',check_same_thread=False)
             self.db.row_factory = sqlite3.Row
             self.name = name
@@ -19,7 +21,7 @@ class rib():
             # Get a cursor object
             cursor = self.db.cursor()
             cursor.execute('''
-                        create table if not exists '''+self.name+''' (prefix text, next_hop text,
+                        create table if not exists '''+self.name+''' (prefix text, neighbor text, next_hop text,
                                origin text, as_path text, communities text, med integer, atomic_aggregate boolean)
             ''')
 
@@ -46,11 +48,12 @@ class rib():
             #print "Add: ", key, item
             key = str(key)
             if (isinstance(item,tuple) or isinstance(item,list)):
-                cursor.execute('insert into ' + self.name + '(prefix, next_hop, origin, as_path, communities, med,atomic_aggregate) values("' + key + '","' + str(item[0]) +'","'+ str(item[1]) +'","'+ str(item[2])+'","'+ str(item[3])+'","'+ str(item[4])+'","'+ str(item[5])+'");')
+                assert (len(item) == 7)
+                cursor.execute('insert into ' + self.name + '(prefix, neighbor, next_hop, origin, as_path, communities, med,atomic_aggregate) values("' + key + '","' + str(item[0]) +'","'+ str(item[1]) +'","'+ str(item[2])+'","'+ str(item[3])+'","'+ str(item[4])+'","'+ str(item[5])+'","'+ str(item[6])+'");')
             elif (isinstance(item,dict) or isinstance(item,sqlite3.Row)):
-                cursor.execute('''insert into ''' + self.name + ''' (prefix, next_hop, origin, as_path, communities, med,
-                        atomic_aggregate) values(?,?,?,?,?,?,?)''',
-                        (key,item['next_hop'],item['origin'],item['as_path'],item['communities'],item['med'],item['atomic_aggregate']))
+                cursor.execute('''insert into ''' + self.name + ''' (prefix, neighbor, next_hop, origin, as_path, communities, med,
+                        atomic_aggregate) values(?,?,?,?,?,?,?,?)''',
+                        (key,item['neighbor'], item['next_hop'],item['origin'],item['as_path'],item['communities'],item['med'],item['atomic_aggregate']))
 
         #TODO: Add support for selective update
 
@@ -73,13 +76,23 @@ class rib():
 
             return cursor.fetchone()
 
+    def get_prefix_neighbor(self,key, neighbor):
+
+        with lock():
+            cursor = self.db.cursor()
+            key = str(key)
+            cursor.execute('''select * from ''' + self.name + ''' where prefix = ? AND neighbor = ?''', (key, neighbor))
+            #cursor.execute('select * from ' + self.name + ' where prefix = "' + key + '"')
+
+            return cursor.fetchone()
+
     def get_all(self,key=None):
 
         with lock():
             cursor = self.db.cursor()
 
             if (key is not None):
-                cursor.execute('select * from ' + self.name + ' where prefix = "' + key + '"')
+                cursor.execute('''select * from ''' + self.name + ''' where prefix = ?''', (key,))
             else:
                 cursor.execute('''select * from ''' + self.name)
 
@@ -128,8 +141,16 @@ class rib():
 
             cursor = self.db.cursor()
 
-            #cursor.execute('''delete from ''' + self.name + ''' where prefix = ?''', (key,))
-            cursor.execute('''delete from ''' + self.name + ''' where prefix = "''' + key + '"')
+            cursor.execute('''delete from ''' + self.name + ''' where prefix = ?''', (key,))
+
+    def delete_prefix_neighbor(self, prefix, neighbor):
+
+        with lock():
+            # Deleting one entry in prefix's column that matches on neighbor
+
+            cursor = self.db.cursor()
+
+            cursor.execute('''delete from ''' + self.name + ''' where prefix = ? AND neighbor = ?''', (prefix, neighbor))
 
     def delete_all(self):
 
