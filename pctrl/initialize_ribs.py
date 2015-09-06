@@ -146,7 +146,7 @@ if __name__ == '__main__':
 
 
     for id in asn_2_ip_small:
-        
+
         peers[id] = Peer(id, asn_2_ip)
         start = time.time()
         peers[id].updateInputRib()
@@ -155,6 +155,7 @@ if __name__ == '__main__':
         peers[id].updateLocalOutboundRib()
         print "Time to update the local/output Rib ", time.time()-start
         peers[id].save_ribs()
+
 
     base_fname = 'ribs/AS12306.db'
 

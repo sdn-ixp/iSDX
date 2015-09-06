@@ -63,6 +63,10 @@ class rib():
 
         file_path = path+'/'+outfile_name
 
+
+        if file_path[-3:] != '.db':
+            file_path += '.db'
+
         print "Saving database to file:", file_path
 
         # Read database to tempfile
