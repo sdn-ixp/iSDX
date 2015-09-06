@@ -19,9 +19,9 @@ class rib():
             db_file = path+'/'+db_name+'.db'
 
             if not in_memory:
-                print "Starting", name, "rib in database file", db_file + "...",
+                #print "Starting", name, "rib in database file", db_file + "...",
                 self.db = sqlite3.connect(db_file,check_same_thread=False)
-                print "done."
+                #print "done."
 
 
             else:
