@@ -71,7 +71,7 @@ def best_path_selection(routes):
     best_routes = []
 
     for route in routes:
-        print route
+        #print route
 
         #find ones with smallest AS Path Length
         if not best_routes:

@@ -16,22 +16,32 @@ class rib():
             # Create a database in RAM
             # TODO: No hardcoding.... :(
 
+            db_file = path+'/'+db_name+'.db'
+
             if not in_memory:
-                self.db = sqlite3.connect(path+'/'+db_name+'.db',check_same_thread=False)
+                print "Starting", name, "rib in database file", db_file + "...",
+                self.db = sqlite3.connect(db_file,check_same_thread=False)
+                print "done."
+
 
             else:
+                print "Reading", name, "rib from database file", db_file + "...",
                 # Read database to tempfile
-                con = sqlite3.connect(path+'/'+db_name+'.db',check_same_thread=False)
+                con = sqlite3.connect(db_file,check_same_thread=False)
                 tempfile = StringIO()
                 for line in con.iterdump():
                     tempfile.write('%s\n' % line)
                 con.close()
                 tempfile.seek(0)
 
+                print "Writing to memory database...",
+
                 # Create a database in memory and import from tempfile
                 self.db = sqlite3.connect(":memory:")
                 self.db.cursor().executescript(tempfile.read())
                 self.db.commit()
+
+                print "done."
 
 
             self.db.row_factory = sqlite3.Row
@@ -46,6 +56,30 @@ class rib():
             ''')
 
             self.db.commit()
+
+
+
+    def save_rib(self, path, outfile_name = "rib.db"):
+
+        file_path = path+'/'+outfile_name
+
+        print "Saving database to file:", file_path
+
+        # Read database to tempfile
+        tempfile = StringIO()
+        for line in self.db.iterdump():
+            tempfile.write('%s\n' % line)
+
+        tempfile.seek(0)
+
+        # Create a database file of the given name and dump the tempfile
+        file_db = sqlite3.connect(file_path, check_same_thread=False)
+        file_db.cursor().executescript(tempfile.read())
+        file_db.commit()
+
+        file_db.close()
+
+
 
     def __del__(self):
 

@@ -68,6 +68,8 @@ class Peer:
                     if ind%100000 == 0:
                         print "entry: ", ind
                     self.updateRibEntry(tmp)
+                    if ind > 10000:
+                        break
                     ind += 1
                 else:
                     x = line.split("\n")[0].split(": ")
@@ -106,9 +108,9 @@ class Peer:
     def updateLocalOutboundRib(self):
         for prefix in self.prefixes:
             routes = self.get_route('input', prefix)
-            print "For prefix ", prefix, " # of routes ", len(routes)
+            #print "For prefix ", prefix, " # of routes ", len(routes)
             best_route = best_path_selection(routes)
-            print "Best route: ", best_route
+            #print "Best route: ", best_route
 
             # Update the local rib
             self.add_route('local', prefix, best_route)
@@ -126,10 +128,18 @@ if __name__ == '__main__':
     peers = {}
     asn_2_ip_small = {"AS12306": {"80.249.208.161": 6}}
 
+
+    path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "ribs"))
+
+
     for id in asn_2_ip_small:
         peers[id] = Peer(id, asn_2_ip)
         peers[id].updateInputRib()
         peers[id].updateLocalOutboundRib()
+
+        peers[id].rib["input"].save_rib(path, str(id))
+        peers[id].rib["output"].save_rib(path, str(id))
+        peers[id].rib["local"].save_rib(path, str(id))
 
     base_fname = 'ribs/AS12306.db'
 
