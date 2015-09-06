@@ -3,6 +3,8 @@ import os
 import json
 import sqlite3
 import time
+import multiprocessing as mp
+from multiprocessing import Process, Queue
 
 from rib import rib
 from decision_process import decision_process, best_path_selection
@@ -51,7 +53,7 @@ class Peer:
                 elif line.startswith("\n"):
                     # Parsed one entry from the RIB text file
                     if ind%100000 == 0:
-                        print "entry: ", ind
+                        print "## ",self.id, " entry: ", ind
                     self.updateRibEntry(tmp)
                     if ind > 1000:
                         break
@@ -66,37 +68,42 @@ class Peer:
             #print "Updating the rib entry ", elem
             # Get the prefix
             prefix = elem["PREFIX"]
-            self.prefixes[prefix] = 0
-
-            # Get the attributes
-            #origin = elem['ORIGIN'] if 'ORIGIN' in elem else ''
-            origin = ''
-            as_path = elem['ASPATH'] if 'ASPATH' in elem else ''
-
-            #med = elem["MULTI_EXIT_DISC"] if "MULTI_EXIT_DISC" in elem else ''
-            med = ''
-
-            #communities = elem["COMMUNITY"] if "COMMUNITY" in elem else ''
-            communities = ''
-
-            atomic_aggregate = ''
             neighbor = elem["FROM"].split(" ")[0]
-            # TODO: Current logic currently misses the case where there are two next hops
-            next_hop = elem["NEXT_HOP"]
-            #prefix text, neighbor text, next_hop text,
-            #       origin text, as_path text, communities text, med integer, atomic_aggregate boolean
-            atrributes = {"neighbor":neighbor, "next_hop":next_hop, "origin":origin,
-                            "as_path":as_path, "communities":communities,
-                            "med":med, "atomic_aggregate":atomic_aggregate}
+            #print [str(x) for x in self.asn_2_ip[self.id].keys()], neighbor
+            if neighbor in [str(x) for x in self.asn_2_ip[self.id]]:
+                print "MATCH", [str(x) for x in self.asn_2_ip[self.id].keys()], neighbor
+            else:
+                self.prefixes[prefix] = 0
 
-            #print prefix, atrributes
+                # Get the attributes
+                #origin = elem['ORIGIN'] if 'ORIGIN' in elem else ''
+                origin = ''
+                as_path = elem['ASPATH'] if 'ASPATH' in elem else ''
 
-            # Add this entry to the input rib for this participant
-            #self.rib["input"].add(prefix, atrributes)
-            #self.rib["input"].commit()
-            if prefix not in self.local_rib["input"]:
-                self.local_rib["input"][prefix] = []
-            self.local_rib["input"][prefix].append(atrributes)
+                #med = elem["MULTI_EXIT_DISC"] if "MULTI_EXIT_DISC" in elem else ''
+                med = ''
+
+                #communities = elem["COMMUNITY"] if "COMMUNITY" in elem else ''
+                communities = ''
+
+                atomic_aggregate = ''
+
+                # TODO: Current logic currently misses the case where there are two next hops
+                next_hop = elem["NEXT_HOP"]
+                #prefix text, neighbor text, next_hop text,
+                #       origin text, as_path text, communities text, med integer, atomic_aggregate boolean
+                atrributes = {"neighbor":neighbor, "next_hop":next_hop, "origin":origin,
+                                "as_path":as_path, "communities":communities,
+                                "med":med, "atomic_aggregate":atomic_aggregate}
+
+                #print prefix, atrributes
+
+                # Add this entry to the input rib for this participant
+                #self.rib["input"].add(prefix, atrributes)
+                #self.rib["input"].commit()
+                if prefix not in self.local_rib["input"]:
+                    self.local_rib["input"][prefix] = []
+                self.local_rib["input"][prefix].append(atrributes)
 
 
     def updateLocalOutboundRib(self):
@@ -129,7 +136,19 @@ class Peer:
                     route = self.local_rib[rib_name][prefix]
                     self.add_route(rib_name, prefix, route)
                     ind += 1
-        print "Completed write operations for ", id, " rows in ", time.time()-start
+        print "##", self.id, "Completed write operations for ", id, " rows in ", time.time()-start
+
+
+def processRibIter(id, asn_2_ip):
+
+    peer = Peer(id, asn_2_ip)
+    start = time.time()
+    peer.updateInputRib()
+    print "##", id, "Time to update the input Rib ", time.time()-start
+    start = time.time()
+    peer.updateLocalOutboundRib()
+    print "##", id, "Time to update the local/output Rib ", time.time()-start
+    peer.save_ribs()
 
 
 ''' main '''
@@ -144,25 +163,13 @@ if __name__ == '__main__':
 
     path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "ribs"))
 
+    process = []
+    queue = []
+    iter = 0
+    for id in asn_2_ip:
+        process.append(Process(target = processRibIter, args = (id, asn_2_ip)))
+        process[iter].start()
+        iter += 1
 
-    for id in asn_2_ip_small:
-
-        peers[id] = Peer(id, asn_2_ip)
-        start = time.time()
-        peers[id].updateInputRib()
-        print "Time to update the input Rib ", time.time()-start
-        start = time.time()
-        peers[id].updateLocalOutboundRib()
-        print "Time to update the local/output Rib ", time.time()-start
-        peers[id].save_ribs()
-
-
-    base_fname = 'ribs/AS12306.db'
-
-    # Copy .db files for all participants
-    for part in asn_2_ip:
-        if part not in base_fname:
-            new_fname = "ribs/"+part+".db"
-            os.system('cp '+base_fname+" "+new_fname)
-
-    # Clean the db files
+    for p in process:
+        p.join()
