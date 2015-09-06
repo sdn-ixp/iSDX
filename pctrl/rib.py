@@ -9,15 +9,33 @@ from threading import RLock as lock
 
 class rib():
 
-    def __init__(self,db_name,name, path):
+    def __init__(self,db_name,name,path, in_memory=False):
 
         with lock():
             # Create a database in RAM
             # TODO: No hardcoding.... :(
 
-            self.db = sqlite3.connect(path+'/'+db_name+'.db',check_same_thread=False)
+            if not in_memory:
+                self.db = sqlite3.connect(path+'/'+db_name+'.db',check_same_thread=False)
+
+            else:
+                # Read database to tempfile
+                con = sqlite3.connect(path+'/'+db_name+'.db',check_same_thread=False)
+                tempfile = StringIO()
+                for line in con.iterdump():
+                    tempfile.write('%s\n' % line)
+                con.close()
+                tempfile.seek(0)
+
+                # Create a database in memory and import from tempfile
+                self.db = sqlite3.connect(":memory:")
+                self.db.cursor().executescript(tempfile.read())
+                self.db.commit()
+
+
             self.db.row_factory = sqlite3.Row
             self.name = name
+
 
             # Get a cursor object
             cursor = self.db.cursor()

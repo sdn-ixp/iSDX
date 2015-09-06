@@ -38,9 +38,9 @@ class Peer:
         print path
         self.prefixes = {}
 
-        self.rib = {"input": rib(str(id),"input", path),
-                    "local": rib(str(id),"local", path),
-                    "output": rib(str(id),"output", path)}
+        self.rib = {"input": rib(str(id),"input", path, in_memory=True),
+                    "local": rib(str(id),"local", path, in_memory=True),
+                    "output": rib(str(id),"output", path, in_memory=True)}
 
     def get_route(self,rib_name,prefix):
 
