@@ -29,7 +29,37 @@ def getMatchHash(part, peer, count):
 
     return int(1*part+1*peer+count)
 
-def generatePoliciesParticipant(part, asn_2_ip, count, limit_out, limit_in):
+
+def getParticipants():
+    asn_2_ip = {}
+
+    with open(fname, 'r') as f:
+        print "Loaded the RIB file"
+        for line in f.readlines():
+            if "FROM" in line:
+                line
+                tmp = line.split("FROM: ")[1].split("\n")[0].split(" ")
+                #print tmp
+                if tmp[1] not in asn_2_ip:
+                    asn_2_ip[tmp[1]] = {}
+                asn_2_ip[tmp[1]][tmp[0]] = 0
+
+    print asn_2_ip
+    print "Assigning Ports"
+    port_id = 10
+    for part in asn_2_ip:
+        for ip in asn_2_ip[part]:
+            asn_2_ip[part][ip] = port_id
+            port_id += 1
+
+    out_fname = "asn_2_ip.json"
+    with open(out_fname,'w') as f:
+        json.dump(asn_2_ip, f)
+
+    return asn_2_ip
+
+
+def generatePoliciesParticipant(part, asn_2_ip, count, limit_out):
     # randomly select fwding participants
     peers = filter(lambda x: x!=part, asn_2_ip.keys())
     shuffle(peers)
@@ -69,61 +99,42 @@ def generatePoliciesParticipant(part, asn_2_ip, count, limit_out, limit_in):
         json.dump(policy, f)
 
 
-def getParticipants():
-    asn_2_ip = {}
-
-    with open(fname, 'r') as f:
-        print "Loaded the RIB file"
-        for line in f.readlines():
-            if "FROM" in line:
-                line
-                tmp = line.split("FROM: ")[1].split("\n")[0].split(" ")
-                #print tmp
-                if tmp[1] not in asn_2_ip:
-                    asn_2_ip[tmp[1]] = {}
-                asn_2_ip[tmp[1]][tmp[0]] = 0
-
-    print asn_2_ip
-    print "Assigning Ports"
-    port_id = 10
-    for part in asn_2_ip:
-        for ip in asn_2_ip[part]:
-            asn_2_ip[part][ip] = port_id
-            port_id += 1
-
-    out_fname = "asn_2_ip.json"
-    with open(out_fname,'w') as f:
-        json.dump(asn_2_ip, f)
-
-    return asn_2_ip
-
-
 def generate_global_config(asn_2_ip):
     # load the base config
     config_filename = "sdx_global.cfg"
     config_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config"))
     config_file = os.path.join(config_path, config_filename)
     #print "config file: ", config_file
+    asn_2_id = {}
+    unique_id = 1
+
+    for part in asn_2_ip:
+        if part not in asn_2_id:
+            asn_2_id[part] = unique_id
+            unique_id += 1
+
     with open(config_file, 'r') as f:
         config = json.load(f)
         config["Participants"] = {}
         eh_port = 7777
 
         for part in asn_2_ip:
-            config["Participants"][part] = {}
-            config["Participants"][part]["Ports"] = []
+            part_id = asn_2_id[part]
+
+            config["Participants"][part_id] = {}
+            config["Participants"][part_id]["Ports"] = []
             for nhip in asn_2_ip[part]:
                 tmp = {}
                 tmp["Id"] = asn_2_ip[part][nhip]
                 tmp["MAC"] = ""
                 tmp["IP"] = str(nhip)
-                config["Participants"][part]["Ports"].append(tmp)
-            config["Participants"][part]["ASN"] = part
-            config["Participants"][part]["Peers"] = filter(lambda x: x!=part, asn_2_ip.keys())
-            config["Participants"][part]["Inbound Rules"] = "true"
-            config["Participants"][part]["Outbound Rules"] = "true"
-            config["Participants"][part]["EH_SOCKET"] = ["localhost", eh_port]
-            config["Participants"][part]["Flanc Key"] = "Part"+str(part)+"Key"
+                config["Participants"][part_id]["Ports"].append(tmp)
+            config["Participants"][part_id]["ASN"] = part
+            config["Participants"][part_id]["Peers"] = [asn_2_id[x] for x in filter(lambda x: x!=part, asn_2_ip.keys())]
+            config["Participants"][part_id]["Inbound Rules"] = "true"
+            config["Participants"][part_id]["Outbound Rules"] = "true"
+            config["Participants"][part_id]["EH_SOCKET"] = ["localhost", eh_port]
+            config["Participants"][part_id]["Flanc Key"] = "Part"+str(part_id)+"Key"
             eh_port += 1
 
         config["RefMon Settings"]["fabric connections"]["main"] = {}
@@ -135,7 +146,8 @@ def generate_global_config(asn_2_ip):
 
 
         for part in asn_2_ip:
-            config["RefMon Settings"]["fabric connections"]["main"][part] = asn_2_ip[part].values()
+            part_id = asn_2_id[part]
+            config["RefMon Settings"]["fabric connections"]["main"][part_id] = asn_2_ip[part].values()
 
         with open(config_file, "w") as f:
             json.dump(config, f)
@@ -146,7 +158,6 @@ if __name__ == '__main__':
     # Params
     count = 10
     limit_out = 4
-    limit_in = 2
 
     # Parse ribs to extract asn_2_ip
     #asn_2_ip = getParticipants()
@@ -156,6 +167,6 @@ if __name__ == '__main__':
     asn_2_ip = json.load(open("asn_2_ip.json", 'r'))
 
     for part in asn_2_ip:
-        generatePoliciesParticipant(part, asn_2_ip, count, limit_out, limit_in)
+        generatePoliciesParticipant(part, asn_2_ip, count, limit_out)
 
     generate_global_config(asn_2_ip)
