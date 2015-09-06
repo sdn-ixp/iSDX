@@ -23,9 +23,12 @@ class BGPPeer():
         for port in ports:
             ips.append(port["IP"])
 
-        self.rib = {"input": rib("-".join(ips),"input"),
-                    "local": rib("-".join(ips),"local"),
-                    "output": rib("-".join(ips),"output")}
+        # TODO: Get rid of this hardcoding
+        path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "ribs"))
+
+        self.rib = {"input": rib("-".join(ips),"input", path),
+                    "local": rib("-".join(ips),"local", path),
+                    "output": rib("-".join(ips),"output", path)}
 
         # peers that a participant accepts traffic from and sends advertisements to
         self.peers_in = peers_in

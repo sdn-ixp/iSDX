@@ -71,6 +71,7 @@ def best_path_selection(routes):
     best_routes = []
 
     for route in routes:
+        print route
 
         #find ones with smallest AS Path Length
         if not best_routes:
@@ -87,6 +88,7 @@ def best_path_selection(routes):
     # If there's only 1, it's the best route
 
     if len(best_routes) == 1:
+        #print "Shortest A"
         return best_routes.pop()
 
     ''' 2. Lowest MED '''
@@ -137,6 +139,7 @@ def best_path_selection(routes):
 
     # If there's only 1, it's the best route
     if len(post_med_best_routes) == 1:
+        #print "M"
         return post_med_best_routes.pop()
 
     ''' 3. Lowest Router ID '''
@@ -151,6 +154,7 @@ def best_path_selection(routes):
             lowest_ip_as_long = ip_to_long(post_med_best_routes[i]['next_hop'])
         i += 1
 
+    #print "R"
     return post_med_best_routes[get_index(post_med_best_routes,'next_hop',long_to_ip(lowest_ip_as_long))]
 
 

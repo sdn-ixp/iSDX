@@ -9,12 +9,13 @@ from threading import RLock as lock
 
 class rib():
 
-    def __init__(self,ip,name):
+    def __init__(self,db_name,name, path):
 
         with lock():
             # Create a database in RAM
             # TODO: No hardcoding.... :(
-            self.db = sqlite3.connect('/home/vagrant/sdx-ryu/xrs/ribs/'+ip+'.db',check_same_thread=False)
+
+            self.db = sqlite3.connect(path+'/'+db_name+'.db',check_same_thread=False)
             self.db.row_factory = sqlite3.Row
             self.name = name
 
@@ -74,7 +75,7 @@ class rib():
             key = str(key)
             cursor.execute('select * from ' + self.name + ' where prefix = "' + key + '"')
 
-            return cursor.fetchone()
+            return cursor.fetchall()
 
     def get_prefix_neighbor(self,key, neighbor):
 
