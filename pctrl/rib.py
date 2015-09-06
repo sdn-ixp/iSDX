@@ -6,6 +6,7 @@
 import os
 import sqlite3
 from threading import RLock as lock
+from StringIO import StringIO
 
 class rib():
 
