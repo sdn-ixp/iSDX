@@ -117,6 +117,7 @@ def generate_global_config(asn_2_ip):
                 tmp["Id"] = asn_2_ip[part][nhip]
                 tmp["MAC"] = ""
                 tmp["IP"] = str(nhip)
+                config["Participants"][part]["Ports"].append(tmp)
             config["Participants"][part]["ASN"] = part
             config["Participants"][part]["Peers"] = filter(lambda x: x!=part, asn_2_ip.keys())
             config["Participants"][part]["Inbound Rules"] = "true"
