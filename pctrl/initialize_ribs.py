@@ -137,9 +137,9 @@ if __name__ == '__main__':
         peers[id].updateInputRib()
         peers[id].updateLocalOutboundRib()
 
-        peers[id].rib["input"].save_rib(path, str(id))
-        peers[id].rib["output"].save_rib(path, str(id))
-        peers[id].rib["local"].save_rib(path, str(id))
+        peers[id].rib["input"].save_rib(path, str(id)+'.db')
+        peers[id].rib["output"].save_rib(path, str(id)+'.db')
+        peers[id].rib["local"].save_rib(path, str(id)+'.db')
 
     base_fname = 'ribs/AS12306.db'
 
