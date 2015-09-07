@@ -70,7 +70,8 @@ class Peer:
             prefix = elem["PREFIX"]
             neighbor = elem["FROM"].split(" ")[0]
             #print [str(x) for x in self.asn_2_ip[self.id].keys()], neighbor
-            if neighbor in [str(x) for x in self.asn_2_ip[self.id]]:
+            #if neighbor in [str(x) for x in self.asn_2_ip[self.id]]:
+            if 1==0:
                 print "MATCH", [str(x) for x in self.asn_2_ip[self.id].keys()], neighbor
             else:
                 self.prefixes[prefix] = 0
@@ -154,7 +155,6 @@ def processRibIter(id, asn_2_ip):
 ''' main '''
 if __name__ == '__main__':
 
-
     asn_2_ip = json.load(open("asn_2_ip.json", 'r'))
     #asn_2_ip = {"AS12306": {"80.249.208.161": 6}}
     peers = {}
@@ -166,10 +166,17 @@ if __name__ == '__main__':
     process = []
     queue = []
     iter = 0
-    for id in asn_2_ip:
+    for id in asn_2_ip_small:
         process.append(Process(target = processRibIter, args = (id, asn_2_ip)))
         process[iter].start()
         iter += 1
 
     for p in process:
         p.join()
+
+    base_fname = 'ribs/AS12306.db'
+    # Copy .db files for all participants
+    for part in asn_2_ip:
+        if part not in base_fname:
+            new_fname = "ribs/"+part+".db"
+            os.system('cp '+base_fname+" "+new_fname)
