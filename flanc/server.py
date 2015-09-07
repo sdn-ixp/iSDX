@@ -38,6 +38,7 @@ class Server():
                     msg = conn.recv()
                 except:
                     pass
+
             self.logger.info('server: received message')
             self.refmon.process_flow_mods(json.loads(msg))
 

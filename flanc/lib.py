@@ -132,6 +132,15 @@ class MultiTableController():
             return True
         return False
 
+    def send_barrier_request(self):
+        request = self.config.parser.OFPBarrierRequest(self.config.datapaths["main"])
+        self.config.datapaths["main"].send_msg(request)
+
+    def handle_barrier_reply(self, datapath):
+        if self.config.datapaths["main"] == datapath
+            return True
+        return False        
+
 class MultiSwitchController(object):
     def __init__(self, config):
         self.logger = logging.getLogger('MultiSwitchController')
@@ -141,6 +150,8 @@ class MultiSwitchController(object):
         self.config = config
 
         self.fm_queue = Queue()
+
+        self.received_barriers = {"main": False, "inbound": False, "outbound": False}
 
     def switch_connect(self, dp):
         dp_name = self.config.dpid_2_name[dp.id]
@@ -206,3 +217,23 @@ class MultiSwitchController(object):
         if len(self.config.datapaths) > 2:
             return True
         return False
+
+    def send_barrier_request(self):
+        for dp in self.config.datapaths.values():
+            request = self.config.parser.OFPBarrierRequest(dp)
+            dp.send_msg(request)
+
+    def handle_barrier_reply(self, datapath):
+        if self.config.datapaths["main"] == datapath
+            self.received_barriers["main"] = True
+        elif self.config.datapaths["inbound"] == datapath
+            self.received_barriers["inbound"] = True
+        elif self.config.datapaths["outbound"] == datapath
+            self.received_barriers["outbound"] = True
+
+        if self.received_barriers["main"] and self.received_barriers["inbound"] and self.received_barriers["outbound"]:
+            self.received_barriers["main"] = False
+            self.received_barriers["inbound"] = False
+            self.received_barriers["outbound"] = False
+            return True
+        return False        
