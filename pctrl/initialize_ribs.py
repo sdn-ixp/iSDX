@@ -55,8 +55,8 @@ class Peer:
                     if ind%100000 == 0:
                         print "## ",self.id, " entry: ", ind
                     self.updateRibEntry(tmp)
-                    if ind > 10000:
-                        break
+                    #if ind > 10000:
+                    #    break
                     ind += 1
                 else:
                     x = line.split("\n")[0].split(": ")
@@ -129,9 +129,9 @@ class Peer:
 
             routes = self.get_route("input", prefix)
             best_route = self.get_route("local", prefix)
-            print "For prefix: ", prefix, " ribs has ", len(routes), " routes"
-            print routes
-            print "For prefix: ", prefix, " best route is:", best_route
+            #print self.id, "For prefix: ", prefix, " ribs has ", len(routes), " routes"
+            #print routes
+            #print self.id, "For prefix: ", prefix, " best route is:", best_route
 
 
 
@@ -159,7 +159,7 @@ class Peer:
                     ind += 1
             #Coalsecing multiple add insertion operations into one transaction
             # using add_many() function
-            print "Adding ", len(items), " entries"
+            print "$$", self.id, "Adding ", len(items), " entries"
             self.rib[rib_name].add_many(items)
             self.rib[rib_name].commit()
         print "##", self.id, "Completed write operations for ", ind, " rows in ", time.time()-start
@@ -175,7 +175,7 @@ def processRibIter(id, asn_2_ip):
     peer.updateLocalOutboundRib()
     print "##", id, "Time to update the local/output Rib ", time.time()-start
     peer.save_ribs()
-    #peer.test_ribs()
+    peer.test_ribs()
 
 
 ''' main '''
