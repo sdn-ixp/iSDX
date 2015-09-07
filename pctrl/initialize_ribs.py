@@ -35,7 +35,7 @@ class Peer:
 
     def add_route(self,rib_name,prefix,attributes):
         self.rib[rib_name][prefix] = attributes
-        self.rib[rib_name].commit()
+        #self.rib[rib_name].commit()
 
     def updateInputRib(self):
         path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "examples", "test-amsix"))
@@ -55,7 +55,7 @@ class Peer:
                     if ind%100000 == 0:
                         print "## ",self.id, " entry: ", ind
                     self.updateRibEntry(tmp)
-                    if ind > 1000:
+                    if ind > 10000:
                         break
                     ind += 1
                 else:
@@ -70,9 +70,10 @@ class Peer:
             prefix = elem["PREFIX"]
             neighbor = elem["FROM"].split(" ")[0]
             #print [str(x) for x in self.asn_2_ip[self.id].keys()], neighbor
-            #if neighbor in [str(x) for x in self.asn_2_ip[self.id]]:
-            if 1==0:
-                print "MATCH", [str(x) for x in self.asn_2_ip[self.id].keys()], neighbor
+            if neighbor in [str(x) for x in self.asn_2_ip[self.id]]:
+                #if 1==0:
+                y = 1
+                #print "MATCH", [str(x) for x in self.asn_2_ip[self.id].keys()], neighbor
             else:
                 self.prefixes[prefix] = 0
 
@@ -91,8 +92,7 @@ class Peer:
 
                 # TODO: Current logic currently misses the case where there are two next hops
                 next_hop = elem["NEXT_HOP"]
-                #prefix text, neighbor text, next_hop text,
-                #       origin text, as_path text, communities text, med integer, atomic_aggregate boolean
+
                 atrributes = {"neighbor":neighbor, "next_hop":next_hop, "origin":origin,
                                 "as_path":as_path, "communities":communities,
                                 "med":med, "atomic_aggregate":atomic_aggregate}
@@ -124,20 +124,45 @@ class Peer:
             #self.add_route('output', prefix, best_route)
             self.local_rib["output"][prefix] = best_route
 
+    def test_ribs(self):
+        for prefix in self.prefixes:
+
+            routes = self.get_route("input", prefix)
+            best_route = self.get_route("local", prefix)
+            print "For prefix: ", prefix, " ribs has ", len(routes), " routes"
+            print routes
+            print "For prefix: ", prefix, " best route is:", best_route
+
+
+
+
     def save_ribs(self):
         ind = 0
         start = time.time()
         for rib_name in ["input", "local", "output"]:
+            items = []
             for prefix in self.local_rib[rib_name]:
                 if rib_name == "input":
                     for route in self.local_rib[rib_name][prefix]:
-                        self.add_route(rib_name, prefix, route)
+                        #self.add_route(rib_name, prefix, route)
+                        #prefix text, neighbor text, next_hop text,
+                        #       origin text, as_path text, communities text, med integer, atomic_aggregate boolean
+                        items.append(tuple([prefix, route["neighbor"], route["next_hop"],
+                                            '', route["as_path"], '', '', '']))
+
                         ind += 1
                 else:
                     route = self.local_rib[rib_name][prefix]
-                    self.add_route(rib_name, prefix, route)
+                    #self.add_route(rib_name, prefix, route)
+                    items.append(tuple([prefix, route["neighbor"], route["next_hop"],
+                                        '', route["as_path"], '', '', '']))
                     ind += 1
-        print "##", self.id, "Completed write operations for ", id, " rows in ", time.time()-start
+            #Coalsecing multiple add insertion operations into one transaction
+            # using add_many() function
+            print "Adding ", len(items), " entries"
+            self.rib[rib_name].add_many(items)
+            self.rib[rib_name].commit()
+        print "##", self.id, "Completed write operations for ", ind, " rows in ", time.time()-start
 
 
 def processRibIter(id, asn_2_ip):
@@ -150,6 +175,7 @@ def processRibIter(id, asn_2_ip):
     peer.updateLocalOutboundRib()
     print "##", id, "Time to update the local/output Rib ", time.time()-start
     peer.save_ribs()
+    #peer.test_ribs()
 
 
 ''' main '''
@@ -166,7 +192,7 @@ if __name__ == '__main__':
     process = []
     queue = []
     iter = 0
-    for id in asn_2_ip_small:
+    for id in asn_2_ip:
         process.append(Process(target = processRibIter, args = (id, asn_2_ip)))
         process[iter].start()
         iter += 1
@@ -174,9 +200,12 @@ if __name__ == '__main__':
     for p in process:
         p.join()
 
+    """
+
     base_fname = 'ribs/AS12306.db'
     # Copy .db files for all participants
     for part in asn_2_ip:
         if part not in base_fname:
             new_fname = "ribs/"+part+".db"
             os.system('cp '+base_fname+" "+new_fname)
+    """
