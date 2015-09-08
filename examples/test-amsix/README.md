@@ -1,3 +1,22 @@
+# Generate configs/policies
+
+```bash
+$ cd  ~/sdx-parallel/examples/test-amsix/
+$ python generate_configs.py
+```
+
+# Initialize RIBs for the participants
+```bash
+$ cd  ~/sdx-parallel/pctrl
+$ python initialize_ribs.py
+```
+
+# Start the Pctrl
+```bash
+$ cd  ~/sdx-parallel/pctrl
+$ python participant_controller.py test-amsix <id>
+```
+
 # FLANC - Reference Monitor Logger
 
 This script saves every flowmod with a timestamp to the specified file (e.g. test.log)
