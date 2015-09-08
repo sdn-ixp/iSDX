@@ -55,8 +55,8 @@ class Peer:
                     if ind%100000 == 0:
                         print "## ",self.id, " entry: ", ind
                     self.updateRibEntry(tmp)
-                    #if ind > 10000:
-                    #    break
+                    if ind > 1000:
+                        break
                     ind += 1
                 else:
                     x = line.split("\n")[0].split(": ")
@@ -184,7 +184,7 @@ if __name__ == '__main__':
     asn_2_ip = json.load(open("asn_2_ip.json", 'r'))
     #asn_2_ip = {"AS12306": {"80.249.208.161": 6}}
     peers = {}
-    asn_2_ip_small = {"AS12306": {"80.249.208.161": 6}}
+    asn_2_ip_small = {"AS12306": {"80.249.208.161": 6},"AS1273": {"2001:7f8:1::a500:1273:1": 5}}
 
 
     path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "ribs"))

@@ -1,0 +1,2 @@
+CASSANDRA_HOST=["localhost"]
+CASSANDRA_SPACE="demo"
