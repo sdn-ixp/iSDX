@@ -18,7 +18,9 @@ from ofp13 import FlowMod as OFP13FlowMod
 
 # REST API from rest import FlowModReceiver
 
-from server import Server
+from log_server import Server
+from multiprocessing import Queue
+from time import time
 
 LOG = False
 
@@ -38,9 +40,15 @@ class RefMon(app_manager.RyuApp):
 
         # retrieve command line arguments
         CONF = cfg.CONF
-        config_file_path = CONF['refmon']['config']
 
+        config_file_path = CONF['refmon']['config']
         config_file = os.path.abspath(config_file_path)
+
+        input_file_path = CONF['refmon']['input']
+        input_file = os.path.abspath(input_file_path)
+
+        log_file_path = CONF['refmon']['log']
+        log_file = os.path.abspath(log_file_path)
 
         # load config from file
         self.logger.info('refmon: load config')
@@ -56,11 +64,17 @@ class RefMon(app_manager.RyuApp):
             self.controller = MultiTableController(self.config)
 
         # start server receiving flowmod requests
-        self.server = Server(self, self.config.server["IP"], self.config.server["Port"], self.config.server["key"])
+        self.server = Server(self, input_file)
         self.server.start()
+
+        self.flow_mod_times = Queue()
+
+        self.log = open(log_file, "w")
 
     def close(self):
         self.logger.info('refmon: stop')
+
+        self.log.close()
 
         #self.server.stop()
 
@@ -77,7 +91,20 @@ class RefMon(app_manager.RyuApp):
     def _packet_in_handler(self, ev):
         self.controller.packet_in(ev)
 
+    @set_ev_cls(ofp_event.EventOFPBarrierReply, MAIN_DISPATCHER)
+    def barrier_reply_handler(self, ev):
+        datapath = ev.datapath
+        if self.controller.handle_barrier_reply(datapath):
+            end_time = time()
+
+            start_time = self.flow_mod_times.get()
+
+            self.log.write(start_time + " " + end_time + " " + (start_time - end_time))
+        
+
     def process_flow_mods(self, msg):
+        self.flow_mod_times.put(time())
+
         self.logger.info('refmon: received flowmod request')
 
         # authorization
@@ -97,4 +124,5 @@ class RefMon(app_manager.RyuApp):
                         fm = OFP13FlowMod(self.config, origin, flow_mod)
 
                     self.controller.process_flow_mod(fm)
+                    self.controller.send_barrier_request()
 

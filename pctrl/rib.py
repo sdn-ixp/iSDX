@@ -121,8 +121,8 @@ class rib():
             cursor = self.db.cursor()
 
             if (isinstance(items,list)):
-                cursor.execute('''insert into ''' + self.name + ''' (prefix, next_hop, origin, as_path, communities, med,
-                        atomic_aggregate) values(?,?,?,?,?,?,?)''', items)
+                cursor.executemany('''insert into ''' + self.name + ''' (prefix, neighbor, next_hop, origin, as_path, communities, med,
+                        atomic_aggregate) values(?,?,?,?,?,?,?,?)''', items)
 
     def get(self,key):
 

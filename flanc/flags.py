@@ -87,4 +87,8 @@ CONF.register_cli_opts([
     # refmon
     cfg.StrOpt('config', default=None,
                help='path of config file'),
+    cfg.StrOpt('input', default=None,
+               help='path of input file'),
+    cfg.StrOpt('log', default=None,
+               help='path of log file'),
 ], group='refmon')

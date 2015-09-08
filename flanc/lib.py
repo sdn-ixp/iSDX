@@ -85,7 +85,7 @@ class MultiTableController():
 
         self.fm_queue = Queue()
 
-    def init_fabric(self):    
+    def init_fabric(self):
         # install table-miss flow entry
         self.logger.info("mt_ctrlr: init fabric")
         match = self.config.parser.OFPMatch()
@@ -93,11 +93,11 @@ class MultiTableController():
         instructions = [self.config.parser.OFPInstructionActions(self.config.ofproto.OFPIT_APPLY_ACTIONS, actions)]
 
         for table in self.config.tables.values():
-            mod = self.config.parser.OFPFlowMod(datapath=self.config.datapaths["main"], 
-                                                cookie=NO_COOKIE, cookie_mask=1, 
-                                                table_id=table, 
-                                                command=self.config.ofproto.OFPFC_ADD, 
-                                                priority=FLOW_MISS_PRIORITY, 
+            mod = self.config.parser.OFPFlowMod(datapath=self.config.datapaths["main"],
+                                                cookie=NO_COOKIE, cookie_mask=1,
+                                                table_id=table,
+                                                command=self.config.ofproto.OFPFC_ADD,
+                                                priority=FLOW_MISS_PRIORITY,
                                                 match=match, instructions=instructions)
             self.config.datapaths["main"].send_msg(mod)
 
@@ -123,12 +123,21 @@ class MultiTableController():
         else:
             mod = fm.get_flow_mod(self.config)
             self.config.datapaths["main"].send_msg(mod)
-           
+
     def packet_in(self, ev):
         self.logger.info("mt_ctrlr: packet in")
 
     def is_ready(self):
         if "main" in self.config.datapaths:
+            return True
+        return False
+
+    def send_barrier_request(self):
+        request = self.config.parser.OFPBarrierRequest(self.config.datapaths["main"])
+        self.config.datapaths["main"].send_msg(request)
+
+    def handle_barrier_reply(self, datapath):
+        if self.config.datapaths["main"] == datapath:
             return True
         return False
 
@@ -141,6 +150,8 @@ class MultiSwitchController(object):
         self.config = config
 
         self.fm_queue = Queue()
+
+        self.received_barriers = {"main": False, "inbound": False, "outbound": False}
 
     def switch_connect(self, dp):
         dp_name = self.config.dpid_2_name[dp.id]
@@ -179,16 +190,16 @@ class MultiSwitchController(object):
 
         for datapath in self.config.datapaths.values():
             if self.config.ofv  == "1.3":
-                mod = self.config.parser.OFPFlowMod(datapath=datapath, 
-                                                    cookie=NO_COOKIE, cookie_mask=3, 
-                                                    command=self.config.ofproto.OFPFC_ADD, 
-                                                    priority=FLOW_MISS_PRIORITY, 
+                mod = self.config.parser.OFPFlowMod(datapath=datapath,
+                                                    cookie=NO_COOKIE, cookie_mask=3,
+                                                    command=self.config.ofproto.OFPFC_ADD,
+                                                    priority=FLOW_MISS_PRIORITY,
                                                     match=match, instructions=instructions)
             else:
-                mod = self.config.parser.OFPFlowMod(datapath=datapath, 
-                                                    cookie=NO_COOKIE, 
-                                                    command=self.config.ofproto.OFPFC_ADD, 
-                                                    priority=FLOW_MISS_PRIORITY, 
+                mod = self.config.parser.OFPFlowMod(datapath=datapath,
+                                                    cookie=NO_COOKIE,
+                                                    command=self.config.ofproto.OFPFC_ADD,
+                                                    priority=FLOW_MISS_PRIORITY,
                                                     match=match, actions=actions)
             datapath.send_msg(mod)
 
@@ -204,5 +215,25 @@ class MultiSwitchController(object):
 
     def is_ready(self):
         if len(self.config.datapaths) > 2:
+            return True
+        return False
+
+    def send_barrier_request(self):
+        for dp in self.config.datapaths.values():
+            request = self.config.parser.OFPBarrierRequest(dp)
+            dp.send_msg(request)
+
+    def handle_barrier_reply(self, datapath):
+        if self.config.datapaths["main"] == datapath:
+            self.received_barriers["main"] = True
+        elif self.config.datapaths["inbound"] == datapath:
+            self.received_barriers["inbound"] = True
+        elif self.config.datapaths["outbound"] == datapath:
+            self.received_barriers["outbound"] = True
+
+        if self.received_barriers["main"] and self.received_barriers["inbound"] and self.received_barriers["outbound"]:
+            self.received_barriers["main"] = False
+            self.received_barriers["inbound"] = False
+            self.received_barriers["outbound"] = False
             return True
         return False
