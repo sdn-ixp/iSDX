@@ -5,6 +5,7 @@
 #  Arpit Gupta (Princeton)
 
 import json
+import os
 import sqlite3
 
 from rib import rib

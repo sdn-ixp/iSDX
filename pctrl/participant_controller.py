@@ -136,7 +136,7 @@ class ParticipantController():
         if self.cfg.dp_mode == MULTITABLE:
             final_switch = "main-out"
 
-        rule_msgs = init_inbound_rules(self.id, self.policies, 
+        rule_msgs = init_inbound_rules(self.id, self.policies,
                                         self.supersets, final_switch)
 
         if "changes" in rule_msgs:
@@ -307,11 +307,11 @@ class ParticipantController():
             tha = part_mac
 
 
-        arp_fields = {  'SPA':vnh,     'TPA':tpa, 
-                        'SHA':vmac,     'THA':tha, 
+        arp_fields = {  'SPA':vnh,     'TPA':tpa,
+                        'SHA':vmac,     'THA':tha,
                         'eth_src':vmac, 'eth_dst':eth_dst}
 
-        if LOG: 
+        if LOG:
             if gratuitous:
                 print self.idp, "Sending Gratuitious ARP:", arp_fields
             else:
@@ -475,11 +475,15 @@ if __name__ == '__main__':
                                 "..","examples",args.dir,"config"))
     config_file = os.path.join(base_path, "sdx_global.cfg")
 
-    # locate the participant's policy file as well
-    policy_filenames_file = os.path.join(base_path, "sdx_policies.cfg")
-    with open(policy_filenames_file, 'r') as f:
-        policy_filenames = json.load(f)
-    policy_filename = policy_filenames[str(args.id)]
+    with open("asn_2_id.json", 'r') as f:
+        asn_2_id = json.load(f)
+    asn = ''
+    for elem in asn_2_id:
+        if str(asn_2_id[elem]) == str(args.id):
+            asn = elem
+
+    policy_filename = "participant_"+str(asn)+".py"
+
 
 
     policy_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),

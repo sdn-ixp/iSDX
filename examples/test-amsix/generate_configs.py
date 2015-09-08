@@ -152,6 +152,9 @@ def generate_global_config(asn_2_ip):
         with open(config_file, "w") as f:
             json.dump(config, f)
 
+        with open("../../pctrl/asn_2_id.json", "w") as f:
+            json.dump(asn_2_id, f)
+
 
 ''' main '''
 if __name__ == '__main__':
