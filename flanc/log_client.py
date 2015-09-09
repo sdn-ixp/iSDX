@@ -4,21 +4,27 @@
 
 import logging
 import json
+import argparse
 
 from threading import Thread
 from Queue import Empty
 from multiprocessing import Queue
+from multiprocessing.connection import Client
 
 from time import sleep, time, strptime, mktime
 
-''' Server of Reference Monitor to Receive Flow Mods '''
-class Server():
+''' LogClient for Reference Monitor '''
+class LogClient():
 
-    def __init__(self, refmon, input_file):
-        self.logger = logging.getLogger('RefMon Server')
+    def __init__(self, address, port, authkey, input_file, debug = False):
+        self.logger = logging.getLogger('log_client')
+        if debug:
+            self.logger.setLevel(logging.DEBUG)
         self.logger.info('server: start')
 
-        self.refmon = refmon
+        self.address = address
+        self.port = int(port)
+        self.authkey = authkey
 
         self.input_file = input_file
 
@@ -32,17 +38,16 @@ class Server():
 
     def start(self):
         self.run = True
-        print "FP START"
+
         self.fp_thread = Thread(target=self.file_processor)
         self.fp_thread.setDaemon(True)
         self.fp_thread.start()
-        print "FP START FERTIG"
+        self.logger.debug('file processor started')
 
-        print "FS START"
         self.fs_thread = Thread(target=self.flow_mod_sender)
         self.fs_thread.setDaemon(True)
         self.fs_thread.start()
-        print "FS START FERTIG"
+        self.logger.debug('flow mod sender started')
 
     def stop(self):
         self.run = False
@@ -81,6 +86,8 @@ class Server():
                         if not self.run:
                             break
 
+                        self.logger.debug('processed one burst')
+
                         self.flow_mod_queue.put(tmp)
 
                         while self.flow_mod_queue.qsize() > 1000:
@@ -91,12 +98,13 @@ class Server():
 
                     else:
                         tmp["flow_mods"].append(json.loads(line))
-        print "Finished Reading the Log"
+
+        self.logger.debug('finished processing the log')
 
     def flow_mod_sender(self):
         while self.run:
             try:
-                flow_mod = self.flow_mod_queue.get(True, 1)
+                flow_mod = self.flow_mod_queue.get(True, 0.5)
             except Empty:
                 continue
 
@@ -110,8 +118,14 @@ class Server():
 
             sleep(sleep_time)
 
-            self.refmon.process_flow_mods(flow_mod)
+            self.send(flow_mod)
 
+    def send(self, flow_mod):
+        conn = Client((self.address, self.port))
+
+        conn.send(json.dumps(flow_mod))
+
+        conn.close()
 
     def sleep_time(self, flow_mod_time):
         time_diff = flow_mod_time - self.simulation_start_time
@@ -122,3 +136,28 @@ class Server():
             sleep_time = 0
 
         return sleep_time
+
+def main(argv):
+    # logging - log level
+    logging.basicConfig(level=logging.INFO)
+
+    log_client_instance = LogClient(args.ip, args.port, args.key, args.input, True)
+    log_client_instance.start()
+
+    while log_client_instance.run:
+        try:
+            sleep(0.5)
+        except KeyboardInterrupt:
+            log_client_instance.stop()
+
+''' main '''
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('ip', help='ip address of the refmon')
+    parser.add_argument('port', help='port of the refmon')
+    parser.add_argument('key', help='authkey of the refmon')
+    parser.add_argument('input', help='flow mod input file')
+    args = parser.parse_args()
+
+    main(args)

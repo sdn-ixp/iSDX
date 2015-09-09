@@ -151,8 +151,6 @@ class MultiSwitchController(object):
 
         self.fm_queue = Queue()
 
-        self.received_barriers = {"main": False, "inbound": False, "outbound": False}
-
     def switch_connect(self, dp):
         dp_name = self.config.dpid_2_name[dp.id]
 
@@ -219,9 +217,13 @@ class MultiSwitchController(object):
         return False
 
     def send_barrier_request(self):
-        dp = self.config.datapaths["outbound"]
-        request = self.config.parser.OFPBarrierRequest(dp)
-        dp.send_msg(request)
+        if self.is_ready():
+            dp = self.config.datapaths["outbound"]
+            request = self.config.parser.OFPBarrierRequest(dp)
+            dp.send_msg(request)
+            return True
+        else:
+            return False
 
     def handle_barrier_reply(self, datapath):
         if self.config.datapaths["outbound"] == datapath:
