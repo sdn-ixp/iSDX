@@ -193,8 +193,7 @@ def main(argv):
 
     exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input, True)
 
-    eb_thread = Thread(target=exabgp_instance.start)
-    eb_thread.start()
+    exabgp_instance.start()
 
     while exabgp_instance.run:
         try:
@@ -202,8 +201,6 @@ def main(argv):
         except KeyboardInterrupt:
             exabgp_instance.stop()        
     
-    eb_thread.join()    
-
 ''' main '''
 if __name__ == '__main__':
 
