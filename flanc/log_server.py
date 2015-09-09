@@ -6,8 +6,8 @@ import logging
 import json
 
 from threading import Thread
-from multiprocessing import Queue
 from Queue import Empty
+from multiprocessing import Queue
 
 from time import sleep, time, strptime, mktime
 
@@ -25,15 +25,24 @@ class Server():
         self.real_start_time = time()
         self.simulation_start_time = 0
 
+        self.fp_thread = None
+        self.fs_thread = None
+
         self.flow_mod_queue = Queue()
 
     def start(self):
         self.run = True
+        print "FP START"
         self.fp_thread = Thread(target=self.file_processor)
+        self.fp_thread.setDaemon(True)
         self.fp_thread.start()
+        print "FP START FERTIG"
 
+        print "FS START"
         self.fs_thread = Thread(target=self.flow_mod_sender)
+        self.fs_thread.setDaemon(True)
         self.fs_thread.start()
+        print "FS START FERTIG"
 
     def stop(self):
         self.run = False
@@ -74,7 +83,7 @@ class Server():
 
                         self.flow_mod_queue.put(tmp)
 
-                        while self.update_queue.qsize() > 1000:
+                        while self.flow_mod_queue.qsize() > 1000:
                             self.logger.debug('queue is full - taking a break')
                             sleep(self.sleep_time(tmp["time"])/2)
 
@@ -82,11 +91,12 @@ class Server():
 
                     else:
                         tmp["flow_mods"].append(json.loads(line))
+        print "Finished Reading the Log"
 
     def flow_mod_sender(self):
         while self.run:
             try:
-                flow_mod = json.loads(self.flow_mod_queue.get(True, 1))
+                flow_mod = self.flow_mod_queue.get(True, 1)
             except Empty:
                 continue
 
@@ -103,7 +113,7 @@ class Server():
             self.refmon.process_flow_mods(flow_mod)
 
 
-    def sleep_time(self, flow_modtime):
+    def sleep_time(self, flow_mod_time):
         time_diff = flow_mod_time - self.simulation_start_time
         wake_up_time = self.real_start_time + time_diff
         sleep_time = wake_up_time - time()

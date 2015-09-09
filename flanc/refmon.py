@@ -65,7 +65,10 @@ class RefMon(app_manager.RyuApp):
 
         # start server receiving flowmod requests
         self.server = Server(self, input_file)
+
+        print "START"
         self.server.start()
+        print "START FERTIG"
 
         self.flow_mod_times = Queue()
 
