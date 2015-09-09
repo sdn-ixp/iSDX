@@ -7,6 +7,7 @@ import json
 
 from threading import Thread
 from multiprocessing import Queue
+from Queue import Empty
 
 from time import sleep, time, strptime, mktime
 
@@ -48,15 +49,39 @@ class Server():
     ''' receiver '''
     def file_processor(self):
         with open(self.input_file) as infile:
+            flag = 0
+            tmp = {}
+
             for line in infile:
-                if not self.run:
-                    break
+                if line.startswith("BURST"):
+                    flag = 1
+                    tmp = {"flow_mods": []}
+                    
+                    x = line.split("\n")[0].split(": ")[1]
+                    tmp["time"] = float(x)
 
-                self.update_queue.put(tmp)
+                elif line.startswith("PARTICIPANT") and flag == 1:
+                    flag = 2
 
-                while self.update_queue.qsize() > 1000:
-                    self.logger.debug('queue is full - taking a break')
-                    sleep(self.sleep_time(tmp["time"])/2)
+                    x = line.split("\n")[0].split(": ")[1]
+
+                    tmp["auth_info"] = {"participant": int(x), "auth_key": "secrect"}
+
+                elif flag == 2:
+                    if line.startswith("\n"):
+                        if not self.run:
+                            break
+
+                        self.flow_mod_queue.put(tmp)
+
+                        while self.update_queue.qsize() > 1000:
+                            self.logger.debug('queue is full - taking a break')
+                            sleep(self.sleep_time(tmp["time"])/2)
+
+                        flag = 0
+
+                    else:
+                        tmp["flow_mods"].append(json.loads(line))
 
     def flow_mod_sender(self):
         while self.run:
