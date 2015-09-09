@@ -35,8 +35,8 @@ class RefLog():
                     msg = json.loads(msg)
 
                     self.log.write('BURST: ' + str(time()) + '\n')
-                    self.log.write('PARTICIPANT: ' + str(msg['auth_info']['participant'] + '\n')
-                    for flow_mod in msg["flow_mods"]
+                    self.log.write('PARTICIPANT: ' + str(msg['auth_info']['participant']) + '\n')
+                    for flow_mod in msg["flow_mods"]:
                         self.log.write(json.dumps(flow_mod) + '\n')
                     self.log.write('\n')
                 except:
