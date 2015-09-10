@@ -6,7 +6,7 @@ import time
 import multiprocessing as mp
 from multiprocessing import Process, Queue
 
-from rib import rib
+from ribc import rib
 from decision_process import decision_process, best_path_selection
 
 rib_fname = "rrc03.bview.20150820.0000.temp.txt"
@@ -23,9 +23,9 @@ class Peer:
         #print path
         self.prefixes = {}
 
-        self.rib = {"input": rib(str(id),"input", path, in_memory=False),
-                    "local": rib(str(id),"local", path, in_memory=False),
-                    "output": rib(str(id),"output", path, in_memory=False)}
+        self.rib = {"input": rib(str(id),"input", path),
+                    "local": rib(str(id),"local", path),
+                    "output": rib(str(id),"output", path)}
 
         self.local_rib = {"input":{}, "local":{}, "output":{}}
 
@@ -100,29 +100,31 @@ class Peer:
                 #print prefix, atrributes
 
                 # Add this entry to the input rib for this participant
-                #self.rib["input"].add(prefix, atrributes)
+                self.add_route("input", prefix, atrributes)
                 #self.rib["input"].commit()
+                """
                 if prefix not in self.local_rib["input"]:
                     self.local_rib["input"][prefix] = []
                 self.local_rib["input"][prefix].append(atrributes)
+                """
 
 
     def updateLocalOutboundRib(self):
         for prefix in self.prefixes:
-            #routes = self.get_route('input', prefix)
-            routes = self.local_rib["input"][prefix]
+            routes = self.get_route('input', prefix)
+            #routes = self.local_rib["input"][prefix]
             #print routes
             #print "For prefix ", prefix, " # of routes ", len(routes)
             best_route = best_path_selection(routes)
             #print "Best route: ", best_route
 
             # Update the local rib
-            #self.add_route('local', prefix, best_route)
-            self.local_rib["local"][prefix] = best_route
+            self.add_route('local', prefix, best_route)
+            #self.local_rib["local"][prefix] = best_route
 
             # Update the output rib
-            #self.add_route('output', prefix, best_route)
-            self.local_rib["output"][prefix] = best_route
+            self.add_route('output', prefix, best_route)
+            #self.local_rib["output"][prefix] = best_route
 
     def test_ribs(self):
         for prefix in self.prefixes:
@@ -174,8 +176,8 @@ def processRibIter(id, asn_2_ip):
     start = time.time()
     peer.updateLocalOutboundRib()
     print "##", id, "Time to update the local/output Rib ", time.time()-start
-    peer.save_ribs()
-    peer.test_ribs()
+    #peer.save_ribs()
+    #peer.test_ribs()
 
 
 ''' main '''
@@ -192,7 +194,7 @@ if __name__ == '__main__':
     process = []
     queue = []
     iter = 0
-    for id in asn_2_ip:
+    for id in asn_2_ip_small:
         process.append(Process(target = processRibIter, args = (id, asn_2_ip)))
         process[iter].start()
         iter += 1
