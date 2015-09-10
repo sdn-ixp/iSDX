@@ -33,5 +33,20 @@ There are two sample config files provided:
 This script saves every flowmod with a timestamp to the specified file (e.g. test.log)
 
 ```bash
-$ ./reflog.py localhost 5555 sdx test.log
+$ ./reflog.py localhost 5555 sdx <path of output file>
 ```
+
+# FLANC - Reference Monitor Log Replay
+
+## Run RefMon
+
+After logging all the flow mods, the flow mods can be replayed using LogClient.
+
+```bash
+$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config <path of config file>
+```
+
+```bash
+$ ./log_client.py localhost 5555 sdx <path of input file>
+```
+
