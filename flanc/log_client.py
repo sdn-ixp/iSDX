@@ -94,6 +94,9 @@ class LogClient():
                             self.logger.debug('queue is full - taking a break')
                             sleep(self.sleep_time(tmp["time"])/2)
 
+                            if not self.run:
+                                break
+
                         flag = 0
 
                     else:
