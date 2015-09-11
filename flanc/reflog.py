@@ -16,7 +16,6 @@ class RefLog():
 
     def __init__(self, address, port, key, logfile):
         self.listener = Listener((address, int(port)))
-        
         self.log = open(logfile, "w")
 
     def start(self):
@@ -33,7 +32,7 @@ class RefLog():
                 try:
                     msg = conn.recv()
                     msg = json.loads(msg)
-
+                    print "Message received:: ", msg
                     self.log.write('BURST: ' + str(time()) + '\n')
                     self.log.write('PARTICIPANT: ' + str(msg['auth_info']['participant']) + '\n')
                     for flow_mod in msg["flow_mods"]:
@@ -41,26 +40,25 @@ class RefLog():
                     self.log.write('\n')
                 except:
                     pass
-
             conn.close()
 
     def stop(self):
         self.receive = False
         self.log.close()
-        
-        
+
+
 def main(argv):
     reflog_instance = RefLog(args.ip, args.port, args.key, args.logfile)
 
     rl_thread = Thread(target=reflog_instance.start)
     rl_thread.daemon = True
     rl_thread.start()
-    
+
     while rl_thread.is_alive():
         try:
             rl_thread.join(1)
         except KeyboardInterrupt:
-            reflog_instance.stop() 
+            reflog_instance.stop()
 
 
 ''' main '''
