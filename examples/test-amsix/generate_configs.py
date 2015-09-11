@@ -59,7 +59,7 @@ def getParticipants():
     return asn_2_ip
 
 
-def generatePoliciesParticipant(part, asn_2_ip, count, limit_out):
+def generatePoliciesParticipant(part, asn_2_ip, asn_2_id, count, limit_out):
     # randomly select fwding participants
     peers = filter(lambda x: x!=part, asn_2_ip.keys())
     shuffle(peers)
@@ -86,10 +86,32 @@ def generatePoliciesParticipant(part, asn_2_ip, count, limit_out):
             tmp_policy["match"]["in_port"] = asn_2_ip[part].values()[0]
 
             # Action: fwd to peer's first port (visible to part)
-            tmp_policy["action"] = {"fwd":asn_2_ip[peer].values()[0]}
+            tmp_policy["action"] = {"fwd":asn_2_id[peer]}
 
             # Add this to participants' outbound policies
             policy["outbound"].append(tmp_policy)
+
+
+    policy["inbound"] = []
+    inbound_count = randint(1, limit_out)
+    for ind in range(1, peer_count+1):
+        tmp_policy = {}
+        # Assign Cookie ID
+        tmp_policy["cookie"] = cookie_id
+        cookie_id += 1
+
+        # Match
+        match_hash = getMatchHash(part, 'AS0', ind)
+        tmp_policy["match"] = {}
+        tmp_policy["match"]["tcp_dst"] = match_hash
+
+
+        # Action: fwd to peer's first port (visible to part)
+        tmp_policy["action"] = {"fwd":asn_2_ip[part].values()[0]}
+
+        # Add this to participants' outbound policies
+        policy["inbound"].append(tmp_policy)
+
 
     # Dump the policies to appropriate directory
     policy_filename = "participant_"+part+".py"
@@ -155,6 +177,8 @@ def generate_global_config(asn_2_ip):
         with open("../../pctrl/asn_2_id.json", "w") as f:
             json.dump(asn_2_id, f)
 
+    return asn_2_id
+
 
 ''' main '''
 if __name__ == '__main__':
@@ -168,8 +192,7 @@ if __name__ == '__main__':
     #asn_2_ip = {"AS1":"1","AS2":"2","AS3":"3"}
     #asn_2_ports = {"AS1":[1], "AS2":[2,3], "AS3":[4,5]}
     asn_2_ip = json.load(open("asn_2_ip.json", 'r'))
+    asn_2_id = generate_global_config(asn_2_ip)
 
     for part in asn_2_ip:
-        generatePoliciesParticipant(part, asn_2_ip, count, limit_out)
-
-    generate_global_config(asn_2_ip)
+        generatePoliciesParticipant(part, asn_2_ip, asn_2_id, count, limit_out)
