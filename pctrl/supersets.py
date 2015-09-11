@@ -9,7 +9,7 @@ from ss_lib import *
 from threading import RLock as lock
 
 
-LOG = True
+LOG = False
 
 class SuperSets():
     def __init__(self, pctrl, config_file = None):
@@ -81,7 +81,7 @@ class SuperSets():
                     if fwd_part not in rulecounts:
                         rulecounts[fwd_part] = 0
                     rulecounts[fwd_part] += 1
-        print pctrl.idp, ": RuleCounts:: ",rulecounts
+        #print pctrl.idp, ": RuleCounts:: ",rulecounts
         return rulecounts
 
 
@@ -177,13 +177,10 @@ class SuperSets():
         self.rulecounts = self.recompute_rulecounts(pctrl)
         # get all sets of participants advertising the same prefix
         peer_sets = get_prefix2part_sets(pctrl)
-        print pctrl.idp,": get/P Peer Sets:: ", peer_sets[:5]
 
         peer_sets = clear_inactive_parts(peer_sets, self.rulecounts.keys())
         peer_sets = removeSubsets(peer_sets)
-        print pctrl.idp,": I/P Peer Sets:: ", peer_sets
         self.supersets = minimize_ss_rules_greedy(peer_sets, self.rulecounts, self.max_initial_bits)
-        print pctrl.idp,": O/P Supersets Sets:: ", self.supersets
 
         # impose an ordering on each superset by converting sets to lists
         for i in range(len(self.supersets)):

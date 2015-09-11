@@ -4,7 +4,7 @@
 
 from ss_lib import *
 
-LOG = True
+LOG = False
 
 # PRIORITIES (Values can be in [0,65535], 0 is miss)
 FLOW_MISS_PRIORITY = 0
@@ -181,7 +181,7 @@ def init_outbound_rules(pctrl, participant_id, policies, ss_instance, final_swit
     if ('outbound' not in policies):
         return {}
     else:
-        
+
         sdx_msgs = ss_instance.initial_computation(pctrl)
         if len(sdx_msgs['changes']) > 0:
             flow_msgs = update_outbound_rules(sdx_msgs, policies,

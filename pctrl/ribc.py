@@ -143,7 +143,7 @@ class rib():
     def filter(self,item,value):
 
         query = "select * from " + self.name + " where " + item + " = '" + value + "' ALLOW FILTERING"
-        print query
+        #print query
         prep = self.session.prepare(query)
         rows = self.session.execute(prep)
 
@@ -193,8 +193,8 @@ class rib():
         rows = self.session.execute(prep)
 
     def commit(self):
-
-        print "previous commit, does nothing"
+        pass
+        #print "previous commit, does nothing"
 
     def rollback(self):
 

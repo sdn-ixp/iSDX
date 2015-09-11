@@ -21,17 +21,17 @@ class ExaBGPEmulator(object):
         self.logger.debug('init')
 
         self.input_file = input_file
-        
+
         self.real_start_time = time()
-        self.simulation_start_time = 0 
+        self.simulation_start_time = 0
 
         self.fp_thread = None
         self.us_thread = None
-        
+
         self.run = True
-        
+
         self.update_queue = Queue()
-        
+
         self.conn = Client((address, int(port)), authkey=authkey)
 
     def file_processor(self):
@@ -39,19 +39,19 @@ class ExaBGPEmulator(object):
             tmp = {}
             next_hop = ""
             flag = 0
-            
+
             for line in infile:
                 if line.startswith("TIME"):
-                
+
                     flag = 1
-                    
+
                     tmp = {"exabgp": "3.4.8", "type": "update"}
                     next_hop = ""
-                    
+
                     x = line.split("\n")[0].split(": ")[1]
                     time = mktime(strptime(x, "%m/%d/%y %H:%M:%S"))
                     tmp["time"] = int(time)
-                    
+
                 elif flag == 1:
                     if 'Keepalive' in line or line.startswith("\n"):
                         # Only process Update Messages
@@ -62,7 +62,7 @@ class ExaBGPEmulator(object):
 
                         if "neighbor" not in tmp:
                              tmp["neighbor"] = {"address": {}, "asn": {}, "message": {"update": {}}}
-                        
+
                         elif line.startswith("FROM"):
                             x = x[1].split(" ")
                             if IPAddress(x[0]).version == 4:
@@ -75,30 +75,30 @@ class ExaBGPEmulator(object):
                             x = x[1].split(" ")
                             if IPAddress(x[0]).version == 4:
                                 tmp["neighbor"]["address"]["local"] = x[0]
-                                tmp["neighbor"]["asn"]["local"] = x[1][2:]                          
+                                tmp["neighbor"]["asn"]["local"] = x[1][2:]
                             else:
-                                flag = 0                        
+                                flag = 0
                         elif line.startswith("ORIGIN"):
                             if "attribute" not in tmp["neighbor"]["message"]["update"]:
                                 tmp["neighbor"]["message"]["update"]["attribute"] = {}
                             tmp["neighbor"]["message"]["update"]["attribute"]["origin"] = x[1].lower()
-                        
+
                         elif line.startswith("ASPATH"):
                             if "attribute" not in tmp["neighbor"]["message"]["update"]:
                                 tmp["neighbor"]["message"]["update"]["attribute"] = {}
                             tmp["neighbor"]["message"]["update"]["attribute"]["as-path"] = "[ " + x[1] + " ]"
-                            
+
                         elif line.startswith("MULTI_EXIT_DISC"):
                             if "attribute" not in tmp["neighbor"]["message"]["update"]:
                                 tmp["neighbor"]["message"]["update"]["attribute"] = {}
                             tmp["neighbor"]["message"]["update"]["attribute"]["med"] = x[1]
-                            
+
                         elif line.startswith("NEXT_HOP"):
                             if "announce" not in tmp["neighbor"]["message"]["update"]:
                                 tmp["neighbor"]["message"]["update"]["announce"] = {}
                             tmp["neighbor"]["message"]["update"]["announce"] = {"ipv4 unicast": {x[1]: {}}}
                             next_hop = x[1]
-                            
+
                         elif line.startswith("ANNOUNCE"):
                             if "announce" not in tmp["neighbor"]["message"]["update"]:
                                 tmp["neighbor"]["message"]["update"]["announce"] = {"ipv4 unicast": {}}
@@ -111,18 +111,18 @@ class ExaBGPEmulator(object):
                     if line.startswith("\n"):
                         if not self.run:
                             break
-                            
+
                         self.update_queue.put(tmp)
-                        
+
                         while self.update_queue.qsize() > 1000:
-                            
+
                             self.logger.debug('queue is full - taking a break')
 
                             sleep(self.sleep_time(tmp["time"])/2)
 
                             if not self.run:
                                 break
-                            
+
                         flag = 0
                     else:
                         x = line.split("\n")[0].split()[0]
@@ -130,13 +130,13 @@ class ExaBGPEmulator(object):
                             tmp["neighbor"]["message"]["update"]["announce"]["ipv4 unicast"][next_hop][x] = {}
                         else:
                             tmp["neighbor"]["message"]["update"]["withdraw"]["ipv4 unicast"][x] = {}
-             
+
         self.run = False
-                
+
     def bgp_update_sender(self):
         while self.run:
             try:
-                bgp_update = self.update_queue.get(True, 1)        
+                bgp_update = self.update_queue.get(True, 1)
             except Empty:
                 continue
 
@@ -147,33 +147,33 @@ class ExaBGPEmulator(object):
             sleep_time = self.sleep_time(bgp_update["time"])
 
             self.logger.debug('sleep for ' + str(sleep_time) + ' seconds')
-                
+
             sleep(sleep_time)
-            
+
             self.send_update(bgp_update)
 
     def sleep_time(self, update_time):
         time_diff = update_time - self.simulation_start_time
         wake_up_time = self.real_start_time + time_diff
         sleep_time = wake_up_time - time()
-        
+
         if sleep_time < 0:
             sleep_time = 0
 
-        return sleep_time      
-        
+        return sleep_time
+
     def send_update(self, update):
         self.conn.send(json.dumps(update))
-        
-    def start(self): 
+
+    def start(self):
         self.logger.debug('start file processor')
         self.fp_thread = Thread(target=self.file_processor)
         self.fp_thread.start()
-        
+
         self.logger.debug('start update sender')
         self.us_thread = Thread(target=self.bgp_update_sender)
         self.us_thread.start()
-        
+
     def stop(self):
         self.logger.debug('terminate')
 
@@ -194,7 +194,7 @@ def main(argv):
     # logging - log level
     logging.basicConfig(level=logging.INFO)
 
-    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input, True)
+    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input, False)
 
     exabgp_instance.start()
 
@@ -202,8 +202,8 @@ def main(argv):
         try:
             sleep(0.5)
         except KeyboardInterrupt:
-            exabgp_instance.stop()        
-    
+            exabgp_instance.stop()
+
 ''' main '''
 if __name__ == '__main__':
 

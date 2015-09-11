@@ -19,7 +19,7 @@ from core import XRS, XRSPeer
 
 
 
-LOG = True
+LOG = False
 
 class route_server():
 
@@ -80,12 +80,14 @@ class route_server():
                     advertise_id = self.portip_2_participant[advertiser_ip]
                     if id in self.participants[advertise_id].peers_out and advertise_id in self.participants[id].peers_in:
                         # Now send this route to participant `id`'s controller'
+                        #print "sending route:: ", route
                         self.send_update(id, route)
+                        break
 
             except Queue.Empty:
-                if LOG: 
+                if LOG:
                     if waiting == 0:
-                        print self.idp, "Waiting for BGP update..."
+                        #print self.idp, "Waiting for BGP update..."
                         waiting = 1
                     else:
                         waiting = (waiting % 30) + 1

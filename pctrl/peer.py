@@ -11,7 +11,7 @@ from threading import RLock as lock
 from ribc import rib
 from decision_process import decision_process, best_path_selection
 
-LOG = True
+LOG = False
 
 class BGPPeer():
 
@@ -71,7 +71,7 @@ class BGPPeer():
                 as_path = attribute['as-path'] if 'as-path' in attribute else ''
                 #as_path = ' '.join(map(str,temp_as_path)).replace('[','').replace(']','').replace(',','')
 
-                print "AS PATH SYNTAX:: ",as_path
+                #print "AS PATH SYNTAX:: ",as_path
                 med = attribute['med'] if 'med' in attribute else ''
 
                 community = attribute['community'] if 'community' in attribute else ''
@@ -86,7 +86,7 @@ class BGPPeer():
                 if ('ipv4 unicast' in announce):
                     for next_hop in announce['ipv4 unicast'].keys():
                         for prefix in announce['ipv4 unicast'][next_hop].keys():
-                            print "::::PREFIX:::::", prefix, type(prefix)
+                            #print "::::PREFIX:::::", prefix, type(prefix)
                             # TODO: Check if this appending the accounced route to the input rib?
                             # Why not use the `add_route` function?
                             atrributes = (neighbor, next_hop, origin, as_path,
@@ -131,7 +131,7 @@ class BGPPeer():
             # message.
 
             announce_route = update['announce']
-            print "decision process local:: ", announce_route
+            #print "decision process local:: ", announce_route
             prefix = announce_route['prefix']
             if LOG: print " Peer Object for: ", self.id, "--- processing update for prefix: ", prefix
             current_best_route = self.get_route('local', prefix)
@@ -195,10 +195,10 @@ class BGPPeer():
 
             best_route = self.get_route("local", prefix)
             if LOG: print " Peer Object for: ", self.id, " -- Previous Outbound route: ", prev_route, " New Best Path: ", best_route
-            print  idp, "**********best route for: ", prefix, "route:: ", best_route
+            #print  idp, "**********best route for: ", prefix, "route:: ", best_route
             #best_route["next_hop"] = str(prefix_2_VNH[prefix])
 
-            print idp, "## DEBUG: best route: ", best_route
+            #print idp, "## DEBUG: best route: ", best_route
 
             if ('announce' in update):
                 # Check if best path has changed for this prefix
@@ -212,12 +212,13 @@ class BGPPeer():
                         # announce the route to each router of the participant
                         for port in ports:
                             # TODO: Create a sender queue and import the announce_route function
-                            print  idp, "********** Failure: ", port["IP"], prefix, "route::failure ", best_route
+                            #print  idp, "********** Failure: ", port["IP"], prefix, "route::failure ", best_route
 
                             announcements.append(announce_route(port["IP"], prefix,
                                                 prefix_2_VNH[prefix], best_route["as_path"]))
                     else:
-                        print "Race condition problem for prefix: ", prefix
+                        continue
+                        #print "Race condition problem for prefix: ", prefix
 
             elif ('withdraw' in update):
                 # A new announcement is only needed if the best path has changed

@@ -23,7 +23,7 @@ import time
 sys.path.insert(0, '../xctrl/')
 from flowmodmsg import FlowModMsgBuilder
 
-LOG = True
+LOG = False
 TIMING = True
 
 MULTISWITCH = 0
@@ -335,10 +335,10 @@ class ParticipantController():
         prefixes.sort()
         hsh = "".join(prefixes)
         if hsh not in self.prefix_lock:
-            print "First Lock:: ", hsh
+            #print "First Lock:: ", hsh
             self.prefix_lock[hsh] = lock()
-        else:
-            print "Repeat :: ", hsh
+        #else:
+            #print "Repeat :: ", hsh
         return self.prefix_lock[hsh]
 
     def process_bgp_route(self, route):
@@ -351,7 +351,7 @@ class ParticipantController():
             reply = ''
             # Map to update for each prefix in the route advertisement.
             updates = self.bgp_instance.update(route)
-            print "process_bgp_route:: ", updates
+            #print "process_bgp_route:: ", updates
             # TODO: This step should be parallelized
             # TODO: The decision process for these prefixes is going to be same, we
             # should think about getting rid of such redundant computations.
@@ -395,7 +395,7 @@ class ParticipantController():
 
                 if len(ss_changes['changes']) > 0:
 
-                    print self.idp, "Supersets have changed:", ss_changes
+                    #print self.idp, "Supersets have changed:", ss_changes
 
                     "Map the superset changes to a list of new flow rules."
                     flow_msgs = update_outbound_rules(ss_changes, self.policies,
@@ -492,7 +492,7 @@ class ParticipantController():
             " Superset"
             # TODO: Do we really need to assign a VNH for each advertised prefix?
             prefixes_dict = self.bgp_instance.rib["local"].get_prefixes()
-            print prefixes_dict
+            #print prefixes_dict
             prefixes = [x.values()[0] for x in prefixes_dict]
 
             for prefix in prefixes:
