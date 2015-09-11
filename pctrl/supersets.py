@@ -6,6 +6,7 @@
 import json
 
 from ss_lib import *
+from threading import RLock as lock
 
 
 LOG = True
@@ -59,7 +60,7 @@ class SuperSets():
                                            "position": part_index})
         sdx_msgs = {"type":"new", "changes":changes}
 
-        if LOG: 
+        if LOG:
             print pctrl.idp, "Superset computation complete. Supersets:"
             print pctrl.idp, ">>", self.supersets
 
@@ -85,86 +86,87 @@ class SuperSets():
 
 
     def update_supersets(self, pctrl, updates):
-        policies = pctrl.policies
+        with lock():
+            policies = pctrl.policies
 
-        if LOG: print pctrl.idp, "Updating supersets..."
+            if LOG: print pctrl.idp, "Updating supersets..."
 
-        sdx_msgs = {"type": "update", "changes": []}
+            sdx_msgs = {"type": "update", "changes": []}
 
-        # the list of prefixes who will have changed VMACs
-        impacted_prefixes = []
+            # the list of prefixes who will have changed VMACs
+            impacted_prefixes = []
 
-        self.rulecounts = self.recompute_rulecounts(pctrl)
+            self.rulecounts = self.recompute_rulecounts(pctrl)
 
-        # if supersets haven't been computed at all yet
-        if len(self.supersets) == 0:
-            sdx_msgs = self.initial_computation(pctrl)
-            return (sdx_msgs, impacted_prefixes)
-
-
-        for update in updates:
-            if ('withdraw' in update):
-                prefix = update['withdraw']['prefix']
-                # withdraws always change the bits of a VMAC
-                impacted_prefixes.append(prefix)
-            if ('announce' not in update):
-                continue
-            prefix = update['announce']['prefix']
-
-            # get set of all participants advertising that prefix
-            new_set = get_all_participants_advertising(pctrl, prefix)
-
-            # clean out the inactive participants
-            new_set = set(new_set)
-            new_set.intersection_update(self.rulecounts.keys())
-
-            # if the prefix group is still a subset, no update needed
-            if is_subset_of_superset(new_set, self.supersets):
-                continue
-
-            expansion_index = best_ss_to_expand_greedy(new_set, self.supersets,
-                                                self.rulecounts, self.mask_size)
+            # if supersets haven't been computed at all yet
+            if len(self.supersets) == 0:
+                sdx_msgs = self.initial_computation(pctrl)
+                return (sdx_msgs, impacted_prefixes)
 
 
-            # if no merge is possible, recompute from scratch
-            if expansion_index == -1:
-                if LOG: print pctrl.idp, "No SS merge was possible. Recomputing."
-                self.recompute_all_supersets(pctrl)
+            for update in updates:
+                if ('withdraw' in update):
+                    prefix = update['withdraw']['prefix']
+                    # withdraws always change the bits of a VMAC
+                    impacted_prefixes.append(prefix)
+                if ('announce' not in update):
+                    continue
+                prefix = update['announce']['prefix']
 
-                sdx_msgs = {"type": "new", "changes": []}
+                # get set of all participants advertising that prefix
+                new_set = get_all_participants_advertising(pctrl, prefix)
 
-                for superset in self.supersets:
-                    for participant in superset:
+                # clean out the inactive participants
+                new_set = set(new_set)
+                new_set.intersection_update(self.rulecounts.keys())
+
+                # if the prefix group is still a subset, no update needed
+                if is_subset_of_superset(new_set, self.supersets):
+                    continue
+
+                expansion_index = best_ss_to_expand_greedy(new_set, self.supersets,
+                                                    self.rulecounts, self.mask_size)
+
+
+                # if no merge is possible, recompute from scratch
+                if expansion_index == -1:
+                    if LOG: print pctrl.idp, "No SS merge was possible. Recomputing."
+                    self.recompute_all_supersets(pctrl)
+
+                    sdx_msgs = {"type": "new", "changes": []}
+
+                    for superset in self.supersets:
+                        for participant in superset:
+                            sdx_msgs["changes"].append({"participant_id": participant,
+                                                       "superset": superset_index,
+                                                       "position": self.supersets[superset_index].index(participant)})
+                    break
+
+
+
+                # if merge is possible, do the merge and add the new rules required
+                else:
+                    # an expansion means the VMAC for this prefix changed
+                    impacted_prefixes.append(prefix)
+
+                    bestSuperset = self.supersets[expansion_index]
+
+                    new_members = list(new_set.difference(bestSuperset))
+                    bestSuperset.extend(new_members)
+
+                    if LOG:
+                        print pctrl.idp, "Merge possible. Merging", new_set, "into superset", bestSuperset,
+                        print "with new members", new_members
+
+                    for participant in new_members:
                         sdx_msgs["changes"].append({"participant_id": participant,
-                                                   "superset": superset_index,
-                                                   "position": self.supersets[superset_index].index(participant)})
-                break
+                                                       "superset": expansion_index,
+                                                       "position": bestSuperset.index(participant)})
 
 
 
-            # if merge is possible, do the merge and add the new rules required
-            else:
-                # an expansion means the VMAC for this prefix changed
-                impacted_prefixes.append(prefix)
-
-                bestSuperset = self.supersets[expansion_index]
-
-                new_members = list(new_set.difference(bestSuperset))
-                bestSuperset.extend(new_members)
-
-                if LOG: 
-                    print pctrl.idp, "Merge possible. Merging", new_set, "into superset", bestSuperset,
-                    print "with new members", new_members
-
-                for participant in new_members:
-                    sdx_msgs["changes"].append({"participant_id": participant,
-                                                   "superset": expansion_index,
-                                                   "position": bestSuperset.index(participant)})
-
-
-
-        # check which participants joined a new superset and communicate to the SDX controller
-        return (sdx_msgs, impacted_prefixes)
+            # check which participants joined a new superset and communicate to the SDX controller
+            return (sdx_msgs, impacted_prefixes)
 
 
 
@@ -193,7 +195,7 @@ class SuperSets():
             self.id_size = int(math.ceil(math.log(len(self.supersets), 2)))
             self.mask_size -= self.id_size
 
-        if LOG: 
+        if LOG:
             print "done.~"
             print pctrl.idp, "Supersets:"
             print pctrl.idp, ">>", self.supersets
@@ -219,7 +221,8 @@ class SuperSets():
 
         # first part of the returned tuple is next hop
         route = bgp_instance.get_route('local', prefix)
-        next_hop = route[1]
+        #if len(route) > 0:
+        next_hop = route['next_hop']
         if next_hop not in nexthop_2_part:
             if LOG: print "Next Hop", next_hop, "not found in get_vmac call!"
             return vmac_addr
@@ -303,13 +306,14 @@ def get_all_participants_advertising(pctrl, prefix):
     nexthop_2_part = pctrl.nexthop_2_part
 
     routes = bgp_instance.get_routes('input',prefix)
-
+    print "Supersets all routes:: ", routes
     parts = set([])
 
 
     for route in routes:
         # first part of the returned tuple is next hop
-        next_hop = route[1]
+        print "Route in supersets:: ", route
+        next_hop = route['next_hop']
 
         if next_hop in nexthop_2_part:
             parts.add(nexthop_2_part[next_hop])

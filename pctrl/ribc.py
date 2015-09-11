@@ -28,7 +28,7 @@ class rib():
         #initialize table name using ip + type(local, input, output)
         self.name = name + "_" + str(table_suffix)
         # Use cassandra session object
-        query = '''CREATE TABLE IF NOT EXISTS '''+ str(self.name) +''' (prefix text PRIMARY KEY, neighbor text, next_hop text, origin text, as_path text, communities text, med text, atomic_aggregate text);'''
+        query = '''CREATE TABLE IF NOT EXISTS '''+ str(self.name) +''' (prefix text, neighbor text, next_hop text, origin text, as_path text, communities text, med text, atomic_aggregate text, PRIMARY KEY(prefix, neighbor));'''
         prep = self.session.prepare(query)
         self.session.execute(prep)
 
@@ -38,7 +38,6 @@ class rib():
         print "stub function"
 
     def __del__(self):
-        print "Cluster Type: ", type(self.cluster)
         self.cluster.shutdown()
 
     def __setitem__(self,key,item):
@@ -53,6 +52,8 @@ class rib():
 
         #print '''insert into ''' + self.name + ''' (prefix, next_hop, origin, as_path, communities, med,atomic_aggregate) values(?,?,?,?,?,?,?)''',(key,item[0],item[1],item[2],item[3],item[4],item[5])
         #print "Add: ", key, item
+        #if session not valid:
+
         key = str(key)
         if (isinstance(item,tuple) or isinstance(item,list)):
             assert (len(item) == 7)
@@ -61,7 +62,7 @@ class rib():
             prep = self.session.prepare(query)
             self.session.execute(prep)
         elif (isinstance(item,dict) or isinstance(item,sqlite3.Row)):
-            query = "insert into " + self.name + "(prefix, neighbor, next_hop, origin, as_path, communities, med,atomic_aggregate) values('" + key + "','" +item['neighbor']+ "','" + item['next_hop']+ "','" +item['origin']+ "','" +item['as_path']+ "','" +item['communities']+ "','" +item['med']+ "','" +item['atomic_aggregate'] + "');"
+            query = "insert into " + self.name + "(prefix, neighbor, next_hop, origin, as_path, communities, med,atomic_aggregate) values('" + str(key) + "','" +str(item['neighbor'])+ "','" + str(item['next_hop'])+ "','" +str(item['origin'])+ "','" +str(item['as_path'])+ "','" +str(item['communities'])+ "','" + str(item['med']) + "','" + str(item['atomic_aggregate']) + "');"
             prep = self.session.prepare(query)
             self.session.execute(prep)
         #TODO: Add support for selective update
@@ -84,30 +85,47 @@ class rib():
         query = "select * from " + self.name + " where prefix = '" + key + "'"
         prep = self.session.prepare(query)
         rows = self.session.execute(prep)
-        return rows
+        output_rows = None
+
+        if "input" in self.name:
+            output_rows = rows
+        else:
+            if len(rows) > 0:
+                output_rows = rows[0]
+
+        return output_rows
 
     def get_prefix_neighbor(self,key, neighbor):
 
         key = str(key)
-        query = '''select * from ''' + self.name + ''' where prefix = ? AND neighbor = ? limit 1''', (key, neighbor)
+        query = "select * from " + self.name + " where prefix = '" + key + "' AND neighbor = '" + neighbor+ "' limit 1"
         prep = self.session.prepare(query)
         row = self.session.execute(prep)
-
-        return row
+        output_row = None
+        if len(row) > 0:
+            output_row = row[0]
+        return output_row
 
     def get_all(self,key=None):
 
         rows = []
         if (key is not None):
-            query = '''select * from ''' + self.name + ''' where prefix = ?''', (key,)
+            query = "select * from " + self.name + " where prefix = '" + key + "'"
             prep = self.session.prepare(query)
             rows = self.session.execute(prep)
         else:
-            query = '''select * from ''' + self.name
+            query = "select * from " + self.name
             prep = self.session.prepare(query)
             rows = self.session.execute(prep)
+        output_rows = None
 
-        return rows
+        if "input" in self.name:
+            output_rows = rows
+        else:
+            if len(rows) > 0:
+                output_rows = rows[0]
+
+        return output_rows
 
     def filter(self,item,value):
 
@@ -120,10 +138,10 @@ class rib():
 
     def update(self,key,item,value):
 
-        query = "update " + self.name + " set " + item + " = '" + value + "' where prefix = '" + key + "'"
+        query = "update " + self.name + " set " + item + " = '" + str(value) + "' where prefix = '" + key + "'"
         prep = self.session.prepare(query)
         rows = self.session.execute(prep)
-
+    """
     def update_many(self,key,item):
 
         if (isinstance(item,tuple) or isinstance(item,list)):
@@ -137,12 +155,12 @@ class rib():
                          item['atomic_aggregate'],key)
             prep = self.session.prepare(query)
             rows = self.session.execute(prep)
-
+    """
     def delete(self,key):
 
         # TODO: Add more granularity in the delete process i.e., instead of just prefix,
         # it should be based on a conjunction of other attributes too.
-        query = '''delete from ''' + self.name + ''' where prefix = ?''', (key,)
+        query = "delete from " + self.name + " where prefix = '" + key + "'"
         prep = self.session.prepare(query)
         rows = self.session.execute(prep)
 
@@ -150,14 +168,14 @@ class rib():
 
         # Deleting one entry in prefix's column that matches on neighbor
 
-        query = '''delete from ''' + self.name + ''' where prefix = ? AND neighbor = ?''', (prefix, neighbor)
+        query = "delete from " + self.name + " where prefix = '" + prefix + "' and neighbor = '" + neighbor + "'"
         prep = self.session.prepare(query)
         rows = self.session.execute(prep)
 
     def delete_all(self):
 
         cursor = self.db.cursor()
-        query = '''delete from ''' + self.name
+        query = "delete from " + self.name
         prep = self.session.prepare(query)
         rows = self.session.execute(prep)
 

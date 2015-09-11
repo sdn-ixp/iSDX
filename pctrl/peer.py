@@ -7,8 +7,8 @@
 import json
 import os
 import sqlite3
-
-from rib import rib
+from threading import RLock as lock
+from ribc import rib
 from decision_process import decision_process, best_path_selection
 
 LOG = True
@@ -19,7 +19,7 @@ class BGPPeer():
         self.id = id
         self.asn = asn
         self.ports = ports
-
+        self.prefix_lock = {}
         ips = []
         for port in ports:
             ips.append(port["IP"])
@@ -27,9 +27,9 @@ class BGPPeer():
         # TODO: Get rid of this hardcoding
         path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "ribs"))
 
-        self.rib = {"input": rib("-".join(ips),"input", path, in_memory=True),
-                    "local": rib("-".join(ips),"local", path, in_memory=True),
-                    "output": rib("-".join(ips),"output", path, in_memory=True)}
+        self.rib = {"input": rib(str(id),"input", path),
+                    "local": rib(str(id),"local", path),
+                    "output": rib(str(id),"output", path)}
 
         # peers that a participant accepts traffic from and sends advertisements to
         self.peers_in = peers_in
@@ -68,9 +68,10 @@ class BGPPeer():
 
                 origin = attribute['origin'] if 'origin' in attribute else ''
 
-                temp_as_path = attribute['as-path'] if 'as-path' in attribute else ''
-                as_path = ' '.join(map(str,temp_as_path)).replace('[','').replace(']','').replace(',','')
+                as_path = attribute['as-path'] if 'as-path' in attribute else ''
+                #as_path = ' '.join(map(str,temp_as_path)).replace('[','').replace(']','').replace(',','')
 
+                print "AS PATH SYNTAX:: ",as_path
                 med = attribute['med'] if 'med' in attribute else ''
 
                 community = attribute['community'] if 'community' in attribute else ''
@@ -90,21 +91,19 @@ class BGPPeer():
                             # Why not use the `add_route` function?
                             atrributes = (neighbor, next_hop, origin, as_path,
                                          communities, med, atomic_aggregate)
-                            self.rib["input"].add(prefix, atrributes)
-                            self.rib["input"].commit()
+                            self.add_route("input", prefix, atrributes)
                             # TODO: Avoid multiple interactions with the DB
-                            announce_route = self.rib["input"].get_prefix_neighbor(prefix, neighbor)
+                            announce_route = self.get_route_with_neighbor("input", prefix, neighbor)
                             route_list.append({'announce': announce_route})
 
             elif ('withdraw' in route['neighbor']['message']['update']):
                 withdraw = route['neighbor']['message']['update']['withdraw']
                 if ('ipv4 unicast' in withdraw):
                     for prefix in withdraw['ipv4 unicast'].keys():
-                        # WTF is this?
-                        deleted_route = self.rib["input"].get_prefix_neighbor(prefix, neighbor)
-                        self.rib["input"].delete_prefix_neighbor(prefix, neighbor)
-                        self.rib["input"].commit()
-                        route_list.append({'withdraw': deleted_route})
+                        deleted_route = self.get_route_with_neighbor("input", prefix, neighbor)
+                        if deleted_route != None:
+                            self.delete_route_with_neighbor("input", prefix, neighbor)
+                            route_list.append({'withdraw': deleted_route})
 
         return route_list
 
@@ -132,6 +131,7 @@ class BGPPeer():
             # message.
 
             announce_route = update['announce']
+            print "decision process local:: ", announce_route
             prefix = announce_route['prefix']
             if LOG: print " Peer Object for: ", self.id, "--- processing update for prefix: ", prefix
             current_best_route = self.get_route('local', prefix)
@@ -143,13 +143,12 @@ class BGPPeer():
                 # This is the first time for this prefix
                 new_best_route = announce_route
 
-            if LOG: print " Peer Object for: ", self.id, "---Best Route after Selection: ", new_best_route
+            if LOG: print " Peer Object for: ", self.id, "---Best Route after Selection: ", prefix, new_best_route
             if bgp_routes_are_equal(new_best_route, current_best_route):
-                if LOG: print " Peer Object for: ", self.id, "--- No change in Best Path...move on"
+                if LOG: print " Peer Object for: ", self.id, "--- No change in Best Path...move on", prefix
             else:
-                self.delete_route('local', prefix)
-                self.add_route('local', prefix, new_best_route)
-                if LOG: print " Peer Object for: ", self.id, "--- Best Path changed: ", new_best_route
+                self.update_route('local', prefix, new_best_route)
+                if LOG: print " Peer Object for: ", self.id, "--- Best Path changed: ", prefix, new_best_route
 
         elif('withdraw' in update):
             deleted_route = update['withdraw']
@@ -178,7 +177,7 @@ class BGPPeer():
                     if LOG: print " Peer Object for: ", self.id, "--- This is weird. How can we not have any delete object in this function"
 
 
-    def bgp_update_peers(self, updates, prefix_2_VNH, ports):
+    def bgp_update_peers(self, updates, prefix_2_VNH, ports, idp):
         # TODO: Verify if the new logic makes sense
         changed_vnhs = []
         announcements = []
@@ -188,27 +187,27 @@ class BGPPeer():
             else:
                 prefix = update['withdraw']['prefix']
 
-            prev_route = self.rib["output"][prefix]
+            prev_route = self.get_route("output", prefix)
             #prev_route["next_hop"] = str(prefix_2_VNH[prefix])
 
-            best_route = self.rib["local"][prefix]
+            best_route = self.get_route("local", prefix)
+            print  idp, "**********best route for: ", prefix, "route:: ", best_route, prefix_2_VNH
             #best_route["next_hop"] = str(prefix_2_VNH[prefix])
 
-            print "## DEBUG: best route: ", best_route
+            print idp, "## DEBUG: best route: ", best_route
 
             if ('announce' in update):
                 # Check if best path has changed for this prefix
                 if not bgp_routes_are_equal(best_route, prev_route):
                     # store announcement in output rib
-                    self.delete_route("output", prefix)
-                    self.add_route("output", prefix, best_route)
-
+                    self.update_route("output", prefix, best_route)
                     # add the VNH to the list of changed VNHs
                     changed_vnhs.append(prefix_2_VNH[prefix])
 
                     # announce the route to each router of the participant
                     for port in ports:
                         # TODO: Create a sender queue and import the announce_route function
+                        #print  idp, "********** Failure: ", port["IP"], prefix, "route:: ", best_route, prefix_2_VNH
 
                         announcements.append(announce_route(port["IP"], prefix,
                                             prefix_2_VNH[prefix], best_route["as_path"]))
@@ -220,10 +219,11 @@ class BGPPeer():
                     if not bgp_routes_are_equal(best_route, prev_route):
                         "There is a new best path available now"
                         # store announcement in output rib
-                        self.delete_route("output", prefix)
-                        self.add_route("output", prefix, best_route)
+                        self.update_route("output", prefix, best_route)
+
 
                         # add the VNH to the list of changed VNHs
+                        if LOG: print " Peer Object for: ", self.id, "^^^bgp_update_peers:: ", best_route
                         changed_vnhs.append(prefix_2_VNH[prefix])
 
                         for port in ports:
@@ -235,15 +235,20 @@ class BGPPeer():
                     "Currently there is no best route to this prefix"
                     if prev_route:
                         # Clear this entry from the output rib
-                        self.delete_route("output", prefix)
-                        for port in self.cfg["Ports"]:
-                            # TODO: Create a sender queue and import the announce_route function
-                            announcements.append(withdraw_route(port["IP"],
-                                                                prefix,
-                                                                prefix_2_VNH[prefix]))
+                        if prefix in prefix_2_VNH:
+                            self.delete_route("output", prefix)
+                            for port in self.ports:
+                                # TODO: Create a sender queue and import the announce_route function
+                                announcements.append(withdraw_route(port["IP"],
+                                                                    prefix,
+                                                                    prefix_2_VNH[prefix]))
 
         return changed_vnhs, announcements
 
+    def getlock(self, prefix):
+        if prefix not in self.prefix_lock:
+            self.prefix_lock[prefix] = lock()
+        return self.prefix_lock[prefix]
 
     def process_notification(self,route):
         if ('shutdown' == route['notification']):
@@ -256,39 +261,54 @@ class BGPPeer():
             # TODO: send shutdown notification to participants
 
     def add_route(self,rib_name,prefix,attributes):
-        self.rib[rib_name][prefix] = attributes
-        self.rib[rib_name].commit()
+        with self.getlock(prefix):
+            self.rib[rib_name][prefix] = attributes
+            self.rib[rib_name].commit()
 
     def add_many_routes(self,rib_name,routes):
         self.rib[rib_name].add_many(routes)
         self.rib[rib_name].commit()
 
     def get_route(self,rib_name,prefix):
+        with self.getlock(prefix):
+            return self.rib[rib_name].get(prefix)
 
-        return self.rib[rib_name].get(prefix)
+    def get_route_with_neighbor(self,rib_name,prefix, neighbor):
+        with self.getlock(prefix):
+            return self.rib[rib_name].get_prefix_neighbor(prefix, neighbor)
 
     def get_routes(self,rib_name,prefix):
-
-        return self.rib[rib_name].get_all(prefix)
+        with self.getlock(prefix):
+            return self.rib[rib_name].get_all(prefix)
 
     def get_all_routes(self, rib_name):
 
         return self.rib[rib_name].get_all()
 
     def delete_route(self,rib_name,prefix):
+        with self.getlock(prefix):
+            self.rib[rib_name].delete(prefix)
+            self.rib[rib_name].commit()
 
-        self.rib[rib_name].delete(prefix)
-        self.rib[rib_name].commit()
+    def delete_route_with_neighbor(self,rib_name,prefix, neighbor):
+        with self.getlock(prefix):
+            self.rib[rib_name].delete_prefix_neighbor(prefix, neighbor)
+            self.rib[rib_name].commit()
 
     def delete_all_routes(self,rib_name):
-
-        self.rib[rib_name].delete_all()
-        self.rib[rib_name].commit()
+        with self.getlock(prefix):
+            self.rib[rib_name].delete_all()
+            self.rib[rib_name].commit()
 
     def filter_route(self,rib_name,item,value):
 
         return self.rib[rib_name].filter(item,value)
 
+    def update_route(self,rib_name,prefix,attributes):
+        with self.getlock(prefix):
+            self.rib[rib_name].delete(prefix)
+            self.rib[rib_name][prefix] = attributes
+            self.rib[rib_name].commit()
 
 def bgp_routes_are_equal(route1, route2):
     if route1 is None:
