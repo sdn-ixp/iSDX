@@ -142,8 +142,20 @@ class ParticipantController():
         if self.cfg.dp_mode == MULTITABLE:
             final_switch = "main-out"
 
+        self.init_vnh_assignment()
+
         rule_msgs = init_inbound_rules(self.id, self.policies,
                                         self.supersets, final_switch)
+        if LOG: print self.idp, "Rule Messages INBOUND:: ", rule_msgs
+
+
+        rule_msgs2 = init_outbound_rules(self, self.id, self.policies,
+                                        self.supersets, final_switch)
+
+        if LOG: print self.idp, "Rule Messages OUTBOUND:: ", rule_msgs2
+        rule_msgs['changes'] = rule_msgs['changes'] + rule_msgs2['changes']
+
+        #TODO: Initialize Outbound Policies from RIB
         if LOG: print self.idp, "Rule Messages:: ", rule_msgs
         if "changes" in rule_msgs:
             self.dp_queued.extend(rule_msgs["changes"])
@@ -412,7 +424,6 @@ class ParticipantController():
                 # TODO: similar logic for MDS
                 if LOG: print self.idp, "Creating ctrlr messages for MDS scheme"
 
-
             self.push_dp()
 
 
@@ -428,6 +439,7 @@ class ParticipantController():
             """ Combine the VNHs which have changed BGP default routes with the
                 VNHs which have changed supersets.
             """
+
             changed_vnhs = set(changed_vnhs)
             changed_vnhs.update(garp_required_vnhs)
 
@@ -467,6 +479,28 @@ class ParticipantController():
             if ('announce' in update):
                 prefix = update['announce']['prefix']
 
+                if (prefix not in self.prefix_2_VNH):
+                    # get next VNH and assign it the prefix
+                    self.num_VNHs_in_use += 1
+                    vnh = str(self.cfg.VNHs[self.num_VNHs_in_use])
+
+                    self.prefix_2_VNH[prefix] = vnh
+                    self.VNH_2_prefix[vnh] = prefix
+        else:
+            "Disjoint"
+            # TODO: @Robert: Place your logic here for VNH assignment for MDS scheme
+            if LOG: print self.idp, "VNH assignment called for disjoint vmac_mode"
+
+    def init_vnh_assignment(self):
+        "Assign VNHs for the advertised prefixes"
+        if self.cfg.vmac_mode == 0:
+            " Superset"
+            # TODO: Do we really need to assign a VNH for each advertised prefix?
+            prefixes_dict = self.bgp_instance.rib["local"].get_prefixes()
+            print prefixes_dict
+            prefixes = [x.values()[0] for x in prefixes_dict]
+
+            for prefix in prefixes:
                 if (prefix not in self.prefix_2_VNH):
                     # get next VNH and assign it the prefix
                     self.num_VNHs_in_use += 1

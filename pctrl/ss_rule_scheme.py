@@ -147,7 +147,7 @@ def build_inbound_rules_for(participant_id, in_policies, ss_instance, final_swit
 
         rule = {"rule_type":"inbound", "priority":INBOUND_HIT_PRIORITY,
                 "match":match_args, "action":actions, "mod_type":"insert",
-                "cookie":(policy["cookie"],2**16-1)}    
+                "cookie":(policy["cookie"],2**16-1)}
 
         rules.append(rule)
 
@@ -168,12 +168,28 @@ def init_inbound_rules(participant_id, policies, ss_instance, final_switch):
 
         in_policies = policies['inbound']
 
-        rules = build_inbound_rules_for(participant_id, in_policies, 
+        rules = build_inbound_rules_for(participant_id, in_policies,
                                         ss_instance, final_switch)
 
         dp_msgs["changes"] = rules
 
         return dp_msgs
+
+# initialize all inbound rules
+def init_outbound_rules(pctrl, participant_id, policies, ss_instance, final_switch):
+    dp_msgs = {"type": "new", "changes": []}
+    if ('outbound' not in policies):
+        return {}
+    else:
+        
+        sdx_msgs = ss_instance.initial_computation(pctrl)
+        if len(sdx_msgs['changes']) > 0:
+            flow_msgs = update_outbound_rules(sdx_msgs, policies,
+                                              ss_instance, pctrl.port0_mac)
+            dp_msgs["changes"] = flow_msgs
+
+            return dp_msgs
+
 
 
 

@@ -27,9 +27,9 @@ class BGPPeer():
         # TODO: Get rid of this hardcoding
         path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "ribs"))
 
-        self.rib = {"input": rib(str(id),"input", path),
-                    "local": rib(str(id),"local", path),
-                    "output": rib(str(id),"output", path)}
+        self.rib = {"input": rib(str(self.asn),"input", path),
+                    "local": rib(str(self.asn),"local", path),
+                    "output": rib(str(self.asn),"output", path)}
 
         # peers that a participant accepts traffic from and sends advertisements to
         self.peers_in = peers_in

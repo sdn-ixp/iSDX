@@ -62,7 +62,7 @@ class SuperSets():
 
         if LOG:
             print pctrl.idp, "Superset computation complete. Supersets:"
-            print pctrl.idp, ">>", self.supersets
+            print pctrl.idp, ">>", self.supersets, "sdx_msgs: ", sdx_msgs
 
         return sdx_msgs
 
@@ -81,7 +81,7 @@ class SuperSets():
                     if fwd_part not in rulecounts:
                         rulecounts[fwd_part] = 0
                     rulecounts[fwd_part] += 1
-
+        print pctrl.idp, ": RuleCounts:: ",rulecounts
         return rulecounts
 
 
@@ -177,10 +177,13 @@ class SuperSets():
         self.rulecounts = self.recompute_rulecounts(pctrl)
         # get all sets of participants advertising the same prefix
         peer_sets = get_prefix2part_sets(pctrl)
+        print pctrl.idp,": get/P Peer Sets:: ", peer_sets[:5]
+
         peer_sets = clear_inactive_parts(peer_sets, self.rulecounts.keys())
         peer_sets = removeSubsets(peer_sets)
-
+        print pctrl.idp,": I/P Peer Sets:: ", peer_sets
         self.supersets = minimize_ss_rules_greedy(peer_sets, self.rulecounts, self.max_initial_bits)
+        print pctrl.idp,": O/P Supersets Sets:: ", self.supersets
 
         # impose an ordering on each superset by converting sets to lists
         for i in range(len(self.supersets)):
@@ -294,7 +297,7 @@ def get_prefix2part_sets(pctrl):
         group = get_all_participants_advertising(pctrl, prefix)
         groups.append(group)
 
-    if LOG: print pctrl.idp, "Prefix2Part called. Returning", groups[:50], "(this should not be empty)"
+    if LOG: print pctrl.idp, "Prefix2Part called. Returning", groups[:5], "(this should not be empty)", len(groups)
 
     return groups
 
@@ -306,18 +309,18 @@ def get_all_participants_advertising(pctrl, prefix):
     nexthop_2_part = pctrl.nexthop_2_part
 
     routes = bgp_instance.get_routes('input',prefix)
-    print "Supersets all routes:: ", routes
+    #print "Supersets all routes:: ", routes
     parts = set([])
 
 
     for route in routes:
         # first part of the returned tuple is next hop
-        print "Route in supersets:: ", route
         next_hop = route['next_hop']
 
         if next_hop in nexthop_2_part:
             parts.add(nexthop_2_part[next_hop])
         else:
+            LOG = False
             if LOG: print pctrl.idp, "In subcall of prefix2part: Next hop", next_hop, "NOT in nexthop_2_part"
 
     return parts

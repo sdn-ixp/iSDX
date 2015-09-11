@@ -28,6 +28,7 @@ class rib():
         #initialize table name using ip + type(local, input, output)
         self.name = name + "_" + str(table_suffix)
         # Use cassandra session object
+        print "table init: " + self.name
         query = '''CREATE TABLE IF NOT EXISTS '''+ str(self.name) +''' (prefix text, neighbor text, next_hop text, origin text, as_path text, communities text, med text, atomic_aggregate text, PRIMARY KEY(prefix, neighbor));'''
         prep = self.session.prepare(query)
         self.session.execute(prep)
@@ -77,6 +78,18 @@ class rib():
                 batch.add(insert_tuple, item)
 
             self.session.execute(batch)
+
+    def get_prefixes(self):
+
+        query = "select prefix from " + self.name +";"
+        print query
+        prep = self.session.prepare(query)
+        rows = self.session.execute(prep)
+        output_rows = None
+        print rows
+
+        return rows
+
 
     def get(self,key):
 
