@@ -148,7 +148,10 @@ class BGPPeer():
                 if LOG: print " Peer Object for: ", self.id, "--- No change in Best Path...move on", prefix
             else:
                 self.update_route('local', prefix, new_best_route)
-                if LOG: print " Peer Object for: ", self.id, "--- Best Path changed: ", prefix, new_best_route
+                # Check
+                updated_best_path = self.get_route('local', prefix)
+                if LOG: print " Peer Object for: ", self.id, "Pushed: ", new_best_route, " Observing: ", updated_best_path
+                if LOG: print " Peer Object for: ", self.id, "--- Best Path changed: ", prefix, new_best_route, " Older best route: ", current_best_route
 
         elif('withdraw' in update):
             deleted_route = update['withdraw']
@@ -191,7 +194,8 @@ class BGPPeer():
             #prev_route["next_hop"] = str(prefix_2_VNH[prefix])
 
             best_route = self.get_route("local", prefix)
-            print  idp, "**********best route for: ", prefix, "route:: ", best_route, prefix_2_VNH
+            if LOG: print " Peer Object for: ", self.id, " -- Previous Outbound route: ", prev_route, " New Best Path: ", best_route
+            print  idp, "**********best route for: ", prefix, "route:: ", best_route
             #best_route["next_hop"] = str(prefix_2_VNH[prefix])
 
             print idp, "## DEBUG: best route: ", best_route
@@ -203,14 +207,17 @@ class BGPPeer():
                     self.update_route("output", prefix, best_route)
                     # add the VNH to the list of changed VNHs
                     changed_vnhs.append(prefix_2_VNH[prefix])
+                    if best_route:
 
-                    # announce the route to each router of the participant
-                    for port in ports:
-                        # TODO: Create a sender queue and import the announce_route function
-                        #print  idp, "********** Failure: ", port["IP"], prefix, "route:: ", best_route, prefix_2_VNH
+                        # announce the route to each router of the participant
+                        for port in ports:
+                            # TODO: Create a sender queue and import the announce_route function
+                            print  idp, "********** Failure: ", port["IP"], prefix, "route::failure ", best_route
 
-                        announcements.append(announce_route(port["IP"], prefix,
-                                            prefix_2_VNH[prefix], best_route["as_path"]))
+                            announcements.append(announce_route(port["IP"], prefix,
+                                                prefix_2_VNH[prefix], best_route["as_path"]))
+                    else:
+                        print "Race condition problem for prefix: ", prefix
 
             elif ('withdraw' in update):
                 # A new announcement is only needed if the best path has changed

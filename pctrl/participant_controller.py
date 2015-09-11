@@ -32,11 +32,6 @@ MULTITABLE  = 1
 SUPERSETS = 0
 MDS       = 1
 
-#KeyError: u'105.96.0.0/22'
-#KeyError: u'93.174.97.0/24'
-#TypeError: 'NoneType' object has no attribute '__getitem__'
-#TypeError: 'NoneType' object has no attribute '__getitem__'
-#KeyError: u'65.42.117.0/24'
 
 class ParticipantController():
     def __init__(self, id, config_file, policy_file):
