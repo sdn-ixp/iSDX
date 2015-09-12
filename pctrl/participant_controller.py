@@ -44,6 +44,7 @@ class ParticipantController():
         self.run = True
         self.prefix_lock = {}
 
+        self.logger = []
 
         # Initialize participant params
         self.cfg = PConfig(config_file, self.id)
@@ -176,6 +177,10 @@ class ParticipantController():
     def stop(self):
         "Stop the Participants' SDN Controller"
         if LOG: print self.idp, "Stopping Controller."
+        print self.idp, "Stopping Controller.", self.logger
+
+        with open('~/workfile', 'w') as f:
+            json.dump(self.logger, f)
 
         # Signal Termination and close blocking listener
         self.run = False
@@ -345,6 +350,13 @@ class ParticipantController():
         "Process each incoming BGP advertisement"
         start = time.time()
         prefixes = get_prefixes_from_announcements(route)
+        time_for_bgp = None
+        time_update_ss = None
+        time_change_ss = None
+        time_push_dp = None
+        time_send_garps = None
+
+
 
         with self.getlock(prefixes):
 
@@ -361,6 +373,7 @@ class ParticipantController():
 
             if TIMING:
                 elapsed = time.time() - start
+                time_for_bgp = elapsed
                 print self.idp, "Time taken for decision process:", elapsed
                 start = time.time()
 
@@ -373,6 +386,7 @@ class ParticipantController():
 
                 if TIMING:
                     elapsed = time.time() - start
+                    time_update_ss = elapsed
                     print self.idp, "Time taken to update supersets:", elapsed
                     start = time.time()
 
@@ -409,6 +423,7 @@ class ParticipantController():
 
                 if TIMING:
                     elapsed = time.time() - start
+                    time_change_ss = elapsed
                     print self.idp, "Time taken to deal with ss_changes:", elapsed
                     start = time.time()
 
@@ -424,6 +439,7 @@ class ParticipantController():
 
             if TIMING:
                 elapsed = time.time() - start
+                time_push_dp = elapsed
                 print self.idp, "Time taken to push dp msgs:", elapsed
                 start = time.time()
 
@@ -451,9 +467,10 @@ class ParticipantController():
 
             if TIMING:
                 elapsed = time.time() - start
+                time_send_garps = elapsed
                 print self.idp, "Time taken to send garps/announcements:", elapsed
                 start = time.time()
-
+            self.logger.append((time_for_bgp, time_update_ss, time_change_ss, time_push_dp, time_send_garps))
 
             return reply
 
