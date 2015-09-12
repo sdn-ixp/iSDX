@@ -2,48 +2,48 @@
 
 ## Mininext
 ```bash
-$ cd ~/sdx-ryu/examples/test-ms/mininext
+$ cd ~/sdx-parallel/examples/test-ms/mininext
 $ sudo ./sdx_mininext.py
 ```
 
 ## Run RefMon
 
 ```bash
-$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config ~/sdx-ryu/examples/test-ms/config/sdx_global.cfg
+$ ryu-manager ~/sdx-parallel/flanc/refmon.py --refmon-config ~/sdx-parallel/examples/test-ms/config/sdx_global.cfg
 ```
 
 ## Run xctrl
 
 ```bash
-$ cd ~/sdx-ryu/xctrl/
-$ ./xctrl.py ~/sdx-ryu/examples/test-ms/config/sdx_global.cfg
+$ cd ~/sdx-parallel/xctrl/
+$ ./xctrl.py ~/sdx-parallel/examples/test-ms/config/sdx_global.cfg
 ```
 
 ## Run arpproxy
 
 ```bash
-$ cd ~/sdx-ryu/arproxy/
+$ cd ~/sdx-parallel/arproxy/
 $ sudo python arproxy.py test-ms
 ```
 
 ## Run xrs
 
 ```bash
-$ cd ~/sdx-ryu/xrs/
+$ cd ~/sdx-parallel/xrs/
 $ sudo python route_server.py test-ms
 ```
 
 ## Run pctrl
 
 ```bash
-$ cd ~/sdx-ryu/pctrl/
+$ cd ~/sdx-parallel/pctrl/
 $ sh run_pctrlr.sh
 ```
 
 ## Run ExaBGP
 
 ```bash
-exabgp ~/sdx-ryu/examples/test-ms/config/bgp.conf
+exabgp ~/sdx-parallel/examples/test-ms/config/bgp.conf
 ```
 
 ## Run iperf to test the policies
@@ -80,7 +80,7 @@ mininext> a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2
 ## Cleanup
 In the `pctrl` directory, run the `clean` script. 
 ```bash
-$ cd ~/sdx-ryu/pctrl/
+$ cd ~/sdx-parallel/pctrl/
 $ sh clean.sh
 ```
 
@@ -93,6 +93,6 @@ Always check with ```route``` whether ```a1``` sees ```140.0.0.0/24``` and ```15
 ### Mininet with SDNIP
 
 ```bash
-$ cd ~/sdx-ryu/examples/test-ms/mininet/
+$ cd ~/sdx-parallel/examples/test-ms/mininet/
 $ sudo ./simple_sdx.py
 ```
