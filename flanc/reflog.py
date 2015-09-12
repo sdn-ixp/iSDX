@@ -9,7 +9,7 @@ import argparse
 from time import time
 from threading import Thread
 from multiprocessing import Queue
-from multiprocessing.connection import Listener
+from multiprocessing.connection import Listener, Client
 
 ''' Reference Monitor that just store all received Flow Mods in a file'''
 class RefLog():
@@ -17,6 +17,10 @@ class RefLog():
     def __init__(self, address, port, key, logfile):
         self.listener = Listener((address, int(port)))
         self.log = open(logfile, "w")
+
+        self.address = address
+        self.port = int(port)
+        self.key = key
 
     def start(self):
         self.receive = True
@@ -31,19 +35,25 @@ class RefLog():
             while msg is None:
                 try:
                     msg = conn.recv()
-                    msg = json.loads(msg)
-                    print "Message received:: ", msg
-                    self.log.write('BURST: ' + str(time()) + '\n')
-                    self.log.write('PARTICIPANT: ' + str(msg['auth_info']['participant']) + '\n')
-                    for flow_mod in msg["flow_mods"]:
-                        self.log.write(json.dumps(flow_mod) + '\n')
-                    self.log.write('\n')
+                    if msg != "terminate":
+                        msg = json.loads(msg)
+                        print "Message received:: ", msg
+                        self.log.write('BURST: ' + str(time()) + '\n')
+                        self.log.write('PARTICIPANT: ' + str(msg['auth_info']['participant']) + '\n')
+                        for flow_mod in msg["flow_mods"]:
+                            self.log.write(json.dumps(flow_mod) + '\n')
+                        self.log.write('\n')
                 except:
                     pass
             conn.close()
 
     def stop(self):
         self.receive = False
+
+        tmp_conn = Client((self.address, self.port))
+        tmp_conn.send("terminate")
+        tmp_conn.close()
+
         self.log.close()
 
 
