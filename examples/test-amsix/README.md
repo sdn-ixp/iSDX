@@ -39,6 +39,13 @@ $ cd ~/sdx-parallel/xbgp
 $ ./xbgp.py localhost 6000 xrs <path of bgp updates file>
 ```
 
+### Run xrs
+
+```bash
+$ cd ~/sdx-parallel/xrs
+$ python route_server.py <name of example>
+```
+
 
 ## FLANC - Reference Monitor Log Replay
 
