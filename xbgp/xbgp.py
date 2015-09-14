@@ -10,6 +10,7 @@ from time import sleep, time, strptime, mktime
 from threading import Thread
 from netaddr import IPAddress
 from multiprocessing import Queue
+import multiprocessing as mp
 from Queue import Empty
 from multiprocessing.connection import Client
 
@@ -30,7 +31,7 @@ class ExaBGPEmulator(object):
 
         self.run = True
 
-        self.update_queue = Queue()
+        self.update_queue = mp.Manager().Queue()
 
         self.conn = Client((address, int(port)), authkey=authkey)
 
@@ -113,7 +114,6 @@ class ExaBGPEmulator(object):
                             break
 
                         self.update_queue.put(tmp)
-
                         while self.update_queue.qsize() > 1000:
 
                             self.logger.debug('queue is full - taking a break')
