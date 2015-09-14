@@ -179,7 +179,9 @@ class ParticipantController():
         if LOG: print self.idp, "Stopping Controller."
         print self.idp, "Stopping Controller.", self.logger
 
-        with open('~/workfile', 'w') as f:
+	timestr = time.strftime("%Y%m%d_%H%M%S")
+	file_name = "data/output_P" + str(self.id) + "" + timestr +".txt"
+        with open(file_name, 'w') as f:
             json.dump(self.logger, f)
 
         # Signal Termination and close blocking listener
@@ -511,7 +513,6 @@ class ParticipantController():
             prefixes_dict = self.bgp_instance.rib["local"].get_prefixes()
             #print prefixes_dict
             prefixes = [x.values()[0] for x in prefixes_dict]
-
             for prefix in prefixes:
                 if (prefix not in self.prefix_2_VNH):
                     # get next VNH and assign it the prefix

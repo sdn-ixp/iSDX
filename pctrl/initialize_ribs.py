@@ -6,7 +6,7 @@ import time
 import multiprocessing as mp
 from multiprocessing import Process, Queue
 
-from ribc import rib
+from ribm import rib
 from decision_process import decision_process, best_path_selection
 
 rib_fname = "rrc03.bview.20150820.0000.temp.txt"

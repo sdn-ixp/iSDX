@@ -8,7 +8,7 @@ import json
 import os
 import sqlite3
 from threading import RLock as lock
-from ribc import rib
+from ribm import rib
 from decision_process import decision_process, best_path_selection
 
 LOG = False

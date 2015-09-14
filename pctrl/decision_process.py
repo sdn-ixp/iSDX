@@ -4,7 +4,7 @@
 #  Sean Donovan
 
 import socket,struct
-from rib import rib
+from ribm import rib
 
 def decision_process(route):
     best_routes = []
@@ -211,7 +211,7 @@ if __name__ == '__main__':
 
     # BPS
     # Starting part is from the RIB module
-    myrib = rib('172.0.0.1',"testing")
+    myrib = rib('172.0.0.1',"testing", 'blah')
 
     myrib['100.0.0.1/16'] = ('172.0.0.2', 'igp', '100, 200, 300', '0', 'false')
     #myrib['100.0.0.1/16'] = ['172.0.0.2', 'igp', '100, 200, 300', '0', 'false']
