@@ -19,7 +19,9 @@ from lib import *
 from ss_lib import *
 
 import time
-
+import atexit
+from signal import signal, SIGTERM
+from sys import exit
 sys.path.insert(0, '../xctrl/')
 from flowmodmsg import FlowModMsgBuilder
 
@@ -34,7 +36,7 @@ MDS       = 1
 
 
 class ParticipantController():
-    def __init__(self, id, config_file, policy_file):
+    def __init__(self, id, config_file, policy_file, exp_file_prefix):
         # participant id
         self.id = id
         # print ID for logging
@@ -45,7 +47,7 @@ class ParticipantController():
         self.prefix_lock = {}
 
         self.logger = []
-
+	self.exp_file_prefix = exp_file_prefix
         # Initialize participant params
         self.cfg = PConfig(config_file, self.id)
         # Vmac encoding mode
@@ -55,8 +57,7 @@ class ParticipantController():
 
 
         self.load_policies(policy_file)
-
-
+	
         # The port 0 MAC is used for tagging outbound rules as belonging to us
         self.port0_mac = self.cfg.port0_mac
 
@@ -84,7 +85,8 @@ class ParticipantController():
     def start(self):
         # Start all clients/listeners/whatevs
         if LOG: print self.idp, "Starting controller for participant", self.id
-
+	
+	
         # ExaBGP Peering Instance
         self.bgp_instance = self.cfg.get_bgp_instance()
 
@@ -180,7 +182,7 @@ class ParticipantController():
         print self.idp, "Stopping Controller.", self.logger
 
 	timestr = time.strftime("%Y%m%d_%H%M%S")
-	file_name = "data/output_P" + str(self.id) + "" + timestr +".txt"
+	file_name = "data/output_P" + str(self.id) + "_" + timestr +"_" + self.exp_file_prefix + ".txt"
         with open(file_name, 'w') as f:
             json.dump(self.logger, f)
 
@@ -202,6 +204,7 @@ class ParticipantController():
     def start_eh(self):
         '''Socket listener for network events '''
         if LOG: print self.idp, "Event Handler started."
+
         while self.run:
             if LOG: print self.idp, "EH waiting for connection..."
             conn_eh = self.listener_eh.accept()
@@ -549,6 +552,7 @@ if __name__ == '__main__':
     parser.add_argument('dir', help='the directory of the example')
     parser.add_argument('id', type=int,
                    help='participant id (integer)')
+    parser.add_argument('exp', help='name of experiment')
     args = parser.parse_args()
 
     # locate config file
@@ -580,13 +584,17 @@ if __name__ == '__main__':
 
 
     # start controller
-    ctrlr = ParticipantController(args.id, config_file, policy_file)
+    ctrlr = ParticipantController(args.id, config_file, policy_file, args.exp)
     ctrlr_thread = Thread(target=ctrlr.start)
     ctrlr_thread.daemon = True
     ctrlr_thread.start()
-
+    
+    #atexit.register(ctrlr.stop)
+    #signal(SIGTERM, lambda signum, stack_frame: exit(1))
+    
     while ctrlr_thread.is_alive():
         try:
             ctrlr_thread.join(1)
         except KeyboardInterrupt:
             ctrlr.stop()
+

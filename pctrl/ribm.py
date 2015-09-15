@@ -37,7 +37,7 @@ class rib():
 		return self.get(key)
 
 	def add(self,key,item):
-
+		#print "Add new row: ", key, item
 		key = str(key)
 		if (isinstance(item,tuple) or isinstance(item,list)):
 			assert (len(item) == 7)
@@ -46,9 +46,10 @@ class rib():
 				"next_hop": item[1], "origin": item[2], 
 				"as_path": item[3], "communities": item[4], 
 				"med": item[5], "atomic_aggregate": item[6]}
-			self.session.insert_one(in_stmt)
-
-		elif (isinstance(item,dict) or isinstance(item,sqlite3.Row)):
+			#print "Insert data", self.name ,in_stmt
+			row = self.session.insert_one(in_stmt)
+			#print row.inserted_id, self.get_prefix_neighbor(key, item[0])
+		elif (isinstance(item,dict)):
 			in_stmt = item
 			in_stmt['prefix'] = key
 			
@@ -117,6 +118,36 @@ class rib():
 		
 		rows = self.session.update_one({"prefix": key},{"$set":{ item: value}})
 	
+	def update_with_prefix_neighbor(self,prefix,item):
+		#print "Update with Prefix", self.name, prefix, item
+		if (isinstance(item,tuple) or isinstance(item,list)):	
+                        assert (len(item) == 7)
+                        neighbor = item[0]
+			if self.get_prefix_neighbor(prefix, neighbor) is not None:
+				in_stmt = {"prefix": prefix, "neighbor": item[0],
+					"next_hop": item[1], "origin": item[2],
+					"as_path": item[3], "communities": item[4],
+					"med": item[5], "atomic_aggregate": item[6]}
+				rows = self.session.update_one({"prefix": prefix, "neighbor": neighbor},{"$set": in_stmt})
+				#print rows.matched_count
+			else:
+				self.add(prefix, item)
+                elif (isinstance(item,dict)):
+			neighbor = item["neighbor"]
+			item["prefix"] = prefix
+			#print "From Get", self.get_prefix_neighbor(prefix, neighbor)
+
+                	if self.get_prefix_neighbor(prefix, neighbor) is not None:
+				in_stmt = {"prefix": prefix, "neighbor": neighbor,
+					"next_hop": item["next_hop"], "origin": item["origin"],
+					"as_path": item["as_path"], "communities": item["communities"],
+					"med": item["med"], "atomic_aggregate": item["atomic_aggregate"]}
+				#print "in Statement: ", in_stmt
+				rows = self.session.update_one({"prefix": prefix, "neighbor": neighbor},{"$set": in_stmt})
+				#print rows.matched_count
+			else:
+				self.add(prefix, item)
+
 	def delete(self,key):
 
 		# TODO: Add more granularity in the delete process i.e., instead of just prefix,

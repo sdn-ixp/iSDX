@@ -147,7 +147,8 @@ class BGPPeer():
             if bgp_routes_are_equal(new_best_route, current_best_route):
                 if LOG: print " Peer Object for: ", self.id, "--- No change in Best Path...move on", prefix
             else:
-                self.update_route('local', prefix, new_best_route)
+                #print new_best_route, type(new_best_route)
+		self.update_route('local', prefix, new_best_route)
                 # Check
                 updated_best_path = self.get_route('local', prefix)
                 if LOG: print " Peer Object for: ", self.id, "Pushed: ", new_best_route, " Observing: ", updated_best_path
@@ -171,7 +172,7 @@ class BGPPeer():
                         routes.extend(self.get_routes('input',prefix))
                         if routes:
                             best_route = best_path_selection(routes)
-                            self.add_route('local', prefix, best_route)
+                            self.update_route('local', prefix, best_route)
                         else:
                             if LOG: print " Peer Object for: ", self.id, "---No best route available for prefix ", prefix, " after receiving withdraw message."
                     else:
@@ -204,7 +205,8 @@ class BGPPeer():
                 # Check if best path has changed for this prefix
                 if not bgp_routes_are_equal(best_route, prev_route):
                     # store announcement in output rib
-                    self.update_route("output", prefix, best_route)
+                    # print best_route, prev_route
+		    self.update_route("output", prefix, best_route)
                     # add the VNH to the list of changed VNHs
                     changed_vnhs.append(prefix_2_VNH[prefix])
                     if best_route:
@@ -217,8 +219,8 @@ class BGPPeer():
                             announcements.append(announce_route(port["IP"], prefix,
                                                 prefix_2_VNH[prefix], best_route["as_path"]))
                     else:
-                        continue
-                        #print "Race condition problem for prefix: ", prefix
+                        #continue
+                        print "Race condition problem for prefix: ", prefix
 
             elif ('withdraw' in update):
                 # A new announcement is only needed if the best path has changed
@@ -314,9 +316,11 @@ class BGPPeer():
 
     def update_route(self,rib_name,prefix,attributes):
         with self.getlock(prefix):
-            self.rib[rib_name].delete(prefix)
-            self.rib[rib_name][prefix] = attributes
-            self.rib[rib_name].commit()
+            #self.rib[rib_name].delete(prefix)
+            #self.rib[rib_name][prefix] = attributes
+	    #neighbor = attributes["neighbor"]
+            self.rib[rib_name].update_with_prefix_neighbor(prefix, attributes)
+	    self.rib[rib_name].commit()
 
 def bgp_routes_are_equal(route1, route2):
     if route1 is None:
