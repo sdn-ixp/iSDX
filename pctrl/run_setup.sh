@@ -5,6 +5,16 @@ NUMBER_OF_PARTICIPANTS=1
 INSTALL_ROOT='/home/glex/sdx-parallel'
 EXAMPLE_NAME='test-amsix'
 UPDATE_FILE='updates.20150802.0000.txt'
+FRAC=0.2
+
+# Generate Policies & Copy asn json files
+
+cd $INSTALL_ROOT/examples/$EXAMPLE_NAME; python generate_configs.py $FRAC ; cp $INSTALL_ROOT/examples/$EXAMPLE_NAME/asn_2_* $INSTALL_ROOT/pctrl
+
+# Clean DB & Initialize the rib
+
+sh clean.sh
+
 # Start the reflog
 `cd $INSTALL_ROOT/flanc ; nohup ./reflog.py localhost 5555 sdx logger.txt > /dev/null 2>&1 &`
 # Start Route Server

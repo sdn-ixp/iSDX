@@ -184,9 +184,17 @@ def processRibIter(id, asn_2_ip):
 if __name__ == '__main__':
 
     asn_2_ip = json.load(open("asn_2_ip.json", 'r'))
+    asn_2_id = json.load(open("asn_2_id.json", 'r'))
     #asn_2_ip = {"AS12306": {"80.249.208.161": 6}}
     peers = {}
-    asn_2_ip_small = {"AS12306": {"80.249.208.161": 6},"AS1273": {"2001:7f8:1::a500:1273:1": 5}}
+    asn = [k for k,v in asn_2_id.iteritems() if v is 1]
+    print "ASN: 1: ", asn[0]
+
+    asn_2_ip_small = {}
+    asn_2_ip_small[asn[0]] = asn_2_ip[asn[0]]
+
+    #print asn_k_small
+    #asn_2_ip_small = {"AS12306": {"80.249.208.161": 6},"AS1273": {"2001:7f8:1::a500:1273:1": 5}}
 
 
     path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "ribs"))
