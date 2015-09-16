@@ -26,10 +26,7 @@ class ExaBGPEmulator(object):
         self.real_start_time = time()
         self.simulation_start_time = 0
 
-        if speed_up:
-            self.speed_up = speed_up
-        else:
-            self.speed_up = 1
+        self.speed_up = speed_up
 
         self.fp_thread = None
         self.us_thread = None
@@ -199,7 +196,12 @@ def main(argv):
     # logging - log level
     logging.basicConfig(level=logging.INFO)
 
-    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input, args.speedup, args.debug)
+    if args.speedup:
+        speedup = args.speedup
+    else:
+        speedup = 1
+
+    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input, speedup, args.debug)
 
     exabgp_instance.start()
 
@@ -218,7 +220,7 @@ if __name__ == '__main__':
     parser.add_argument('key', help='authkey of the xrs')
     parser.add_argument('input', help='bgp input file')
     parser.add_argument('-d', '--debug', help='enable debug output', action="store_true")
-    parser.add_argument('--speedup SPEEDUP', help='speed up of replay', type=float)
+    parser.add_argument('--speedup', help='speed up of replay', type=float)
     args = parser.parse_args()
 
     main(args)
