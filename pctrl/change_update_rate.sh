@@ -52,6 +52,6 @@ do
 
 		ps axf | grep participant_controller | grep -v grep | awk '{print "kill -SIGINT " $1}' | { while IFS= read -r cmd; do  $cmd; done }
 
-		echo "completed for $fraction"
+		echo "completed for $rate"
 	done
 done
