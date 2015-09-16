@@ -6,6 +6,7 @@ import json
 import os
 from random import shuffle, randint
 import sys
+import argparse
 
 fname = "rrc03.bview.20150820.0000.temp.txt"
 
@@ -182,17 +183,23 @@ def generate_global_config(asn_2_ip):
 
 ''' main '''
 if __name__ == '__main__':
-    # Params
-    count = 10
-    limit_out = 4
-
+    parser = argparse.ArgumentParser()
+    parser.add_argument('frac', help='fraction of SDN fowarding peers')
+    args = parser.parse_args()
+    frac = float(args.frac)
     # Parse ribs to extract asn_2_ip
-    #asn_2_ip = getParticipants()
+    asn_2_ip = getParticipants()
 
     #asn_2_ip = {"AS1":"1","AS2":"2","AS3":"3"}
     #asn_2_ports = {"AS1":[1], "AS2":[2,3], "AS3":[4,5]}
     asn_2_ip = json.load(open("asn_2_ip.json", 'r'))
     asn_2_id = generate_global_config(asn_2_ip)
+
+    # Params
+    #count = 10
+    count = int(frac*len(asn_2_ip.keys()))
+    limit_out = 4
+
 
     for part in asn_2_ip:
         generatePoliciesParticipant(part, asn_2_ip, asn_2_id, count, limit_out)
