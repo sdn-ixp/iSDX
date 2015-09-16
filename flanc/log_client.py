@@ -90,7 +90,7 @@ class LogClient():
 
                         self.flow_mod_queue.put(tmp)
 
-                        while self.flow_mod_queue.qsize() > 1000:
+                        while self.flow_mod_queue.qsize() > 32000:
                             self.logger.debug('queue is full - taking a break')
                             sleep(self.sleep_time(tmp["time"])/2)
 
