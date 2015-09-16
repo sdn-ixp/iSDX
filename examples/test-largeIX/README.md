@@ -21,23 +21,32 @@ $ git clone https://github.com/sdn-ixp/sdx-parallel.git
 
 - Install dependencies:
 ```bash
-$ sh sdx-parallel/setup/sdx-setup.sh
+$ sh ~/sdx-parallel/setup/sdx-setup.sh
 ```
 
-### Step 3: Place RIB file in appropriate directory.
+### Step 3: Place RIB/Update files in appropriate directory.
+#### RIB file
 ```bash
 $ cd ~/sdx-parallel/examples/test-largeIX
 $ cp <rib file> rib1.txt
 ```
 
+#### BGP Update File
+```bash
+$ cd ~/sdx-parallel/xbgp/
+$ cp <updates file> updates.txt
+```
+
 ### Step 4: Explore the experiment script
 ```bash
 $ cd ~/sdx-parallel/pctrl/
-$ vi run_setup.sh
+$ vi change_fraction.sh
 ```
 Experiment's params:
-- ITERATIONS = 10 ---> Number of iterations
-- FRAC=(0.2 0.4 0.6,0.8, 1.0) ---> fraction of IXP participants for which each participant has forwarding actions
+- ITERATIONS = 10 ---> Number of iterations.
+- FRAC=(0.2 0.4 0.6,0.8, 1.0) ---> fraction of IXP participants for which each participant has forwarding actions.
+- Mode = 0 ---> The mode for `xbgp.py` for this experiment where it will send first 5 minutes of BGP updates at normal rate.
+- *Update* the `INSTALL_ROOT`, which is the path where `sdx-parallel` is installed. 
 
 ### Step 5: Run the experiment
 ```bash
