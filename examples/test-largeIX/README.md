@@ -66,18 +66,19 @@ Zip all the these files for data analysis.
 ## Experiment 2:
 
 ##Goal: 
-Evaluate the performance of `pctrl` for varying participant policies. We are changing the fraction of the total IXP participants for which we have SDN policies. 
+Evaluate the performance of `pctrl` for varying rate at which BGP updates are sent. We are changing the rate at which BGP updates are sent to the `pctrl` and measuring how long does it takes to process each BGP update. 
 
 
 ### Step 1: Explore the experiment params
 ```bash
 $ cd ~/sdx-parallel/pctrl/
-$ vi change_fraction.sh
+$ vi change_update_rate.sh
 ```
 Experiment's params:
-- ITERATIONS = 10 ---> Number of iterations.
-- FRAC=(0.2 0.4 0.6,0.8, 1.0) ---> fraction of IXP participants for which each participant has forwarding actions.
-- Mode = 0 ---> The mode for `xbgp.py` for this experiment where it will send first 5 minutes of BGP updates at normal rate.
+- ITERATIONS = 5 ---> Number of iterations.
+- FRAC = (0.1) ---> fraction of IXP participants for which each participant has forwarding actions.
+- RATE = (20, 40, 60, 80, 100) ---> Rate at which BGP updates are sent to `pctrl`.
+- Mode = 1 ---> The mode for `xbgp.py` for this experiment where it will send first 5 minutes of BGP updates at specified rate.
 - *Update* the `INSTALL_ROOT`, which is the path where `sdx-parallel` is installed. 
 
 ### Step 2: Run the experiment
