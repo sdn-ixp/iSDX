@@ -157,7 +157,9 @@ class ExaBGPEmulator(object):
     def bgp_update_rate_sender(self):
 	current_count = 0
 	count = 0
-        while not self.update_queue.empty():
+	print "Queue Empty: ", self.update_queue.empty()
+	sleep(2)
+        while not self.update_queue.empty() or self.run:
             try:
                 bgp_update = self.update_queue.get(True, 1)
             except Empty:
@@ -165,9 +167,11 @@ class ExaBGPEmulator(object):
 
 	    if current_count == self.send_rate:
             	current_count = 0
+		print "Current Count: ", current_count
 		sleep(1)
 	    current_count += 1
 	    count += 1
+	    print "Current Count: ", current_count
             self.send_update(bgp_update)	
 
     def sleep_time(self, update_time):
