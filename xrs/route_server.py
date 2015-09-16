@@ -81,7 +81,8 @@ class route_server():
                     if id in self.participants[advertise_id].peers_out and advertise_id in self.participants[id].peers_in:
                         # Now send this route to participant `id`'s controller'
                         #print "sending route:: ", route
-                        self.send_update(id, route)
+			#if id in [1, 2]:
+                	self.send_update(id, route)
                         break
 
             except Queue.Empty:
