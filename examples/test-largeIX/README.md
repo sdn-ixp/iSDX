@@ -1,7 +1,7 @@
-# Experiment 1:
 
-##Goal: 
-Evaluate the performance of `pctrl` for varying participant policies.
+# Experiments to Evaluate SDX's Performance
+
+## One time setup
 
 ### Step 1: Install MongoDB s/w
 ```bash
@@ -37,7 +37,12 @@ $ cd ~/sdx-parallel/xbgp/
 $ cp <updates file> updates.txt
 ```
 
-### Step 4: Explore the experiment script
+## Experiment 1:
+
+##Goal: 
+Evaluate the performance of `pctrl` for varying participant policies. We are changing the fraction of the total IXP participants for which we have SDN policies. 
+
+### Step 1: Explore the experiment params
 ```bash
 $ cd ~/sdx-parallel/pctrl/
 $ vi change_fraction.sh
@@ -48,12 +53,39 @@ Experiment's params:
 - Mode = 0 ---> The mode for `xbgp.py` for this experiment where it will send first 5 minutes of BGP updates at normal rate.
 - *Update* the `INSTALL_ROOT`, which is the path where `sdx-parallel` is installed. 
 
-### Step 5: Run the experiment
+### Step 2: Run the experiment
 ```bash
 $ . change_fraction.sh
 ```
 
-### Step 6: Data Collection
+### Step 3: Data Collection
+After the expriment is complete. We will have all the log files in the directory: `~/sdx-parallel/pctrl/data/`. 
+
+Zip all the these files for data analysis. 
+
+## Experiment 2:
+
+##Goal: 
+Evaluate the performance of `pctrl` for varying participant policies. We are changing the fraction of the total IXP participants for which we have SDN policies. 
+
+
+### Step 1: Explore the experiment params
+```bash
+$ cd ~/sdx-parallel/pctrl/
+$ vi change_fraction.sh
+```
+Experiment's params:
+- ITERATIONS = 10 ---> Number of iterations.
+- FRAC=(0.2 0.4 0.6,0.8, 1.0) ---> fraction of IXP participants for which each participant has forwarding actions.
+- Mode = 0 ---> The mode for `xbgp.py` for this experiment where it will send first 5 minutes of BGP updates at normal rate.
+- *Update* the `INSTALL_ROOT`, which is the path where `sdx-parallel` is installed. 
+
+### Step 2: Run the experiment
+```bash
+$ . change_fraction.sh
+```
+
+### Step 3: Data Collection
 After the expriment is complete. We will have all the log files in the directory: `~/sdx-parallel/pctrl/data/`. 
 
 Zip all the these files for data analysis. 
