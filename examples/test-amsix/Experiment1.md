@@ -27,7 +27,7 @@ $ sh sdx-parallel/setup/sdx-setup.sh
 ### Step 3: Place RIB file in appropriate directory.
 ```bash
 $ cd ~/sdx-parallel/examples/test-largeIX
-$ cp <rib> .
+$ cp <rib file> rib1.txt
 ```
 
 ### Step 4: Explore the experiment script
