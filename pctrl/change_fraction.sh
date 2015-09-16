@@ -4,11 +4,12 @@ EXPERIMENT_NAME='change_frac'
 NUMBER_OF_PARTICIPANTS=1
 INSTALL_ROOT='/home/glex/sdx-parallel'
 EXAMPLE_NAME='test-largeIX'
-UPDATE_FILE='updates.20150802.0000.txt'
-ITERATIONS=2
-FRAC=(0.2 0.4 0.6)
+UPDATE_FILE='updates.txt'
+ITERATIONS=5
+FRAC=(0.2 0.4 0.6 0.8 1.0)
 RATE=5
 MODE=0
+
 for iter in `seq 1 $ITERATIONS`
 do
 	echo "#### Running for Iteration $iter ####"
