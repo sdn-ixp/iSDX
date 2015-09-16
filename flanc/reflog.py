@@ -37,7 +37,7 @@ class RefLog():
                     msg = conn.recv()
                     if msg != "terminate":
                         msg = json.loads(msg)
-                        print "Message received:: ", msg
+                        #print "Message received:: ", msg
                         self.log.write('BURST: ' + str(time()) + '\n')
                         self.log.write('PARTICIPANT: ' + str(msg['auth_info']['participant']) + '\n')
                         for flow_mod in msg["flow_mods"]:
