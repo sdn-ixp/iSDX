@@ -1,65 +1,53 @@
-# Testing
+# Experiment 1:
 
-## Generate configs/policies
+##Goal: 
+Evaluate the performance of `pctrl` for varying participant policies.
 
+### Step 1: Install MongoDB s/w
 ```bash
-$ cd  ~/sdx-parallel/examples/test-amsix/
-$ python generate_configs.py
+$ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
+$ echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.0.list
+$ sudo apt-get update
+$ sudo apt-get install -y mongodb-org
+$ sudo service mongod start
 ```
 
-## Initialize RIBs for the participants
+### Step 2: Setup SDX-Parallel repo
+- Clone the repo
 ```bash
-$ cd  ~/sdx-parallel/pctrl
-$ python initialize_ribs.py
+$ git clone https://github.com/sdn-ixp/sdx-parallel.git
+```
+- Checkout the `testing` branch.
+
+- Install dependencies:
+```bash
+$ sh sdx-parallel/setup/sdx-setup.sh
 ```
 
-## Start the Pctrl
+### Step 3: Place RIB file in appropriate directory.
 ```bash
-$ cd  ~/sdx-parallel/pctrl
-$ python participant_controller.py test-amsix <id>
+$ cd ~/sdx-parallel/examples/test-largeIX
+$ cp <rib file> rib1.txt
 ```
 
-## FLANC - Reference Monitor Logger
-
-This script saves every flowmod with a timestamp to the specified file (e.g. test.log)
-
+### Step 4: Explore the experiment script
 ```bash
-$ cd ~/sdx-parallel/flanc
-$ ./reflog.py localhost 5555 sdx <path of log file>
+$ cd ~/sdx-parallel/pctrl/
+$ vi run_setup.sh
+```
+Experiment's params:
+- ITERATIONS = 10 ---> Number of iterations
+- FRAC=(0.2 0.4 0.6,0.8, 1.0) ---> fraction of IXP participants for which each participant has forwarding actions
+
+### Step 5: Run the experiment
+```bash
+$ . change_fraction.sh
 ```
 
-## xbgp - ExaBGP Simulator
+### Step 6: Data Collection
+After the expriment is complete. We will have all the log files in the directory: `~/sdx-parallel/pctrl/data/`. 
 
-This module reads bgp updates from a bgp dump file and sends them in ExaBGP format to xrs
-
-### Run xbgp
-
-```bash
-$ cd ~/sdx-parallel/xbgp
-$ ./xbgp.py localhost 6000 xrs <path of bgp updates file>
-```
-
-### Run xrs
-
-```bash
-$ cd ~/sdx-parallel/xrs
-$ python route_server.py <name of example>
-```
+Zip all the these files for data analysis. 
 
 
-## FLANC - Reference Monitor Log Replay
-
-### Run RefMon
-
-After logging all the flow mods, the flow mods can be replayed using LogClient.
-
-```bash
-$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config <path of config file>
-```
-
-### Run LogClient
-
-```bash
-$ ./log_client.py localhost 5555 sdx <path of input file>
-```
 
