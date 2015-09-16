@@ -15,7 +15,7 @@ from Queue import Empty
 from multiprocessing.connection import Client
 
 class ExaBGPEmulator(object):
-    def __init__(self, address, port, authkey, input_file, speed_up, debug = False):
+    def __init__(self, address, port, authkey, input_file, speed_up, rate, debug = False):
         self.logger = logging.getLogger('xbgp')
         if debug:
             self.logger.setLevel(logging.DEBUG)
@@ -30,7 +30,7 @@ class ExaBGPEmulator(object):
 
         self.fp_thread = None
         self.us_thread = None
-
+	self.send_rate = int(rate)
         self.run = True
 
         self.update_queue = mp.Manager().Queue()
@@ -154,6 +154,22 @@ class ExaBGPEmulator(object):
 
             self.send_update(bgp_update)
 
+    def bgp_update_rate_sender(self):
+	current_count = 0
+	count = 0
+        while not self.update_queue.empty():
+            try:
+                bgp_update = self.update_queue.get(True, 1)
+            except Empty:
+                continue
+
+	    if current_count == self.send_rate:
+            	current_count = 0
+		sleep(1)
+	    current_count += 1
+	    count += 1
+            self.send_update(bgp_update)	
+
     def sleep_time(self, update_time):
         time_diff = update_time - self.simulation_start_time
         wake_up_time = self.real_start_time + time_diff
@@ -173,7 +189,7 @@ class ExaBGPEmulator(object):
         self.fp_thread.start()
 
         self.logger.debug('start update sender')
-        self.us_thread = Thread(target=self.bgp_update_sender)
+        self.us_thread = Thread(target=self.bgp_update_rate_sender)
         self.us_thread.start()
 
     def stop(self):
@@ -201,7 +217,7 @@ def main(argv):
     else:
         speedup = 1
 
-    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input, speedup, args.debug)
+    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input, speedup, args.rate, args.debug)
 
     exabgp_instance.start()
 
@@ -219,6 +235,7 @@ if __name__ == '__main__':
     parser.add_argument('port', help='port of the xrs', type=int)
     parser.add_argument('key', help='authkey of the xrs')
     parser.add_argument('input', help='bgp input file')
+    parser.add_argument('rate', help='bgp updates rate/second')
     parser.add_argument('-d', '--debug', help='enable debug output', action="store_true")
     parser.add_argument('--speedup', help='speed up of replay', type=float)
     args = parser.parse_args()
