@@ -83,7 +83,7 @@ Experiment's params:
 
 ### Step 2: Run the experiment
 ```bash
-$ . change_fraction.sh
+$ . change_update_rate.sh
 ```
 
 ### Step 3: Data Collection
