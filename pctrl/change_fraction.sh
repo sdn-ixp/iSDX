@@ -1,6 +1,6 @@
 #!/bin/sh
 
-EXPERIMENT_NAME='demo2'
+EXPERIMENT_NAME='change_frac'
 NUMBER_OF_PARTICIPANTS=1
 INSTALL_ROOT='/home/glex/sdx-parallel'
 EXAMPLE_NAME='test-largeIX'
