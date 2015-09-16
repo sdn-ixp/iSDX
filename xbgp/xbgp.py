@@ -119,7 +119,7 @@ class ExaBGPEmulator(object):
                             break
 
                         self.update_queue.put(tmp)
-                        while self.update_queue.qsize() > 1000:
+                        while self.update_queue.qsize() > 32000:
 
                             self.logger.debug('queue is full - taking a break')
 
