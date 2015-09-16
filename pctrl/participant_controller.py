@@ -379,7 +379,7 @@ class ParticipantController():
             if TIMING:
                 elapsed = time.time() - start
                 time_for_bgp = elapsed
-                print self.idp, "Time taken for decision process:", elapsed
+                if LOG: print self.idp, "Time taken for decision process:", elapsed
                 start = time.time()
 
 
@@ -392,7 +392,7 @@ class ParticipantController():
                 if TIMING:
                     elapsed = time.time() - start
                     time_update_ss = elapsed
-                    print self.idp, "Time taken to update supersets:", elapsed
+                    if LOG: print self.idp, "Time taken to update supersets:", elapsed
                     start = time.time()
 
 
@@ -429,7 +429,7 @@ class ParticipantController():
                 if TIMING:
                     elapsed = time.time() - start
                     time_change_ss = elapsed
-                    print self.idp, "Time taken to deal with ss_changes:", elapsed
+                    if LOG: print self.idp, "Time taken to deal with ss_changes:", elapsed
                     start = time.time()
 
 
@@ -445,7 +445,7 @@ class ParticipantController():
             if TIMING:
                 elapsed = time.time() - start
                 time_push_dp = elapsed
-                print self.idp, "Time taken to push dp msgs:", elapsed
+                if LOG: print self.idp, "Time taken to push dp msgs:", elapsed
                 start = time.time()
 
 
@@ -473,7 +473,7 @@ class ParticipantController():
             if TIMING:
                 elapsed = time.time() - start
                 time_send_garps = elapsed
-                print self.idp, "Time taken to send garps/announcements:", elapsed
+                if LOG: print self.idp, "Time taken to send garps/announcements:", elapsed
                 start = time.time()
             self.logger.append((time_for_bgp, time_update_ss, time_change_ss, time_push_dp, time_send_garps))
 

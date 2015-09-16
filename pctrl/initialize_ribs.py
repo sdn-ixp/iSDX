@@ -9,7 +9,7 @@ from multiprocessing import Process, Queue
 from ribm import rib
 from decision_process import decision_process, best_path_selection
 
-rib_fname = "rrc03.bview.20150820.0000.temp.txt"
+rib_fname = "rib1.txt"
 
 def initialize_ribs(part):
     tmp = {"AS1273": {"2001:7f8:1::a500:1273:1": 5}}
@@ -38,7 +38,7 @@ class Peer:
         #self.rib[rib_name].commit()
 
     def updateInputRib(self):
-        path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "examples", "test-amsix"))
+        path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "examples", "test-largeIX"))
         rib_file = os.path.join(path, rib_fname)
         tmp = {}
         with open(rib_file, 'r') as f:

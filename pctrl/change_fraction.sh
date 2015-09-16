@@ -3,12 +3,12 @@
 EXPERIMENT_NAME='demo2'
 NUMBER_OF_PARTICIPANTS=1
 INSTALL_ROOT='/home/glex/sdx-parallel'
-EXAMPLE_NAME='test-amsix'
+EXAMPLE_NAME='test-largeIX'
 UPDATE_FILE='updates.20150802.0000.txt'
 ITERATIONS=2
 FRAC=(0.2 0.4 0.6)
 RATE=5
-
+MODE=0
 for iter in `seq 1 $ITERATIONS`
 do
 	echo "#### Running for Iteration $iter ####"
@@ -40,7 +40,7 @@ do
 
 		#Starting XBGP	
 		echo "Starting XBGP..."
-		`cd $INSTALL_ROOT/xbgp ; nohup ./xbgp.py localhost 6000 xrs $UPDATE_FILE $RATE > /dev/null 2>&1 &` 
+		`cd $INSTALL_ROOT/xbgp ; nohup ./xbgp.py localhost 6000 xrs $UPDATE_FILE $RATE $MODE > /dev/null 2>&1 &` 
 
 		while [ `ps axf | grep xbgp | grep -v grep | wc -l` -ne 0 ] 
 		do 

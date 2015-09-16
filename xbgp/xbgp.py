@@ -14,8 +14,10 @@ import multiprocessing as mp
 from Queue import Empty
 from multiprocessing.connection import Client
 
+update_minutes = 300
+
 class ExaBGPEmulator(object):
-    def __init__(self, address, port, authkey, input_file, speed_up, rate, debug = False):
+    def __init__(self, address, port, authkey, input_file, speed_up, rate, mode, debug = False):
         self.logger = logging.getLogger('xbgp')
         if debug:
             self.logger.setLevel(logging.DEBUG)
@@ -27,7 +29,7 @@ class ExaBGPEmulator(object):
         self.simulation_start_time = 0
 
         self.speed_up = speed_up
-
+	self.mode = int(mode)
         self.fp_thread = None
         self.us_thread = None
 	self.send_rate = int(rate)
@@ -136,7 +138,7 @@ class ExaBGPEmulator(object):
         self.run = False
 
     def bgp_update_sender(self):
-        while self.run:
+        while self.run or not self.update_queue.empty():
             try:
                 bgp_update = self.update_queue.get(True, 1)
             except Empty:
@@ -145,6 +147,12 @@ class ExaBGPEmulator(object):
             if self.simulation_start_time == 0:
                 self.real_start_time = time()
                 self.simulation_start_time = bgp_update["time"]
+
+	    current_bgp_update = bgp_update["time"]
+            elapsed = current_bgp_update - self.simulation_start_time
+            if elapsed > update_minutes:
+                print "start: current", self.simulation_start_time, current_bgp_update
+                break
 
             sleep_time = self.sleep_time(bgp_update["time"])
 
@@ -157,21 +165,29 @@ class ExaBGPEmulator(object):
     def bgp_update_rate_sender(self):
 	current_count = 0
 	count = 0
-	print "Queue Empty: ", self.update_queue.empty()
-	sleep(2)
+	#print "Queue Empty: ", self.update_queue.empty()
+	#sleep(2)
         while not self.update_queue.empty() or self.run:
             try:
                 bgp_update = self.update_queue.get(True, 1)
             except Empty:
                 continue
+	    if self.simulation_start_time == 0: 
+		self.simulation_start_time = bgp_update["time"]		
+
+	    current_bgp_update = bgp_update["time"]
+	    elapsed = current_bgp_update - self.simulation_start_time
+	    if elapsed > update_minutes:
+		print "start: current", self.simulation_start_time, current_bgp_update
+		break
 
 	    if current_count == self.send_rate:
             	current_count = 0
-		print "Current Count: ", current_count
+		#print "Current Count: ", current_count
 		sleep(1)
 	    current_count += 1
 	    count += 1
-	    print "Current Count: ", current_count
+	    #print "Current Count: ", current_count
             self.send_update(bgp_update)	
 
     def sleep_time(self, update_time):
@@ -192,9 +208,14 @@ class ExaBGPEmulator(object):
         self.fp_thread = Thread(target=self.file_processor)
         self.fp_thread.start()
 
+	print "mode: ", self.mode
         self.logger.debug('start update sender')
-        self.us_thread = Thread(target=self.bgp_update_rate_sender)
-        self.us_thread.start()
+        if self.mode == 0:
+		self.us_thread = Thread(target=self.bgp_update_sender)
+        	self.us_thread.start()
+	if self.mode == 1:
+		self.us_thread = Thread(target=self.bgp_update_rate_sender)
+        	self.us_thread.start()
 
     def stop(self):
         self.logger.debug('terminate')
@@ -221,7 +242,7 @@ def main(argv):
     else:
         speedup = 1
 
-    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input, speedup, args.rate, args.debug)
+    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input, speedup, args.rate, args.mode, args.debug)
 
     exabgp_instance.start()
 
@@ -240,6 +261,7 @@ if __name__ == '__main__':
     parser.add_argument('key', help='authkey of the xrs')
     parser.add_argument('input', help='bgp input file')
     parser.add_argument('rate', help='bgp updates rate/second')
+    parser.add_argument('mode', help='xbgp mode 0: bgp update time based 1: bgp update rate based')
     parser.add_argument('-d', '--debug', help='enable debug output', action="store_true")
     parser.add_argument('--speedup', help='speed up of replay', type=float)
     args = parser.parse_args()

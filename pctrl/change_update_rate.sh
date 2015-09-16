@@ -8,6 +8,7 @@ UPDATE_FILE='updates.20150802.0000.txt'
 ITERATIONS=1
 RATE=(30 50 60)
 FRAC=0.1
+MODE=1
 
 for iter in `seq 1 $ITERATIONS`
 do
@@ -41,7 +42,7 @@ do
 
 		#Starting XBGP	
 		echo "Starting XBGP..."
-		`cd $INSTALL_ROOT/xbgp ; nohup ./xbgp.py localhost 6000 xrs $UPDATE_FILE $rate > /dev/null 2>&1 &` 
+		`cd $INSTALL_ROOT/xbgp ; nohup ./xbgp.py localhost 6000 xrs $UPDATE_FILE $rate $MODE > /dev/null 2>&1 &` 
 
 		while [ `ps axf | grep xbgp | grep -v grep | wc -l` -ne 0 ] 
 		do 
