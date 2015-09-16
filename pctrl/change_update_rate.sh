@@ -3,7 +3,7 @@
 EXPERIMENT_NAME='change_rate'
 NUMBER_OF_PARTICIPANTS=1
 INSTALL_ROOT='/home/glex/sdx-parallel'
-EXAMPLE_NAME='test-amsix'
+EXAMPLE_NAME='test-largeIX'
 UPDATE_FILE='updates.txt'
 ITERATIONS=5
 RATE=(20 40 60 80 100)
