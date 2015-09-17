@@ -15,7 +15,7 @@ from Queue import Empty
 from multiprocessing.connection import Client
 
 update_minutes = 300
-LOG=True
+LOG=False
 
 class ExaBGPEmulator(object):
     def __init__(self, address, port, authkey, input_file, speed_up, rate, mode, debug = False):

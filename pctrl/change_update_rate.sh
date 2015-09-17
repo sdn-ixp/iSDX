@@ -10,6 +10,8 @@ RATE=(20 40 60 80 100)
 FRAC=0.1
 MODE=1
 
+cd $INSTALL_ROOT/examples/$EXAMPLE_NAME; python generate_configs.py ; cp $INSTALL_ROOT/examples/$EXAMPLE_NAME/asn_2_* $INSTALL_ROOT/pctrl
+
 for iter in `seq 1 $ITERATIONS`
 do
 	echo "#### Running for Iteration $iter ####"
@@ -19,7 +21,7 @@ do
 
 		# Generate Policies & Copy asn json files
 		echo "Generating policies for $FRAC"
-		cd $INSTALL_ROOT/examples/$EXAMPLE_NAME; python generate_configs.py $FRAC ; cp $INSTALL_ROOT/examples/$EXAMPLE_NAME/asn_2_* $INSTALL_ROOT/pctrl
+		cd $INSTALL_ROOT/examples/$EXAMPLE_NAME; python generate_policies.py $FRAC		
 
 		# Clean DB & Initialize the rib
 		echo "Cleaning MongoDB & Initializing Participant Rib"

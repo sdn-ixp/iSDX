@@ -37,9 +37,11 @@ class Peer:
         self.rib[rib_name][prefix] = attributes
         #self.rib[rib_name].commit()
 
-    def updateInputRib(self):
-        path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "examples", "test-largeIX"))
-        rib_file = os.path.join(path, rib_fname)
+    def updateInputRib(self, asn):
+        path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "examples", "test-largeIX", "ribs"))
+        print "path:: ", path
+	rib_fname = "rib_" + asn + ".txt"
+	rib_file = os.path.join(path, rib_fname)
         tmp = {}
         with open(rib_file, 'r') as f:
             ind = 0
@@ -170,8 +172,9 @@ class Peer:
 def processRibIter(id, asn_2_ip):
 
     peer = Peer(id, asn_2_ip)
+    print "Peer::", id
     start = time.time()
-    peer.updateInputRib()
+    peer.updateInputRib(id)
     print "##", id, "Time to update the input Rib ", time.time()-start
     start = time.time()
     peer.updateLocalOutboundRib()
@@ -192,7 +195,9 @@ if __name__ == '__main__':
 
     asn_2_ip_small = {}
     asn_2_ip_small[asn[0]] = asn_2_ip[asn[0]]
-
+    #rib_fname = "rib_" + asn[0] +".txt"
+    #print "ribname::", rib_fname
+    #id_2_asn = { v: k for k,v in asn_2_id.iteritems()}
     #print asn_k_small
     #asn_2_ip_small = {"AS12306": {"80.249.208.161": 6},"AS1273": {"2001:7f8:1::a500:1273:1": 5}}
 

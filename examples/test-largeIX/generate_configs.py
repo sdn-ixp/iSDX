@@ -186,10 +186,10 @@ def generate_global_config(asn_2_ip):
 
 ''' main '''
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('frac', help='fraction of SDN fowarding peers')
-    args = parser.parse_args()
-    frac = float(args.frac)
+    #parser = argparse.ArgumentParser()
+    #parser.add_argument('frac', help='fraction of SDN fowarding peers')
+    #args = parser.parse_args()
+    #frac = float(args.frac)
     # Parse ribs to extract asn_2_ip
     asn_2_ip = getParticipants()
 

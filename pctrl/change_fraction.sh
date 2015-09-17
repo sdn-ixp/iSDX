@@ -5,10 +5,13 @@ NUMBER_OF_PARTICIPANTS=1
 INSTALL_ROOT='/home/glex/sdx-parallel'
 EXAMPLE_NAME='test-largeIX'
 UPDATE_FILE='updates.txt'
-ITERATIONS=5
-FRAC=(0.2 0.4 0.6 0.8 1.0)
+ITERATIONS=2
+FRAC=(0.8 1.0)
 RATE=5
 MODE=0
+
+
+cd $INSTALL_ROOT/examples/$EXAMPLE_NAME; python generate_configs.py ; cp $INSTALL_ROOT/examples/$EXAMPLE_NAME/asn_2_* $INSTALL_ROOT/pctrl
 
 for iter in `seq 1 $ITERATIONS`
 do
@@ -18,8 +21,7 @@ do
 
 		# Generate Policies & Copy asn json files
 		echo "Generating policies for $fraction"
-		cd $INSTALL_ROOT/examples/$EXAMPLE_NAME; python generate_configs.py $fraction ; cp $INSTALL_ROOT/examples/$EXAMPLE_NAME/asn_2_* $INSTALL_ROOT/pctrl
-
+		cd $INSTALL_ROOT/examples/$EXAMPLE_NAME; python generate_policies.py $fraction
 		# Clean DB & Initialize the rib
 		echo "Cleaning MongoDB & Initializing Participant Rib"
 		cd $INSTALL_ROOT/pctrl ; . clean.sh
