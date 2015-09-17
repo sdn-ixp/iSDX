@@ -52,7 +52,7 @@ do
 		done
 
 		`ps axf | grep participant_controller | grep -v grep | awk '{print "kill -SIGINT " $1}' | { while IFS= read -r cmd; do  $cmd; done }`
-
+		sleep 30
 		echo "completed for $fraction"
 	done
 done
