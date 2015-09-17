@@ -15,6 +15,7 @@ from Queue import Empty
 from multiprocessing.connection import Client
 
 update_minutes = 300
+LOG=True
 
 class ExaBGPEmulator(object):
     def __init__(self, address, port, authkey, input_file, speed_up, rate, mode, debug = False):
@@ -116,7 +117,7 @@ class ExaBGPEmulator(object):
                     if line.startswith("\n"):
                         if not self.run:
                             break
-
+			if LOG: print "Adding Update to queue..."
                         self.update_queue.put(tmp)
                         while self.update_queue.qsize() > 32000:
 
