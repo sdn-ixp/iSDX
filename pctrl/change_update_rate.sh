@@ -48,11 +48,11 @@ do
 
 		while [ `ps axf | grep xbgp | grep -v grep | wc -l` -ne 0 ] 
 		do 
-			echo "running"
-			sleep 15
+			echo "XBGP still running"
+			sleep 1m
 		done
 
-		ps axf | grep participant_controller | grep -v grep | awk '{print "kill -SIGINT " $1}' | { while IFS= read -r cmd; do  $cmd; done }
+		`ps axf | grep participant_controller | grep -v grep | awk '{print "kill -SIGINT " $1}' | { while IFS= read -r cmd; do  $cmd; done }`
 
 		echo "completed for $rate"
 	done

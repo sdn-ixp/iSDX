@@ -5,8 +5,8 @@ NUMBER_OF_PARTICIPANTS=1
 INSTALL_ROOT='/home/glex/sdx-parallel'
 EXAMPLE_NAME='test-largeIX'
 UPDATE_FILE='updates.txt'
-ITERATIONS=2
-FRAC=(0.8 1.0)
+ITERATIONS=5
+FRAC=(0.2 0.4 0.6 0.8 1.0)
 RATE=5
 MODE=0
 
