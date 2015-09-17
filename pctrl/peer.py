@@ -219,8 +219,8 @@ class BGPPeer():
                             announcements.append(announce_route(port["IP"], prefix,
                                                 prefix_2_VNH[prefix], best_route["as_path"]))
                     else:
-                        #continue
-                        print "Race condition problem for prefix: ", prefix
+                        continue
+                        #print "Race condition problem for prefix: ", prefix
 
             elif ('withdraw' in update):
                 # A new announcement is only needed if the best path has changed
