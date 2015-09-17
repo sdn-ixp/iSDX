@@ -7,10 +7,9 @@ import os
 from random import shuffle, randint
 import sys
 import argparse
-import glob
 
-fname = "rib1.txt"
-path = "ribs/*"
+#fname = "rib1.txt"
+
 """
 TIME: 08/20/15 00:00:00
 TYPE: TABLE_DUMP_V2/IPV4_UNICAST
@@ -34,19 +33,17 @@ def getMatchHash(part, peer, count):
 
 def getParticipants():
     asn_2_ip = {}
-    files=glob.glob(path)
-    for file in files:
-        print "File::", file
-        with open(file, 'r') as f:
-            print "Loaded the RIB file"
-            for line in f.readlines():
-                if "FROM" in line:
-                    line
-                    tmp = line.split("FROM: ")[1].split("\n")[0].split(" ")
-                    #print tmp
-                    if tmp[1] not in asn_2_ip:
-                        asn_2_ip[tmp[1]] = {}
-                    asn_2_ip[tmp[1]][tmp[0]] = 0
+
+    with open(fname, 'r') as f:
+        print "Loaded the RIB file"
+        for line in f.readlines():
+            if "FROM" in line:
+                line
+                tmp = line.split("FROM: ")[1].split("\n")[0].split(" ")
+                #print tmp
+                if tmp[1] not in asn_2_ip:
+                    asn_2_ip[tmp[1]] = {}
+                asn_2_ip[tmp[1]][tmp[0]] = 0
 
     #print asn_2_ip
     print "Assigning Ports"
@@ -191,18 +188,18 @@ if __name__ == '__main__':
     args = parser.parse_args()
     frac = float(args.frac)
     # Parse ribs to extract asn_2_ip
-    asn_2_ip = getParticipants()
+    #asn_2_ip = getParticipants()
 
     #asn_2_ip = {"AS1":"1","AS2":"2","AS3":"3"}
     #asn_2_ports = {"AS1":[1], "AS2":[2,3], "AS3":[4,5]}
     asn_2_ip = json.load(open("asn_2_ip.json", 'r'))
-    asn_2_id = generate_global_config(asn_2_ip)
+    asn_2_id = json.load(open("asn_2_id.json", 'r'))
 
     # Params
     #count = 10
-    #count = int(frac*len(asn_2_ip.keys()))
-    #limit_out = 4
+    count = int(frac*len(asn_2_ip.keys()))
+    limit_out = 4
 
 
-    #for part in asn_2_ip:
-    #    generatePoliciesParticipant(part, asn_2_ip, asn_2_id, count, limit_out)
+    for part in asn_2_ip:
+        generatePoliciesParticipant(part, asn_2_ip, asn_2_id, count, limit_out)
