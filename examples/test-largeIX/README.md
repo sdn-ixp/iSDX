@@ -28,7 +28,7 @@ $ sh ~/sdx-parallel/setup/sdx-setup.sh
 #### RIB file
 ```bash
 $ cd ~/sdx-parallel/examples/test-largeIX
-$ cp <rib file> rib1.txt
+$ cp <all rib files> ribs/
 ```
 
 #### BGP Update File
