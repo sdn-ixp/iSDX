@@ -92,4 +92,55 @@ After the expriment is complete. We will have all the log files in the directory
 Zip all the these files for data analysis. 
 
 
+## Debugging
 
+### Generate configs/policies
+
+```bash
+$ cd  ~/sdx-parallel/examples/test-largeIX/
+$ python generate_configs.py <frac>
+```
+
+Copy `asn_2_ip` and `asn_2_id` in pctrl directory
+```bash
+$  cp asn_2_* ~/sdx-parallel/pctrl
+```
+
+### Initialize RIBs for the participants
+```bash
+$ cd  ~/sdx-parallel/pctrl
+$ python initialize_ribs.py 
+```
+
+### FLANC - Reference Monitor Logger
+
+This script saves every flowmod with a timestamp to the specified file (e.g. test.log)
+
+```bash
+$ cd ~/sdx-parallel/flanc
+$ ./reflog.py localhost 5555 sdx <path of log file>
+```
+
+#### Run xrs
+
+```bash
+$ cd ~/sdx-parallel/xrs
+$ python route_server.py <name of example>
+```
+
+### Start the Pctrl
+```bash
+$ cd  ~/sdx-parallel/pctrl
+$ python participant_controller.py test-largeIX <id> <output file name>
+```
+
+### xbgp - ExaBGP Simulator
+
+This module reads bgp updates from a bgp dump file and sends them in ExaBGP format to xrs
+
+#### Run xbgp
+
+```bash
+$ cd ~/sdx-parallel/xbgp
+$ ./xbgp.py localhost 6000 xrs <path of bgp updates file> <rate=anything for mode 0> <mode=0> -d (for debugging)
+```
