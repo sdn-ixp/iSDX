@@ -5,7 +5,7 @@ import sqlite3
 import time
 import multiprocessing as mp
 from multiprocessing import Process, Queue
-
+import argparse
 from ribm import rib
 from decision_process import decision_process, best_path_selection
 
@@ -186,15 +186,34 @@ def processRibIter(id, asn_2_ip):
 ''' main '''
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('server', help='server we are running this code on')
+    parser.add_argument('example_name', help='Example Name Directory')
+    args = parser.parse_args()
+    print args
+
+
     asn_2_ip = json.load(open("asn_2_ip.json", 'r'))
     asn_2_id = json.load(open("asn_2_id.json", 'r'))
-    #asn_2_ip = {"AS12306": {"80.249.208.161": 6}}
-    peers = {}
-    asn = [k for k,v in asn_2_id.iteritems() if v is 1]
-    print "ASN: 1: ", asn[0]
 
+    server_filename = "server_settings.cfg"
+    server_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "examples", args.example_name))
+    server_file = os.path.join(server_path, server_filename)
+    server_settings = json.load(open(server_file, 'r'))
+    print server_settings
+
+    from_id = int(server_settings[args.server]["FROM"])
+    to_id = int(server_settings[args.server]["TO"]) + 1
+
+    peers = {}
     asn_2_ip_small = {}
-    asn_2_ip_small[asn[0]] = asn_2_ip[asn[0]]
+    
+    for i in range(from_id, to_id):
+	    asn = [k for k,v in asn_2_id.iteritems() if v is i]
+	    print "ID:: ", i,"ASN: 1: ", asn[0]
+    	    asn_2_ip_small[asn[0]] = asn_2_ip[asn[0]]
+
+
     #rib_fname = "rib_" + asn[0] +".txt"
     #print "ribname::", rib_fname
     #id_2_asn = { v: k for k,v in asn_2_id.iteritems()}
@@ -202,7 +221,6 @@ if __name__ == '__main__':
     #asn_2_ip_small = {"AS12306": {"80.249.208.161": 6},"AS1273": {"2001:7f8:1::a500:1273:1": 5}}
 
 
-    path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "ribs"))
 
     process = []
     queue = []

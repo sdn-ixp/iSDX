@@ -47,7 +47,7 @@ class route_server():
         self.parse_config(config_file)
 
         # Initialize a XRS Server
-        self.server = Server()
+        self.server = Server(self.ah_socket)
         self.run = True
 
         """

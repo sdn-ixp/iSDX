@@ -4,4 +4,3 @@ sudo killall python
 sudo killall exabgp
 sudo fuser -k 6633/tcp
 python clean_mongo.py
-python initialize_ribs.py

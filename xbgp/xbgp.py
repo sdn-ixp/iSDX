@@ -238,12 +238,17 @@ def main(argv):
     # logging - log level
     logging.basicConfig(level=logging.INFO)
 
+    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"config"))
+    config_file = os.path.join(base_path, "sdx_global.cfg")
+    config = json.load(open(config_file, 'r'))
+    #ah_socket = tuple(config["Route Server"]["AH_SOCKET"])
+
     if args.speedup:
         speedup = args.speedup
     else:
         speedup = 1
 
-    exabgp_instance = ExaBGPEmulator(args.ip, args.port, args.key, args.input, speedup, args.rate, args.mode, args.debug)
+    exabgp_instance = ExaBGPEmulator(config["Route Server"]["AH_SOCKET"][0], config["Route Server"]["AH_SOCKET"][1], args.key, args.input, speedup, args.rate, args.mode, args.debug)
 
     exabgp_instance.start()
 
