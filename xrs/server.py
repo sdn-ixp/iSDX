@@ -10,7 +10,7 @@ from multiprocessing.connection import Listener
 class server():
 
     def __init__(self, ah_socket):
-        self.listener = Listener((ah_socket[0], ah_socket[1]), authkey='xrs')
+        self.listener = Listener(ah_socket, authkey='xrs')
 
         self.sender_queue = Queue()
         self.receiver_queue = Queue()
