@@ -134,6 +134,15 @@ def generate_global_config(asn_2_ip):
     asn_2_id = {}
     unique_id = 1
 
+    server_filename = "server_settings.cfg"
+    server_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__))))
+    server_file = os.path.join(server_path, server_filename)
+    server_settings = ""
+
+    with open(server_file, 'r') as f:
+        server_settings = json.load(f)
+	print server_settings
+
     for part in asn_2_ip:
         if part not in asn_2_id:
             asn_2_id[part] = unique_id
@@ -143,6 +152,9 @@ def generate_global_config(asn_2_ip):
         config = json.load(f)
         config["Participants"] = {}
         eh_port = 7777
+
+	config["RefMon Server"]["IP"] = server_settings["server1"]["IP"]
+	config["Route Server"]["AH_SOCKET"] = [server_settings["server2"]["IP"], 6666]
 
         for part in asn_2_ip:
             part_id = asn_2_id[part]
@@ -159,7 +171,11 @@ def generate_global_config(asn_2_ip):
             config["Participants"][part_id]["Peers"] = [asn_2_id[x] for x in filter(lambda x: x!=part, asn_2_ip.keys())]
             config["Participants"][part_id]["Inbound Rules"] = "true"
             config["Participants"][part_id]["Outbound Rules"] = "true"
-            config["Participants"][part_id]["EH_SOCKET"] = ["localhost", eh_port]
+	    host = ""
+	    if int(server_settings["server1"]["FROM"]) <= part_id and part_id <= int(server_settings["server1"]["TO"]): config["Participants"][part_id]["EH_SOCKET"] = [server_settings["server1"]["IP"], eh_port]
+	    elif int(server_settings["server2"]["FROM"]) <= part_id and part_id <= int(server_settings["server2"]["TO"]): config["Participants"][part_id]["EH_SOCKET"] = [server_settings["server2"]["IP"], eh_port]
+	    elif int(server_settings["server3"]["FROM"]) <= part_id and part_id <= int(server_settings["server3"]["TO"]): config["Participants"][part_id]["EH_SOCKET"] = [server_settings["server3"]["IP"], eh_port]
+            #config["Participants"][part_id]["EH_SOCKET"] = ["localhost", eh_port]
             config["Participants"][part_id]["Flanc Key"] = "Part"+str(part_id)+"Key"
             eh_port += 1
 
