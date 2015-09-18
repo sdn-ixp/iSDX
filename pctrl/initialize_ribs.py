@@ -40,7 +40,7 @@ class Peer:
     def updateInputRib(self, asn):
         path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "examples", "test-largeIX", "ribs"))
         print "path:: ", path
-	rib_fname = "rib_" + asn + ".txt"
+	rib_fname = "ribs_" + asn + ".txt"
 	rib_file = os.path.join(path, rib_fname)
         tmp = {}
         with open(rib_file, 'r') as f:
