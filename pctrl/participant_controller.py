@@ -11,7 +11,7 @@ import argparse
 from threading import Thread
 from multiprocessing.connection import Listener
 from netaddr import *
-
+from threading import RLock as lock
 from peer import BGPPeer as BGPPeer
 from supersets import SuperSets
 from ss_rule_scheme import *
@@ -19,11 +19,13 @@ from lib import *
 from ss_lib import *
 
 import time
-
+import atexit
+from signal import signal, SIGTERM
+from sys import exit
 sys.path.insert(0, '../xctrl/')
 from flowmodmsg import FlowModMsgBuilder
 
-LOG = True
+LOG = False
 TIMING = True
 
 MULTISWITCH = 0
@@ -33,9 +35,8 @@ SUPERSETS = 0
 MDS       = 1
 
 
-
 class ParticipantController():
-    def __init__(self, id, config_file, policy_file):
+    def __init__(self, id, config_file, policy_file, exp_file_prefix):
         # participant id
         self.id = id
         # print ID for logging
@@ -43,7 +44,10 @@ class ParticipantController():
 
         # used to signal termination
         self.run = True
+        self.prefix_lock = {}
 
+        self.logger = []
+	self.exp_file_prefix = exp_file_prefix
         # Initialize participant params
         self.cfg = PConfig(config_file, self.id)
         # Vmac encoding mode
@@ -53,8 +57,7 @@ class ParticipantController():
 
 
         self.load_policies(policy_file)
-
-
+	
         # The port 0 MAC is used for tagging outbound rules as belonging to us
         self.port0_mac = self.cfg.port0_mac
 
@@ -82,7 +85,8 @@ class ParticipantController():
     def start(self):
         # Start all clients/listeners/whatevs
         if LOG: print self.idp, "Starting controller for participant", self.id
-
+	
+	
         # ExaBGP Peering Instance
         self.bgp_instance = self.cfg.get_bgp_instance()
 
@@ -136,9 +140,22 @@ class ParticipantController():
         if self.cfg.dp_mode == MULTITABLE:
             final_switch = "main-out"
 
-        rule_msgs = init_inbound_rules(self.id, self.policies, 
+        self.init_vnh_assignment()
+
+        rule_msgs = init_inbound_rules(self.id, self.policies,
+                                        self.supersets, final_switch)
+        if LOG: print self.idp, "Rule Messages INBOUND:: ", rule_msgs
+
+
+        rule_msgs2 = init_outbound_rules(self, self.id, self.policies,
                                         self.supersets, final_switch)
 
+        if LOG: print self.idp, "Rule Messages OUTBOUND:: ", rule_msgs2
+
+        rule_msgs['changes'] = rule_msgs['changes'] + rule_msgs2['changes']
+
+        #TODO: Initialize Outbound Policies from RIB
+        if LOG: print self.idp, "Rule Messages:: ", rule_msgs
         if "changes" in rule_msgs:
             self.dp_queued.extend(rule_msgs["changes"])
 
@@ -158,12 +175,17 @@ class ParticipantController():
             self.dp_pushed.append(flowmod)
 
         self.dp_queued = []
-        self.refmon_client.send(json.dumps(self.fm_builder.get_msg()))
-
+        #self.refmon_client.send(json.dumps(self.fm_builder.get_msg()))
 
     def stop(self):
         "Stop the Participants' SDN Controller"
         if LOG: print self.idp, "Stopping Controller."
+        print self.idp, "Stopping Controller.", self.logger
+
+	timestr = time.strftime("%Y%m%d_%H%M%S")
+	file_name = "data/output_P" + str(self.id) + "_" + timestr +"_" + self.exp_file_prefix + ".txt"
+        with open(file_name, 'w') as f:
+            json.dump(self.logger, f)
 
         # Signal Termination and close blocking listener
         self.run = False
@@ -183,6 +205,7 @@ class ParticipantController():
     def start_eh(self):
         '''Socket listener for network events '''
         if LOG: print self.idp, "Event Handler started."
+
         while self.run:
             if LOG: print self.idp, "EH waiting for connection..."
             conn_eh = self.listener_eh.accept()
@@ -226,7 +249,7 @@ class ParticipantController():
         elif 'arp' in data:
             (requester_srcmac, requested_vnh) = tuple(data['arp'])
             if LOG: print self.idp, "Event Received: ARP request for IP", requested_vnh
-            self.process_arp_request(requester_srcmac, requested_vnh)
+            #self.process_arp_request(requester_srcmac, requested_vnh)
 
         else:
             if LOG: print self.idp, "UNKNOWN EVENT TYPE RECEIVED:", data
@@ -307,11 +330,11 @@ class ParticipantController():
             tha = part_mac
 
 
-        arp_fields = {  'SPA':vnh,     'TPA':tpa, 
-                        'SHA':vmac,     'THA':tha, 
+        arp_fields = {  'SPA':vnh,     'TPA':tpa,
+                        'SHA':vmac,     'THA':tha,
                         'eth_src':vmac, 'eth_dst':eth_dst}
 
-        if LOG: 
+        if LOG:
             if gratuitous:
                 print self.idp, "Sending Gratuitious ARP:", arp_fields
             else:
@@ -319,118 +342,143 @@ class ParticipantController():
 
         self.arp_client.send(json.dumps(arp_fields))
 
+    def getlock(self, prefixes):
+        prefixes.sort()
+        hsh = "".join(prefixes)
+        if hsh not in self.prefix_lock:
+            #print "First Lock:: ", hsh
+            self.prefix_lock[hsh] = lock()
+        #else:
+            #print "Repeat :: ", hsh
+        return self.prefix_lock[hsh]
 
     def process_bgp_route(self, route):
         "Process each incoming BGP advertisement"
         start = time.time()
-
-        reply = ''
-        # Map to update for each prefix in the route advertisement.
-        updates = self.bgp_instance.update(route)
-
-        # TODO: This step should be parallelized
-        # TODO: The decision process for these prefixes is going to be same, we
-        # should think about getting rid of such redundant computations.
-        for update in updates:
-            self.bgp_instance.decision_process_local(update)
-            self.vnh_assignment(update)
-
-        if TIMING:
-            elapsed = time.time() - start
-            print self.idp, "Time taken for decision process:", elapsed
-            start = time.time()
+        prefixes = get_prefixes_from_announcements(route)
+        time_for_bgp = None
+        time_update_ss = None
+        time_change_ss = None
+        time_push_dp = None
+        time_send_garps = None
 
 
-        if self.cfg.vmac_mode == 0:
-        ################## SUPERSET RESPONSE TO BGP ##################
-            # update supersets
-            "Map the set of BGP updates to a list of superset expansions."
-            ss_changes, ss_changed_prefs = self.supersets.update_supersets(self, updates)
+
+        with self.getlock(prefixes):
+
+            reply = ''
+            # Map to update for each prefix in the route advertisement.
+            updates = self.bgp_instance.update(route)
+            #print "process_bgp_route:: ", updates
+            # TODO: This step should be parallelized
+            # TODO: The decision process for these prefixes is going to be same, we
+            # should think about getting rid of such redundant computations.
+            for update in updates:
+                self.bgp_instance.decision_process_local(update)
+                self.vnh_assignment(update)
 
             if TIMING:
                 elapsed = time.time() - start
-                print self.idp, "Time taken to update supersets:", elapsed
+                time_for_bgp = elapsed
+                if LOG: print self.idp, "Time taken for decision process:", elapsed
                 start = time.time()
 
 
+            if self.cfg.vmac_mode == 0:
+            ################## SUPERSET RESPONSE TO BGP ##################
+                # update supersets
+                "Map the set of BGP updates to a list of superset expansions."
+                ss_changes, ss_changed_prefs = self.supersets.update_supersets(self, updates)
 
-            # ss_changed_prefs are prefixes for which the VMAC bits have changed
-            # these prefixes must have gratuitous arps sent
-            garp_required_vnhs = [self.prefix_2_VNH[prefix] for prefix in ss_changed_prefs]
-
-
-            "If a recomputation event was needed, wipe out the flow rules."
-            if ss_changes["type"] == "new":
-                if LOG: print self.idp, "Wiping outbound rules."
-                wipe_msgs = msg_clear_all_outbound(self.policies, self.port0_mac)
-                self.dp_queued.extend(wipe_msgs)
-
-                #if a recomputation was needed, all VMACs must be reARPed
-                # TODO: confirm reARPed is a word
-                garp_required_vnhs = self.VNH_2_prefix.keys()
-
-            if len(ss_changes['changes']) > 0:
-
-                print self.idp, "Supersets have changed:", ss_changes
-
-                "Map the superset changes to a list of new flow rules."
-                flow_msgs = update_outbound_rules(ss_changes, self.policies,
-                                                  self.supersets, self.port0_mac)
+                if TIMING:
+                    elapsed = time.time() - start
+                    time_update_ss = elapsed
+                    if LOG: print self.idp, "Time taken to update supersets:", elapsed
+                    start = time.time()
 
 
-                if LOG: print self.idp, "Flow msgs:", flow_msgs
-                "Dump the new rules into the dataplane queue."
-                self.dp_queued.extend(flow_msgs)
+
+                # ss_changed_prefs are prefixes for which the VMAC bits have changed
+                # these prefixes must have gratquitous arps sent
+                garp_required_vnhs = [self.prefix_2_VNH[prefix] for prefix in filter(lambda x: x in self.prefix_2_VNH, ss_changed_prefs)]
+
+
+                "If a recomputation event was needed, wipe out the flow rules."
+                if ss_changes["type"] == "new":
+                    if LOG: print self.idp, "Wiping outbound rules."
+                    wipe_msgs = msg_clear_all_outbound(self.policies, self.port0_mac)
+                    self.dp_queued.extend(wipe_msgs)
+
+                    #if a recomputation was needed, all VMACs must be reARPed
+                    # TODO: confirm reARPed is a word
+                    garp_required_vnhs = self.VNH_2_prefix.keys()
+
+                if len(ss_changes['changes']) > 0:
+
+                    #print self.idp, "Supersets have changed:", ss_changes
+
+                    "Map the superset changes to a list of new flow rules."
+                    flow_msgs = update_outbound_rules(ss_changes, self.policies,
+                                                      self.supersets, self.port0_mac)
+
+
+                    if LOG: print self.idp, "Flow msgs:", flow_msgs
+                    "Dump the new rules into the dataplane queue."
+                    self.dp_queued.extend(flow_msgs)
+
+
+                if TIMING:
+                    elapsed = time.time() - start
+                    time_change_ss = elapsed
+                    if LOG: print self.idp, "Time taken to deal with ss_changes:", elapsed
+                    start = time.time()
+
+
+            ################## END SUPERSET RESPONSE ##################
+
+            else:
+                # TODO: similar logic for MDS
+                if LOG: print self.idp, "Creating ctrlr messages for MDS scheme"
+
+            self.push_dp()
 
 
             if TIMING:
                 elapsed = time.time() - start
-                print self.idp, "Time taken to deal with ss_changes:", elapsed
+                time_push_dp = elapsed
+                if LOG: print self.idp, "Time taken to push dp msgs:", elapsed
                 start = time.time()
 
 
-        ################## END SUPERSET RESPONSE ##################
+            changed_vnhs, announcements = self.bgp_instance.bgp_update_peers(updates,
+                                            self.prefix_2_VNH, self.cfg.ports, self.idp)
 
-        else:
-            # TODO: similar logic for MDS
-            if LOG: print self.idp, "Creating ctrlr messages for MDS scheme"
+            """ Combine the VNHs which have changed BGP default routes with the
+                VNHs which have changed supersets.
+            """
 
+            changed_vnhs = set(changed_vnhs)
+            changed_vnhs.update(garp_required_vnhs)
 
-        self.push_dp()
-
-
-        if TIMING:
-            elapsed = time.time() - start
-            print self.idp, "Time taken to push dp msgs:", elapsed
-            start = time.time()
-
-
-        changed_vnhs, announcements = self.bgp_instance.bgp_update_peers(updates,
-                                        self.prefix_2_VNH, self.cfg.ports, self.idp)
-
-        """ Combine the VNHs which have changed BGP default routes with the
-            VNHs which have changed supersets.
-        """
-        changed_vnhs = set(changed_vnhs)
-        changed_vnhs.update(garp_required_vnhs)
-
-        # Send gratuitous ARP responses for all them
-        for vnh in changed_vnhs:
-            self.process_arp_request(None, vnh)
-
-        # Tell Route Server that it needs to announce these routes
-        for announcement in announcements:
-            # TODO: Complete the logic for this function
-            self.send_announcement(announcement)
+            # Send gratuitous ARP responses for all them
+            """
+            for vnh in changed_vnhs:
+                self.process_arp_request(None, vnh)
+            """
+            # Tell Route Server that it needs to announce these routes
+            for announcement in announcements:
+                # TODO: Complete the logic for this function
+                self.send_announcement(announcement)
 
 
-        if TIMING:
-            elapsed = time.time() - start
-            print self.idp, "Time taken to send garps/announcements:", elapsed
-            start = time.time()
+            if TIMING:
+                elapsed = time.time() - start
+                time_send_garps = elapsed
+                if LOG: print self.idp, "Time taken to send garps/announcements:", elapsed
+                start = time.time()
+            self.logger.append((time_for_bgp, time_update_ss, time_change_ss, time_push_dp, time_send_garps))
 
-
-        return reply
+            return reply
 
 
 
@@ -438,7 +486,7 @@ class ParticipantController():
         "Send the announcements to XRS"
         if LOG: print self.idp, "Sending announcements to XRS.", type(announcement)
 
-        self.xrs_client.send(json.dumps(announcement))
+        #self.xrs_client.send(json.dumps(announcement))
 
 
     def vnh_assignment(self, update):
@@ -449,24 +497,63 @@ class ParticipantController():
             if ('announce' in update):
                 prefix = update['announce']['prefix']
 
-            if (prefix not in self.prefix_2_VNH):
-                # get next VNH and assign it the prefix
-                self.num_VNHs_in_use += 1
-                vnh = str(self.cfg.VNHs[self.num_VNHs_in_use])
+                if (prefix not in self.prefix_2_VNH):
+                    # get next VNH and assign it the prefix
+                    self.num_VNHs_in_use += 1
+                    vnh = str(self.cfg.VNHs[self.num_VNHs_in_use])
 
-                self.prefix_2_VNH[prefix] = vnh
-                self.VNH_2_prefix[vnh] = prefix
+                    self.prefix_2_VNH[prefix] = vnh
+                    self.VNH_2_prefix[vnh] = prefix
         else:
             "Disjoint"
             # TODO: @Robert: Place your logic here for VNH assignment for MDS scheme
             if LOG: print self.idp, "VNH assignment called for disjoint vmac_mode"
 
+    def init_vnh_assignment(self):
+        "Assign VNHs for the advertised prefixes"
+        if self.cfg.vmac_mode == 0:
+            " Superset"
+            # TODO: Do we really need to assign a VNH for each advertised prefix?
+            prefixes_dict = self.bgp_instance.rib["local"].get_prefixes()
+            #print prefixes_dict
+            prefixes = [x.values()[0] for x in prefixes_dict]
+            for prefix in prefixes:
+                if (prefix not in self.prefix_2_VNH):
+                    # get next VNH and assign it the prefix
+                    self.num_VNHs_in_use += 1
+                    vnh = str(self.cfg.VNHs[self.num_VNHs_in_use])
+
+                    self.prefix_2_VNH[prefix] = vnh
+                    self.VNH_2_prefix[vnh] = prefix
+        else:
+            "Disjoint"
+            # TODO: @Robert: Place your logic here for VNH assignment for MDS scheme
+            if LOG: print self.idp, "VNH assignment called for disjoint vmac_mode"
+
+def get_prefixes_from_announcements(route):
+
+    prefixes = []
+    if ('update' in route['neighbor']['message']):
+        if ('announce' in route['neighbor']['message']['update']):
+            announce = route['neighbor']['message']['update']['announce']
+            if ('ipv4 unicast' in announce):
+                for next_hop in announce['ipv4 unicast'].keys():
+                    for prefix in announce['ipv4 unicast'][next_hop].keys():
+                        prefixes.append(prefix)
+
+        elif ('withdraw' in route['neighbor']['message']['update']):
+            withdraw = route['neighbor']['message']['update']['withdraw']
+            if ('ipv4 unicast' in withdraw):
+                for prefix in withdraw['ipv4 unicast'].keys():
+                    prefixes.append(prefix)
+    return prefixes
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('dir', help='the directory of the example')
     parser.add_argument('id', type=int,
                    help='participant id (integer)')
+    parser.add_argument('exp', help='name of experiment')
     args = parser.parse_args()
 
     # locate config file
@@ -475,11 +562,15 @@ if __name__ == '__main__':
                                 "..","examples",args.dir,"config"))
     config_file = os.path.join(base_path, "sdx_global.cfg")
 
-    # locate the participant's policy file as well
-    policy_filenames_file = os.path.join(base_path, "sdx_policies.cfg")
-    with open(policy_filenames_file, 'r') as f:
-        policy_filenames = json.load(f)
-    policy_filename = policy_filenames[str(args.id)]
+    with open("asn_2_id.json", 'r') as f:
+        asn_2_id = json.load(f)
+    asn = ''
+    for elem in asn_2_id:
+        if str(asn_2_id[elem]) == str(args.id):
+            asn = elem
+
+    policy_filename = "participant_"+str(asn)+".py"
+
 
 
     policy_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -494,13 +585,17 @@ if __name__ == '__main__':
 
 
     # start controller
-    ctrlr = ParticipantController(args.id, config_file, policy_file)
+    ctrlr = ParticipantController(args.id, config_file, policy_file, args.exp)
     ctrlr_thread = Thread(target=ctrlr.start)
     ctrlr_thread.daemon = True
     ctrlr_thread.start()
-
+    
+    #atexit.register(ctrlr.stop)
+    #signal(SIGTERM, lambda signum, stack_frame: exit(1))
+    
     while ctrlr_thread.is_alive():
         try:
             ctrlr_thread.join(1)
         except KeyboardInterrupt:
             ctrlr.stop()
+

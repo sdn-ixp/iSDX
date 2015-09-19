@@ -19,7 +19,7 @@ from core import XRS, XRSPeer
 
 
 
-LOG = True
+LOG = False
 
 class route_server():
 
@@ -31,6 +31,7 @@ class route_server():
         # Init the Route Server
         self.server = None
         self.ah_socket = None
+        self.xrs_socket = None
         self.participants = {}
 
         # Several useful mappings
@@ -47,7 +48,7 @@ class route_server():
         self.parse_config(config_file)
 
         # Initialize a XRS Server
-        self.server = Server()
+        self.server = Server(self.xrs_socket)
         self.run = True
 
         """
@@ -77,15 +78,19 @@ class route_server():
                 for id, peer in self.participants.iteritems():
                     # Apply the filtering logic
                     advertiser_ip = route['neighbor']['ip']
-                    advertise_id = self.portip_2_participant[advertiser_ip]
-                    if id in self.participants[advertise_id].peers_out and advertise_id in self.participants[id].peers_in:
-                        # Now send this route to participant `id`'s controller'
-                        self.send_update(id, route)
+                    if advertiser_ip in self.portip_2_participant:
+                        advertise_id = self.portip_2_participant[advertiser_ip]
+                        if id in self.participants[advertise_id].peers_out and advertise_id in self.participants[id].peers_in:
+                            # Now send this route to participant `id`'s controller'
+                            #print "sending route:: ", route
+			    if id in [1, 2, 3, 4, 5]:
+                    	        self.send_update(id, route)
+                                #break
 
             except Queue.Empty:
-                if LOG: 
+                if LOG:
                     if waiting == 0:
-                        print self.idp, "Waiting for BGP update..."
+                        #print self.idp, "Waiting for BGP update..."
                         waiting = 1
                     else:
                         waiting = (waiting % 30) + 1
@@ -104,7 +109,7 @@ class route_server():
         config = json.load(open(config_file, 'r'))
 
         self.ah_socket = tuple(config["Route Server"]["AH_SOCKET"])
-
+	self.xrs_socket = tuple(config["Route Server"]["XRS_SOCKET"])
         for participant_name in config["Participants"]:
             participant = config["Participants"][participant_name]
 
@@ -184,7 +189,6 @@ class route_server():
         conn.send(json.dumps(data))
         recv = conn.recv()
         conn.close()
-
 
     def stop(self):
 
