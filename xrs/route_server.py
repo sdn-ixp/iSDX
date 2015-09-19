@@ -31,6 +31,7 @@ class route_server():
         # Init the Route Server
         self.server = None
         self.ah_socket = None
+        self.xrs_socket = None
         self.participants = {}
 
         # Several useful mappings
@@ -47,7 +48,7 @@ class route_server():
         self.parse_config(config_file)
 
         # Initialize a XRS Server
-        self.server = Server(self.ah_socket)
+        self.server = Server(self.xrs_socket)
         self.run = True
 
         """
@@ -82,9 +83,9 @@ class route_server():
                         if id in self.participants[advertise_id].peers_out and advertise_id in self.participants[id].peers_in:
                             # Now send this route to participant `id`'s controller'
                             #print "sending route:: ", route
-			    if id in [1]:
+			    if id in [1, 2, 3, 4, 5]:
                     	        self.send_update(id, route)
-                                break
+                                #break
 
             except Queue.Empty:
                 if LOG:
@@ -108,7 +109,7 @@ class route_server():
         config = json.load(open(config_file, 'r'))
 
         self.ah_socket = tuple(config["Route Server"]["AH_SOCKET"])
-
+	self.xrs_socket = tuple(config["Route Server"]["XRS_SOCKET"])
         for participant_name in config["Participants"]:
             participant = config["Participants"][participant_name]
 

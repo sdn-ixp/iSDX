@@ -5,7 +5,7 @@
 import logging
 import argparse
 import json
-
+import os
 from time import sleep, time, strptime, mktime
 from threading import Thread
 from netaddr import IPAddress
@@ -248,7 +248,7 @@ def main(argv):
     else:
         speedup = 1
 
-    exabgp_instance = ExaBGPEmulator(config["Route Server"]["AH_SOCKET"][0], config["Route Server"]["AH_SOCKET"][1], args.key, args.input, speedup, args.rate, args.mode, args.debug)
+    exabgp_instance = ExaBGPEmulator(config["Route Server"]["XRS_SOCKET"][0], config["Route Server"]["XRS_SOCKET"][1], args.key, args.input, speedup, args.rate, args.mode, args.debug)
 
     exabgp_instance.start()
 
@@ -268,6 +268,7 @@ if __name__ == '__main__':
     parser.add_argument('input', help='bgp input file')
     parser.add_argument('rate', help='bgp updates rate/second')
     parser.add_argument('mode', help='xbgp mode 0: bgp update time based 1: bgp update rate based')
+    parser.add_argument('dir', help='Example directory name')
     parser.add_argument('-d', '--debug', help='enable debug output', action="store_true")
     parser.add_argument('--speedup', help='speed up of replay', type=float)
     args = parser.parse_args()

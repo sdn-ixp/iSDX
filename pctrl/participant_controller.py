@@ -151,6 +151,7 @@ class ParticipantController():
                                         self.supersets, final_switch)
 
         if LOG: print self.idp, "Rule Messages OUTBOUND:: ", rule_msgs2
+
         rule_msgs['changes'] = rule_msgs['changes'] + rule_msgs2['changes']
 
         #TODO: Initialize Outbound Policies from RIB
@@ -174,7 +175,7 @@ class ParticipantController():
             self.dp_pushed.append(flowmod)
 
         self.dp_queued = []
-        self.refmon_client.send(json.dumps(self.fm_builder.get_msg()))
+        #self.refmon_client.send(json.dumps(self.fm_builder.get_msg()))
 
     def stop(self):
         "Stop the Participants' SDN Controller"
@@ -485,7 +486,7 @@ class ParticipantController():
         "Send the announcements to XRS"
         if LOG: print self.idp, "Sending announcements to XRS.", type(announcement)
 
-        self.xrs_client.send(json.dumps(announcement))
+        #self.xrs_client.send(json.dumps(announcement))
 
 
     def vnh_assignment(self, update):

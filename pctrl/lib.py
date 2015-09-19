@@ -120,7 +120,7 @@ class PConfig(object):
         address = conn_info["IP"]
 
         key = config["Participants"][self.id]["Flanc Key"]
-
+	key = conn_info["key"]
         return GenericClient(address, port, key)
 
 
