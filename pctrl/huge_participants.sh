@@ -1,6 +1,6 @@
 #!/bin/sh
 
-server="server1"
+server="server2"
 EXPERIMENT_NAME='change_frac'
 NUMBER_OF_PARTICIPANTS=1
 INSTALL_ROOT='/home/glex/sdx-parallel'
@@ -60,20 +60,19 @@ do
 		if [ $server == "server3" ]; then
 			#Starting XBGP	
 			echo "Starting XBGP..."
-			`cd $INSTALL_ROOT/xbgp ; nohup ./xbgp.py localhost 6000 xrs $UPDATE_FILE $RATE $MODE $EXAMPLE_NAME > /dev/null 2>&1 &` 
+			`cd $INSTALL_ROOT/xbgp ; nohup ./xbgp.py localhost 6000 xrs $UPDATE_FILE $RATE $MODE $EXAMPLE_NAME > /dev/null 2>&1 &` 	
+			while [ `ps axf | grep xbgp | grep -v grep | wc -l` -ne 0 ] 
+			do 
+				echo "running"
+				sleep 1m
+			done
+		else
+			cd $INSTALL_ROOT/pctrl
+			output="output.txt"
+			rm -rf $INSTALL_ROOT/pctrl/$output
+			python xbgp_stopped.py $server $EXAMPLE_NAME > $INSTALL_ROOT/pctrl/$output
+			while [ ! -s $INSTALL_ROOT/pctrl/$output ]; do sleep 1; done
 		fi
-		while [ `ps axf | grep xbgp | grep -v grep | wc -l` -ne 0 ] 
-		do 
-			echo "running"
-			sleep 1m
-		done
-		cd $INSTALL_ROOT/pctrl
-                output="output.txt"
-                rm -rf $INSTALL_ROOT/pctrl/$output
-                python xbgp_stopped.py $server $EXAMPLE_NAME > $INSTALL_ROOT/pctrl/$output
-
-                while [ ! -s $INSTALL_ROOT/pctrl/$output ]; do sleep 1; done
-
 		#sleep 7m
 		`ps axf | grep participant_controller | grep -v grep | awk '{print "kill -SIGINT " $1}' | { while IFS= read -r cmd; do  $cmd; done }`
 		sleep 30
