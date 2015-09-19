@@ -125,7 +125,7 @@ def generatePoliciesParticipant(part, asn_2_ip, asn_2_id, count, limit_out):
         json.dump(policy, f)
 
 
-def generate_global_config(asn_2_ip):
+def generate_global_config(asn_2_ip, args):
     # load the base config
     config_filename = "sdx_global.cfg"
     config_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config"))
@@ -153,9 +153,30 @@ def generate_global_config(asn_2_ip):
         config["Participants"] = {}
         eh_port = 7777
 
-	config["RefMon Server"]["IP"] = server_settings["server1"]["IP"]
-	config["Route Server"]["AH_SOCKET"] = [server_settings["server2"]["IP"], 6666]
-	config["Route Server"]["XRS_SOCKET"] = [server_settings["server2"]["IP"], 6000]
+	server1_ip = None
+	server2_ip = None
+	server3_ip = None
+
+	if args.server == "server1":
+		server1_ip = "0.0.0.0"
+	else:
+		server1_ip = server_settings["server1"]["IP"]	
+
+	if args.server == "server2":
+		server2_ip = "0.0.0.0"
+	else:
+		server2_ip = server_settings["server2"]["IP"]	
+
+	if args.server == "server3":
+		server3_ip = "0.0.0.0"
+	else:
+		server3_ip = server_settings["server3"]["IP"]	
+
+
+
+	config["RefMon Server"]["IP"] = server1_ip
+	config["Route Server"]["AH_SOCKET"] = [server2_ip, 6666]
+	config["Route Server"]["XRS_SOCKET"] = [server2_ip, 6000]
 
         for part in asn_2_ip:
             part_id = asn_2_id[part]
@@ -173,9 +194,9 @@ def generate_global_config(asn_2_ip):
             config["Participants"][part_id]["Inbound Rules"] = "true"
             config["Participants"][part_id]["Outbound Rules"] = "true"
 	    host = ""
-	    if int(server_settings["server1"]["FROM"]) <= part_id and part_id <= int(server_settings["server1"]["TO"]): config["Participants"][part_id]["EH_SOCKET"] = [server_settings["server1"]["IP"], eh_port]
-	    elif int(server_settings["server2"]["FROM"]) <= part_id and part_id <= int(server_settings["server2"]["TO"]): config["Participants"][part_id]["EH_SOCKET"] = [server_settings["server2"]["IP"], eh_port]
-	    elif int(server_settings["server3"]["FROM"]) <= part_id and part_id <= int(server_settings["server3"]["TO"]): config["Participants"][part_id]["EH_SOCKET"] = [server_settings["server3"]["IP"], eh_port]
+	    if int(server_settings["server1"]["FROM"]) <= part_id and part_id <= int(server_settings["server1"]["TO"]): config["Participants"][part_id]["EH_SOCKET"] = [server1_ip, eh_port]
+	    elif int(server_settings["server2"]["FROM"]) <= part_id and part_id <= int(server_settings["server2"]["TO"]): config["Participants"][part_id]["EH_SOCKET"] = [server2_ip, eh_port]
+	    elif int(server_settings["server3"]["FROM"]) <= part_id and part_id <= int(server_settings["server3"]["TO"]): config["Participants"][part_id]["EH_SOCKET"] = [server3_ip, eh_port]
             #config["Participants"][part_id]["EH_SOCKET"] = ["localhost", eh_port]
             config["Participants"][part_id]["Flanc Key"] = "Part"+str(part_id)+"Key"
             eh_port += 1
@@ -203,9 +224,9 @@ def generate_global_config(asn_2_ip):
 
 ''' main '''
 if __name__ == '__main__':
-    #parser = argparse.ArgumentParser()
-    #parser.add_argument('frac', help='fraction of SDN fowarding peers')
-    #args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('server', help='current server')
+    args = parser.parse_args()
     #frac = float(args.frac)
     # Parse ribs to extract asn_2_ip
     asn_2_ip = getParticipants()
@@ -213,7 +234,7 @@ if __name__ == '__main__':
     #asn_2_ip = {"AS1":"1","AS2":"2","AS3":"3"}
     #asn_2_ports = {"AS1":[1], "AS2":[2,3], "AS3":[4,5]}
     asn_2_ip = json.load(open("asn_2_ip.json", 'r'))
-    asn_2_id = generate_global_config(asn_2_ip)
+    asn_2_id = generate_global_config(asn_2_ip, args)
 
     # Params
     #count = 10
