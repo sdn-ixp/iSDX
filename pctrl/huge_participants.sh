@@ -67,7 +67,14 @@ do
 			echo "running"
 			sleep 1m
 		done
-		sleep 7m
+		cd $INSTALL_ROOT/pctrl
+                output="output.txt"
+                rm -rf $INSTALL_ROOT/pctrl/$output
+                python xbgp_stopped.py $server $EXAMPLE_NAME > $INSTALL_ROOT/pctrl/$output
+
+                while [ ! -s $INSTALL_ROOT/pctrl/$output ]; do sleep 1; done
+
+		#sleep 7m
 		`ps axf | grep participant_controller | grep -v grep | awk '{print "kill -SIGINT " $1}' | { while IFS= read -r cmd; do  $cmd; done }`
 		sleep 30
 		echo "completed for $fraction"
