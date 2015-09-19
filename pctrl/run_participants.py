@@ -25,7 +25,7 @@ if __name__ == '__main__':
 	for i in range(from_id, to_id):
 		cmd = "cd " + args.base + "/pctrl ; python participant_controller.py " + args.example_name + " " + str(i) + " " + args.output_file + " > /dev/null 2>&1 &"
 		print cmd
-		#os.system(cmd)
+		os.system(cmd)
 
 
 

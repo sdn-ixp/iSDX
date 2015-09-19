@@ -35,13 +35,13 @@ do
 		echo "Initialize Ribs for $server"
 		cd $INSTALL_ROOT/pctrl ; python initialize_ribs.py $server $EXAMPLE_NAME
 
-		if [[ $server == "server1" ]]
+		if [ $server == "server1" ]; then
 			# Start the reflog
 			echo "Starting Reflog..."
 			`cd $INSTALL_ROOT/flanc ; nohup ./reflog.py 0.0.0.0 5555 sdx logger.txt > /dev/null 2>&1 &`
 		fi
 
-		if [[ $server == "server2" ]]
+		if [ $server == "server2" ]; then
 			# Start Route Server
 			echo "Starting RouteServer..."
 			`cd $INSTALL_ROOT/xrs ; nohup python route_server.py $EXAMPLE_NAME > /dev/null 2>&1 &`
@@ -51,7 +51,7 @@ do
 		OUTPUT_FILE_NAME=$EXPERIMENT_NAME"_FRAC"$fraction"_ITER"$iter
 		cd $INSTALL_ROOT/pctrl ; python run_participants.py $INSTALL_ROOT $server $EXAMPLE_NAME $OUTPUT_FILE_NAME > /dev/null 2>&1 &
 
-		if [[ $server == "server3" ]]
+		if [ $server == "server3" ]; then
 			#Starting XBGP	
 			echo "Starting XBGP..."
 			#`cd $INSTALL_ROOT/xbgp ; nohup ./xbgp.py localhost 6000 xrs $UPDATE_FILE $RATE $MODE > /dev/null 2>&1 &` 
@@ -61,7 +61,7 @@ do
 			echo "running"
 			sleep 1m
 		done
-
+		sleep 5m
 		`ps axf | grep participant_controller | grep -v grep | awk '{print "kill -SIGINT " $1}' | { while IFS= read -r cmd; do  $cmd; done }`
 		sleep 30
 		echo "completed for $fraction"
