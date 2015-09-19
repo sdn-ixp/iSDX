@@ -6,13 +6,16 @@ NUMBER_OF_PARTICIPANTS=1
 INSTALL_ROOT='/home/glex/sdx-parallel'
 EXAMPLE_NAME='test-largeIX'
 UPDATE_FILE='updates.txt'
-ITERATIONS=5
-FRAC=(0.2 0.4 0.6 0.8 1.0)
+ITERATIONS=1
+FRAC=(0.2)
 RATE=5
 MODE=0
 
+cd $INSTALL_ROOT/examples/$EXAMPLE_NAME/ribs ; rm -rf ribs_AS*
 
-cd $INSTALL_ROOT/examples/$EXAMPLE_NAME; python generate_configs.py ; cp $INSTALL_ROOT/examples/$EXAMPLE_NAME/asn_2_* $INSTALL_ROOT/pctrl
+cd $INSTALL_ROOT/examples/$EXAMPLE_NAME; python generate_configs.py $server; cp $INSTALL_ROOT/examples/$EXAMPLE_NAME/asn_2_* $INSTALL_ROOT/pctrl
+
+cd $INSTALL_ROOT/examples/$EXAMPLE_NAME/ribs; python duplicate_ribs.py
 
 for iter in `seq 1 $ITERATIONS`
 do
@@ -51,7 +54,7 @@ do
 		if [[ $server == "server3" ]]
 			#Starting XBGP	
 			echo "Starting XBGP..."
-			`cd $INSTALL_ROOT/xbgp ; nohup ./xbgp.py localhost 6000 xrs $UPDATE_FILE $RATE $MODE > /dev/null 2>&1 &` 
+			#`cd $INSTALL_ROOT/xbgp ; nohup ./xbgp.py localhost 6000 xrs $UPDATE_FILE $RATE $MODE > /dev/null 2>&1 &` 
 		fi
 		while [ `ps axf | grep xbgp | grep -v grep | wc -l` -ne 0 ] 
 		do 
