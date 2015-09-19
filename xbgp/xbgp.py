@@ -18,7 +18,7 @@ update_minutes = 300
 LOG=False
 
 class ExaBGPEmulator(object):
-    def __init__(self, address, port, authkey, input_file, speed_up, rate, mode, debug = False):
+    def __init__(self, address, port, authkey, input_file, speed_up, rate, mode, example_name, debug = False):
         self.logger = logging.getLogger('xbgp')
         if debug:
             self.logger.setLevel(logging.DEBUG)
@@ -35,6 +35,10 @@ class ExaBGPEmulator(object):
         self.us_thread = None
 	self.send_rate = int(rate)
         self.run = True
+	server_filename = "server_settings.cfg"
+        server_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "examples", example_name))
+        server_file = os.path.join(server_path, server_filename)
+        self.server_settings = json.load(open(server_file, 'r'))	
 
         self.update_queue = mp.Manager().Queue()
 
@@ -219,6 +223,19 @@ class ExaBGPEmulator(object):
         	self.us_thread.start()
 
     def stop(self):
+	server1 = tuple([self.server_settings["server1"]["IP"], int(self.server_settings["server1"]["PORT"])])
+	server2 = tuple([self.server_settings["server2"]["IP"], int(self.server_settings["server2"]["PORT"])])
+
+	conn = Client(tuple(server1, authkey = None)
+        data = 'terminate'
+        conn.send(json.dumps(data))
+        conn.close()
+
+	conn = Client(tuple(server2, authkey = None)
+        data = 'terminate'
+        conn.send(json.dumps(data))
+        conn.close()
+
         self.logger.debug('terminate')
 
         self.run = False
@@ -248,7 +265,7 @@ def main(argv):
     else:
         speedup = 1
 
-    exabgp_instance = ExaBGPEmulator(config["Route Server"]["XRS_SOCKET"][0], config["Route Server"]["XRS_SOCKET"][1], args.key, args.input, speedup, args.rate, args.mode, args.debug)
+    exabgp_instance = ExaBGPEmulator(config["Route Server"]["XRS_SOCKET"][0], config["Route Server"]["XRS_SOCKET"][1], args.key, args.input, speedup, args.rate, args.mode, args.dir, args.debug)
 
     exabgp_instance.start()
 
