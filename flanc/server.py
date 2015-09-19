@@ -1,49 +1,60 @@
 #!/usr/bin/env python
 #  Author:
 #  Muhammad Shahbaz (muhammad.shahbaz@gatech.edu)
-#  Rudiger Birkner (Networked Systems Group ETH Zurich)
-
-import logging
-import json
 
 from threading import Thread
 from multiprocessing import Queue
 from multiprocessing.connection import Listener
 
-''' Server of Reference Monitor to Receive Flow Mods '''
-class Server():
+''' bgp server '''
+class server():
 
-    def __init__(self, refmon, address, port, key):
-        self.logger = logging.getLogger('RefMon Server')
-        self.logger.info('server: start')
-
-        self.refmon = refmon
-        #self.listener = Listener((address, port), authkey=str(key))
-        self.listener = Listener((address, port))
+    def __init__(self, ref_socket, key):
+	print ref_socket
+        self.listener = Listener(ref_socket, authkey=key)
+        self.sender_queue = Queue()
+        self.receiver_queue = Queue()
 
     def start(self):
-        self.receive = True
-        self.receiver = Thread(target=self.receiver)
+        #print 'Connection accepted from', self.listener.last_a
+
+        #self.sender = Thread(target=_sender, args=(self.sender_queue))
+        #self.sender.start()
+
+        self.receiver = Thread(target=_receiver, args=(self.receiver_queue,self.listener))
         self.receiver.start()
 
-    ''' receiver '''
-    def receiver(self):
-        while self.receive:
-            conn = self.listener.accept()
-            self.logger.info('server: accepted connection from ' + str(self.listener.last_accepted))
+''' sender '''
+def _sender(queue):
+    while True:
+        try:
+	    conn = listener.accept()
+            line = queue.get()
+            conn.send(line)
+	    conn.close()
+        except:
+            pass
 
-            msg = None
-            while msg is None:
-                try:
-                    msg = conn.recv()
-                except:
-                    pass
-            self.logger.info('server: received message')
-            self.refmon.process_flow_mods(json.loads(msg))
+''' receiver '''
+def _receiver(queue, listener):
+    while True:	
+        try:
+            conn = listener.accept()
+	    print 'Connection accepted from', listener.last_accepted
+            line = conn.recv()
+            queue.put(line)
+	    conn.close()
+        except:
+            pass
 
-            conn.close()
-            self.logger.info('server: closed connection')
-
-    def stop(self):
-        self.receive = False
-	self.receiver.join(1)
+''' main '''
+if __name__ == '__main__':
+    while True:
+        server = server()
+        while True:
+            try:
+                print server.receiver_queue.get()
+                server.sender_queue.put('announce route %s next-hop %s as-path [ %s ]' % ('200.0.0.0/16','172.0.0.1','100'))
+            except:
+                print 'thread ended'
+                break
