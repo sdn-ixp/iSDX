@@ -152,7 +152,8 @@ class ParticipantController():
 
         if LOG: print self.idp, "Rule Messages OUTBOUND:: ", rule_msgs2
 
-        rule_msgs['changes'] = rule_msgs['changes'] + rule_msgs2['changes']
+	if rule_msgs2 is not None:
+	        rule_msgs['changes'] = rule_msgs['changes'] + rule_msgs2['changes']
 
         #TODO: Initialize Outbound Policies from RIB
         if LOG: print self.idp, "Rule Messages:: ", rule_msgs
