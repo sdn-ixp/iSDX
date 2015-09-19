@@ -23,9 +23,9 @@ if __name__ == '__main__':
 	listener = Listener(tuple([address, port]), authkey=key)
 	while True:
 		conn = listener.accept()
-		print 'Connection accepted from', listener.last_accepted
+		#print 'Connection accepted from', listener.last_accepted
 		line = conn.recv()
-		print line
+		#print line
 		if "terminate" in line: 
 			print "terminate"
 			conn.close()
