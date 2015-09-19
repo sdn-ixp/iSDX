@@ -155,6 +155,7 @@ def generate_global_config(asn_2_ip):
 
 	config["RefMon Server"]["IP"] = server_settings["server1"]["IP"]
 	config["Route Server"]["AH_SOCKET"] = [server_settings["server2"]["IP"], 6666]
+	config["Route Server"]["XRS_SOCKET"] = [server_settings["server2"]["IP"], 6000]
 
         for part in asn_2_ip:
             part_id = asn_2_id[part]
