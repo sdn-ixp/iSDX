@@ -1,6 +1,6 @@
 #!/bin/sh
 
-server="server2"
+server="server1"
 EXPERIMENT_NAME='change_frac'
 NUMBER_OF_PARTICIPANTS=1
 INSTALL_ROOT='/home/glex/sdx-parallel'
@@ -38,32 +38,38 @@ do
 		if [ $server == "server1" ]; then
 			# Start the reflog
 			echo "Starting Reflog..."
-			#`cd $INSTALL_ROOT/flanc ; nohup ./reflog.py 0.0.0.0 5555 sdx logger.txt > /dev/null 2>&1 &`
+			`cd $INSTALL_ROOT/flanc ; nohup ./reflog.py 0.0.0.0 5555 sdx logger.txt > /dev/null 2>&1 &`
 		fi
 
 		if [ $server == "server2" ]; then
 			# Start Route Server
 			echo "Starting RouteServer..."
-			#`cd $INSTALL_ROOT/xrs ; nohup python route_server.py $EXAMPLE_NAME > /dev/null 2>&1 &`
+			`cd $INSTALL_ROOT/xrs ; nohup python route_server.py $EXAMPLE_NAME > /dev/null 2>&1 &`
 		fi
 	
 		# Start Participant controller
 		OUTPUT_FILE_NAME=$EXPERIMENT_NAME"_FRAC"$fraction"_ITER"$iter
-		#cd $INSTALL_ROOT/pctrl ; python run_participants.py $INSTALL_ROOT $server $EXAMPLE_NAME $OUTPUT_FILE_NAME > /dev/null 2>&1 &
+		cmd=`cd $INSTALL_ROOT/pctrl ; python run_participants.py $INSTALL_ROOT $server $EXAMPLE_NAME $OUTPUT_FILE_NAME`
+		for i in `$cmd`
+                do
+                        echo "Starting Participant $i Controller..."
+                        cd $INSTALL_ROOT/pctrl ; python participant_controller.py $EXAMPLE_NAME $i $OUTPUT_FILE_NAME > /dev/null 2>&1 &
+                done
 
+		echo "$cmd" | { while IFS= read -r cmd; do  echo $cmd; $cmd; done }
 		if [ $server == "server3" ]; then
 			#Starting XBGP	
 			echo "Starting XBGP..."
-			#`cd $INSTALL_ROOT/xbgp ; nohup ./xbgp.py localhost 6000 xrs $UPDATE_FILE $RATE $MODE > /dev/null 2>&1 &` 
+			`cd $INSTALL_ROOT/xbgp ; nohup ./xbgp.py localhost 6000 xrs $UPDATE_FILE $RATE $MODE > /dev/null 2>&1 &` 
 		fi
 		while [ `ps axf | grep xbgp | grep -v grep | wc -l` -ne 0 ] 
 		do 
 			echo "running"
 			sleep 1m
 		done
-		#sleep 5m
-		#`ps axf | grep participant_controller | grep -v grep | awk '{print "kill -SIGINT " $1}' | { while IFS= read -r cmd; do  $cmd; done }`
-		#sleep 30
+		sleep 7m
+		`ps axf | grep participant_controller | grep -v grep | awk '{print "kill -SIGINT " $1}' | { while IFS= read -r cmd; do  $cmd; done }`
+		sleep 30
 		echo "completed for $fraction"
 	done
 done
