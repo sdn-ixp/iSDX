@@ -20,13 +20,5 @@ if __name__ == '__main__':
 	#print server_settings
 
 	from_id = int(server_settings[args.server]["FROM"])
-	to_id = int(server_settings[args.server]["TO"]) + 1
+	to_id = int(server_settings[args.server]["TO"])
 	print "seq " + str(from_id) + " " + str(to_id)
-	for i in range(from_id, to_id):
-		cmd = "cd " + args.base + "/pctrl ; python participant_controller.py " + args.example_name + " " + str(i) + " " + args.output_file + " > /dev/null 2>&1 &"
-		#cmd = "cd " + args.base + "/pctrl ; python participant_controller.py " + args.example_name + " " + str(i) + " " + args.output_file + " > data/P"+ str(i) +" &"
-		#print cmd
-		#os.system(cmd)
-
-
-

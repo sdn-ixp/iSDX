@@ -6,13 +6,13 @@ if [ $# -ne 1 ]; then
 else
 
 	server="$1"
-	EXPERIMENT_NAME='change_frac'
+	EXPERIMENT_NAME='all_participants'
 	NUMBER_OF_PARTICIPANTS=1
 	INSTALL_ROOT='/home/glex/sdx-parallel'
 	EXAMPLE_NAME='test-largeIX'
 	UPDATE_FILE='updates.txt'
-	ITERATIONS=1
-	FRAC=(0.2)
+	ITERATIONS=2
+	FRAC=(0.2 0.4)
 	RATE=5
 	MODE=0
 
