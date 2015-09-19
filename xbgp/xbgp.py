@@ -39,7 +39,6 @@ class ExaBGPEmulator(object):
         server_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "examples", example_name))
         server_file = os.path.join(server_path, server_filename)
         self.server_settings = json.load(open(server_file, 'r'))	
-
         self.update_queue = mp.Manager().Queue()
 
         self.conn = Client((address, port), authkey=authkey)
@@ -166,6 +165,7 @@ class ExaBGPEmulator(object):
             sleep(sleep_time)
 
             self.send_update(bgp_update)
+	self.stop()
 
     def bgp_update_rate_sender(self):
 	current_count = 0
@@ -194,6 +194,7 @@ class ExaBGPEmulator(object):
 	    count += 1
 	    #print "Current Count: ", current_count
             self.send_update(bgp_update)	
+	self.stop()
 
     def sleep_time(self, update_time):
         time_diff = update_time - self.simulation_start_time
@@ -226,12 +227,12 @@ class ExaBGPEmulator(object):
 	server1 = tuple([self.server_settings["server1"]["IP"], int(self.server_settings["server1"]["PORT"])])
 	server2 = tuple([self.server_settings["server2"]["IP"], int(self.server_settings["server2"]["PORT"])])
 
-	conn = Client(tuple(server1, authkey = None)
+	conn = Client(server1, authkey = None)
         data = 'terminate'
         conn.send(json.dumps(data))
         conn.close()
 
-	conn = Client(tuple(server2, authkey = None)
+	conn = Client(server2, authkey = None)
         data = 'terminate'
         conn.send(json.dumps(data))
         conn.close()
