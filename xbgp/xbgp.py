@@ -14,7 +14,8 @@ import multiprocessing as mp
 from Queue import Empty
 from multiprocessing.connection import Client
 
-update_minutes = 300
+# Run each iteration for half an hour duration
+update_minutes = 1800
 LOG=False
 
 class ExaBGPEmulator(object):
