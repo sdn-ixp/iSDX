@@ -2,12 +2,12 @@
 
 EXPERIMENT_NAME='change_rate'
 NUMBER_OF_PARTICIPANTS=1
-INSTALL_ROOT='/home/glex/sdx-parallel'
+INSTALL_ROOT='/home/ubuntu/sdx-parallel'
 EXAMPLE_NAME='test-largeIX'
 UPDATE_FILE='updates.txt'
 ITERATIONS=5
 RATE=(20 40 60 80 100)
-FRAC=0.1
+FRAC=0.2
 MODE=1
 
 cd $INSTALL_ROOT/examples/$EXAMPLE_NAME; python generate_configs.py ; cp $INSTALL_ROOT/examples/$EXAMPLE_NAME/asn_2_* $INSTALL_ROOT/pctrl
