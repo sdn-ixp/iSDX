@@ -91,6 +91,49 @@ After the expriment is complete. We will have all the log files in the directory
 
 Zip all the these files for data analysis. 
 
+## Experiment 3:
+
+##Goal: 
+Evaluate the performance of `pctrl` for when we instantiate all the 511 participants' controllers over three servers.
+
+
+### Step 1: Explore the experiment params
+```bash
+$ cd ~/sdx-parallel/pctrl/
+$ vi all_participants.sh
+```
+	
+Experiment's params:
+- server="$1" ---> Server's identifier which is given as command line input.
+- ITERATIONS =5 ---> Number of iterations.
+- FRAC=(0.2) ---> fraction of IXP participants for which each participant has forwarding actions.
+- RATE=5 ---> Doesn't matter for this experiment.
+- MODE=0 ---> The mode for `xbgp.py`.
+- *Update* the `INSTALL_ROOT`, which is the path where `sdx-parallel` is installed. 
+
+### Step 2: Configure the servers for the experiment on each server:
+On each server:
+```bash
+$ cd ~/sdx-parallel/examples/test-largeIX
+$ vi server_settings.cfg
+```
+In this file, change the IP address and check the range of participant controllers running over each server (TO/FROM). 
+
+### Step 3: Run the experiment on all the three servers:
+```bash
+$ . all_participants.sh <server-id>
+```
+e.g. on server1 we will run the command:
+```bash
+$ . all_participants.sh server1 
+```
+
+### Step 4: Data Collection
+After the expriment is complete. We will have all the log files in the directory: `~/sdx-parallel/pctrl/data/`. 
+
+Zip all the these files for data analysis. 
+
+
 
 ## Debugging
 
