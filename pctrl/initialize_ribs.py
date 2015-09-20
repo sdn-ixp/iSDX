@@ -207,11 +207,11 @@ if __name__ == '__main__':
 
     peers = {}
     asn_2_ip_small = {}
-    
+    id_2_asn = {v: k for k,v in asn_2_id.iteritems()}
     for i in range(from_id, to_id):
-	    asn = [k for k,v in asn_2_id.iteritems() if v is i]
-	    print "ID:: ", i,"ASN: 1: ", asn[0]
-    	    asn_2_ip_small[asn[0]] = asn_2_ip[asn[0]]
+	    asn = id_2_asn[i]
+	    print "ID:: ", i,"ASN: 1: ", asn
+    	    asn_2_ip_small[asn] = asn_2_ip[asn]
 
 
     #rib_fname = "rib_" + asn[0] +".txt"
