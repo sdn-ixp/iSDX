@@ -11,16 +11,12 @@ else
 	INSTALL_ROOT='/home/glex/sdx-parallel'
 	EXAMPLE_NAME='test-largeIX'
 	UPDATE_FILE='updates.txt'
-	ITERATIONS=2
-	FRAC=(0.2 0.4)
+	ITERATIONS=5
+	FRAC=(0.2)
 	RATE=5
 	MODE=0
 
-	cd $INSTALL_ROOT/examples/$EXAMPLE_NAME/ribs ; rm -rf ribs_AS*
-
 	cd $INSTALL_ROOT/examples/$EXAMPLE_NAME; python generate_configs.py $server; cp $INSTALL_ROOT/examples/$EXAMPLE_NAME/asn_2_* $INSTALL_ROOT/pctrl
-
-	cd $INSTALL_ROOT/examples/$EXAMPLE_NAME/ribs; python duplicate_ribs.py
 
 	for iter in `seq 1 $ITERATIONS`
 	do
