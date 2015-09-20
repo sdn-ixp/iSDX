@@ -44,9 +44,12 @@ def getParticipants():
                     line
                     tmp = line.split("FROM: ")[1].split("\n")[0].split(" ")
                     #print tmp
-                    if tmp[1] not in asn_2_ip:
-                        asn_2_ip[tmp[1]] = {}
-                    asn_2_ip[tmp[1]][tmp[0]] = 0
+		    tmp_fname = 'ribs/ribs_'+tmp[1]+'.txt'
+		    if tmp_fname in files:
+                    	if tmp[1] not in asn_2_ip:
+                        	asn_2_ip[tmp[1]] = {}
+		    
+                    	asn_2_ip[tmp[1]][tmp[0]] = 0
 
     #print asn_2_ip
     print "Assigning Ports"
