@@ -57,7 +57,6 @@ else
 				cd $INSTALL_ROOT/pctrl ; python participant_controller.py $EXAMPLE_NAME $i $OUTPUT_FILE_NAME > /dev/null 2>&1 &
 			done
 
-			echo "$cmd" | { while IFS= read -r cmd; do  echo $cmd; $cmd; done }
 			if [ $server == "server3" ]; then
 				#Starting XBGP	
 				echo "Starting XBGP..."
