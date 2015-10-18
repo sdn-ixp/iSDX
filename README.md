@@ -1,4 +1,4 @@
-# Ryu based SDX Controller
+# Industry Scale SDX Controller (iSDX)
 
 ## Installation: Vagrant Setup
 
@@ -20,14 +20,14 @@ To get started install these softwares on your ```host``` machine:
 
 ####Basics
 
-* Clone the ```sdx-ryu``` repository from Github:
+* Clone the ```iSDX``` repository from Github:
 ```bash 
-$ git clone https://github.com/sdn-ixp/sdx-ryu.git
+$ git clone https://github.com/sdn-ixp/iSDX.git
 ```
 
-* Change the directory to ```sdx-ryu```:
+* Change the directory to ```iSDX```:
 ```bash
-$ cd sdx-ryu
+$ cd iSDX
 ```
 
 * Now run the vagrant up command. This will read the Vagrantfile from the current directory and provision the VM accordingly:
@@ -42,4 +42,4 @@ The provisioning scripts will install all the required software (and their depen
 * [Exabgp](https://github.com/Exa-Networks/exabgp)
 
 ## Usage
-Run the different setups provided in the examples directory.
+Run the different setups provided in the examples directory. Check out the `test-ms` example for a simple case with three IXP participants.
