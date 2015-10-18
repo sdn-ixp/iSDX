@@ -1,4 +1,4 @@
-## This is the base Vagrantfile used to create the sdx-ryu box.
+# This is the base Vagrantfile used to create the sdx-ryu box.
 
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/trusty64"
@@ -15,17 +15,17 @@ Vagrant.configure("2") do |config|
   config.vm.network :forwarded_port, guest:6633, host:6637 # forwarding of port
 
   ## Provisioning
-  #config.vm.provision :shell, privileged: false, :path => "setup/basic-setup.sh"
-  #config.vm.provision :shell, privileged: false, :path => "setup/ovs-setup.sh"
-  #config.vm.provision :shell, privileged: false, :path => "setup/mininet-setup.sh"
-  #config.vm.provision :shell, privileged: false, :path => "setup/ryu-setup.sh"
-  #config.vm.provision :shell, privileged: false, :path => "setup/sdx-setup.sh"
+  config.vm.provision :shell, privileged: false, :path => "setup/basic-setup.sh"
+  config.vm.provision :shell, privileged: false, :path => "setup/ovs-setup.sh"
+  config.vm.provision :shell, privileged: false, :path => "setup/mininet-setup.sh"
+  config.vm.provision :shell, privileged: false, :path => "setup/ryu-setup.sh"
+  config.vm.provision :shell, privileged: false, :path => "setup/sdx-setup.sh"
 
   ## SSH config
   config.ssh.forward_x11 = true
 
 
-  config.vm.synced_folder ".", "/home/vagrant/sdx-parallel", type: "rsync",
-    rsync__exclude: ".git/"
+  #config.vm.synced_folder ".", "/home/vagrant/sdx-parallel", type: "rsync",
+  #  rsync__exclude: ".git/"
 
 end
