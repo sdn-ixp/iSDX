@@ -10,7 +10,7 @@ The setup consists of 3 participants (participating ASes) A, B and C. These part
 
 `Router A1, Router B1, Router C1, and Router C2`
 
-These routers are running the zebra and bgpd daemons, part of the `Quagga` routing engine. We've used the `MiniNext` emulation tool to create this topology.
+These routers are running the zebra and bgpd daemons, part of the `Quagga` routing engine. We've used the `MiniNext` emulation tool to create this topology. In this example we have three switches representing SDX switch: (1) Main Switch, (2) Outbound Switch, and (3) Inbound Switch. 
 
 ## Configuring the Setup
 
@@ -26,7 +26,7 @@ In this example, participant `A` has outbound policies defined in `/examples/tes
 * **Data Plane Configurations**
 
 In our experimental setup, we need edge routers running a routing engine to exchange BGP paths. 
-For our example, the MiniNext script is described in `examples/test-ms/mininext/sdx_mininext.py`.
+For our example, the MiniNext script is described in `/examples/test-ms/mininext/sdx_mininext.py`.
 
 The SDX route server (which is based on ExaBGP) runs in the root namespace. We created an interface in the root namespace itself and connected it with the SDX switch. 
 
