@@ -1,52 +1,85 @@
-# Test Setup - MultiSwitch
 
-## Mininext
+# Example: MultiSwitch
+
+## Topology
+
+![Experimental Setup]
+(https://docs.google.com/drawings/d/1aO6wxbl6jv7nfOHl8kKbb7I3vJYeWRar4Yv_6uYGeSE/pub?w=808&h=579)
+
+The setup consists of 3 participants (participating ASes) A, B and C. These participants have the following routers:
+
+`Router A1, Router B1, Router C1, and Router C2`
+
+These routers are running the zebra and bgpd daemons, part of the `Quagga` routing engine. We've used the `MiniNext` emulation tool to create this topology.
+
+## Configuring the Setup
+
+The experiment needs two types of configurations: the control plane (SDX controller), and the data plane (Mininet topology). 
+
+* **Control Plane Configurations**
+
+The control plane configuration involves defining participant's policies, configuring `bgp.conf` for SDX's route server (based on ExaBGP), configuring 'sdx_global.cfg' to provide each participant's information to the SDX controller. 
+
+In this example, participant `A` has outbound policies defined in `/examples/test-ms/policies/participant_1.py`. Participant `C` has inbound policies as defined in `/examples/test-ms/policies/participant_3.py`. Participant `B` has no policy.
+
+
+* **Data Plane Configurations**
+
+In our experimental setup, we need edge routers running a routing engine to exchange BGP paths. 
+For our example, the MiniNext script is described in `examples/test-ms/mininext/sdx_mininext.py`.
+
+The SDX route server (which is based on ExaBGP) runs in the root namespace. We created an interface in the root namespace itself and connected it with the SDX switch. 
+
+## Running the setup
+
+
+### Mininext
 ```bash
 $ cd ~/sdx-parallel/examples/test-ms/mininext
 $ sudo ./sdx_mininext.py
 ```
 
-## Run RefMon
+### Run RefMon
 
 ```bash
 $ ryu-manager ~/sdx-parallel/flanc/refmon.py --refmon-config ~/sdx-parallel/examples/test-ms/config/sdx_global.cfg
 ```
 
-## Run xctrl
+### Run xctrl
 
 ```bash
 $ cd ~/sdx-parallel/xctrl/
 $ ./xctrl.py ~/sdx-parallel/examples/test-ms/config/sdx_global.cfg
 ```
 
-## Run arpproxy
+### Run arpproxy
 
 ```bash
 $ cd ~/sdx-parallel/arproxy/
 $ sudo python arproxy.py test-ms
 ```
 
-## Run xrs
+### Run xrs
 
 ```bash
 $ cd ~/sdx-parallel/xrs/
 $ sudo python route_server.py test-ms
 ```
 
-## Run pctrl
+### Run pctrl
 
 ```bash
 $ cd ~/sdx-parallel/pctrl/
 $ sh run_pctrlr.sh
 ```
 
-## Run ExaBGP
+### Run ExaBGP
 
 ```bash
 exabgp ~/sdx-parallel/examples/test-ms/config/bgp.conf
 ```
 
-## Run iperf to test the policies
+## Testing the setup
 
 ### Test 1
 
@@ -87,12 +120,3 @@ $ sh clean.sh
 ### Note
 
 Always check with ```route``` whether ```a1``` sees ```140.0.0.0/24``` and ```150.0.0.0/24```, ```b1```/```c1```/```c2``` see ```100.0.0.0/24``` and ```110.0.0.0/24```
-
-## Different Setup (not yet tested)
-
-### Mininet with SDNIP
-
-```bash
-$ cd ~/sdx-parallel/examples/test-ms/mininet/
-$ sudo ./simple_sdx.py
-```
