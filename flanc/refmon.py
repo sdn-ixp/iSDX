@@ -3,6 +3,7 @@
 
 import os
 import logging
+import json
 
 from ryu.base import app_manager
 from ryu.controller import ofp_event
@@ -18,6 +19,7 @@ from ofp13 import FlowMod as OFP13FlowMod
 
 # REST API from rest import FlowModReceiver
 
+from time import time
 from server import Server
 
 LOG = False
@@ -42,6 +44,14 @@ class RefMon(app_manager.RyuApp):
 
         config_file = os.path.abspath(config_file_path)
 
+        # configure flow mod logging
+        if CONF['refmon']['flowmodlog']:
+            log_file = os.path.abspath(CONF['refmon']['flowmodlog'])
+            self.flow_mod_log = open(log_file, "w")
+            self.log = True
+        else:
+            self.log = False
+
         # load config from file
         self.logger.info('refmon: load config')
         try:
@@ -61,6 +71,9 @@ class RefMon(app_manager.RyuApp):
 
     def close(self):
         self.logger.info('refmon: stop')
+
+        if self.log:
+            self.flow_mod_log.close()
 
         #self.server.stop()
 
@@ -84,11 +97,19 @@ class RefMon(app_manager.RyuApp):
         if "auth_info" in msg:
             auth_info = msg["auth_info"]
 
-            # TODO: FLANC authorization here
-           
             origin = auth_info["participant"]
 
             if "flow_mods" in msg:
+
+                # flow mod logging
+                if self.log:
+                    self.flow_mod_log.write('BURST: ' + str(time()) + '\n')
+                    self.flow_mod_log.write('PARTICIPANT: ' + str(msg['auth_info']['participant']) + '\n')
+                    for flow_mod in msg["flow_mods"]:
+                        self.flow_mod_log.write(json.dumps(flow_mod) + '\n')
+                    self.flow_mod_log.write('\n')
+
+                # push flow mods to the data plane
                 self.logger.info('refmon: process ' + str(len(msg["flow_mods"])) + ' flowmods from ' + str(origin))
                 for flow_mod in msg["flow_mods"]:
                     if self.config.ofv == "1.0":
@@ -97,4 +118,3 @@ class RefMon(app_manager.RyuApp):
                         fm = OFP13FlowMod(self.config, origin, flow_mod)
 
                     self.controller.process_flow_mod(fm)
-
