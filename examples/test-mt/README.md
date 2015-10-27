@@ -12,7 +12,7 @@ $ sudo ./sdx_mininext.py
 ### Run RefMon
 
 ```bash
-$ ryu-manager ~/iSDX/flanc/refmon.py --refmon-config ~/sdx-parallel/examples/test-mt/config/sdx_global.cfg
+$ ryu-manager ~/iSDX/flanc/refmon.py --refmon-config ~/iSDX/examples/test-mt/config/sdx_global.cfg
 ```
 
 ### Run xctrl
@@ -83,7 +83,7 @@ mininext> a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2
 ## Cleanup
 In the `pctrl` directory, run the `clean` script. 
 ```bash
-$ cd ~/sdx-parallel/pctrl/
+$ cd ~/iSDX/pctrl/
 $ sh clean.sh
 ```
 
