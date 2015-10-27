@@ -21,8 +21,22 @@ Before installing it, replace flags.py with the provided file
 $ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config <path of config file>
 ```
 
-There are two sample config files provided:
+To log all received flow mods to a file just run it like this:
 
-* refmon_ms.cfg - a config file for an SDX using Supersets and Multiple-Switches
+```bash
+$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config <path of config file> --refmon-flowmodlog <path of log file>
+```
 
-* refmon_mt.cfg - a config file for an SDX using Supersets and Multiple-Tables
+# FLANC - Reference Monitor Log Replay
+
+## Run RefMon
+
+After logging all the flow mods, the flow mods can be replayed using LogClient.
+
+```bash
+$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config <path of config file>
+```
+
+```bash
+$ ./log_client.py localhost 5555 sdx <path of input file>
+```
