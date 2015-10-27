@@ -1,39 +1,55 @@
 # Test Setup - MultiTable
 
-## Mininet with SDNIP or Mininext
+## Running the setup
 
-### Mininet with SDNIP
-```bash
-$ cd ~/sdx-parallel/examples/test-mt/mininet/
-$ sudo ./simple_sdx.py
-```
 
 ### Mininext
 ```bash
-$ cd ~/sdx-parallel/examples/test-mt/mininext(
+$ cd ~/sdx-parallel/examples/test-mt/mininext
 $ sudo ./sdx_mininext.py
 ```
 
-## Run xctrl
+### Run RefMon
+
+```bash
+$ ryu-manager ~/sdx-parallel/flanc/refmon.py --refmon-config ~/sdx-parallel/examples/test-mt/config/sdx_global.cfg
+```
+
+### Run xctrl
 
 ```bash
 $ cd ~/sdx-parallel/xctrl/
 $ ./xctrl.py ~/sdx-parallel/examples/test-mt/config/sdx_global.cfg
 ```
 
-## Run RefMon
+### Run arpproxy
 
 ```bash
-$ ryu-manager ~/sdx-parallel/flanc/refmon.py --refmon-config ~/sdx-parallel/examples/test-mt/config/sdx_global.cfg
+$ cd ~/sdx-parallel/arproxy/
+$ sudo python arproxy.py test-mt
 ```
 
-## Run ExaBGP
+### Run xrs
 
 ```bash
-exabgp ~/sdx-parallel/examples/test-ms/config/bgp.conf
+$ cd ~/sdx-parallel/xrs/
+$ sudo python route_server.py test-mt
 ```
 
-## Run iperf to test the policies
+### Run pctrl
+
+```bash
+$ cd ~/sdx-parallel/pctrl/
+$ sh run_pctrlr.sh
+```
+
+### Run ExaBGP
+
+```bash
+exabgp ~/sdx-parallel/examples/test-mt/config/bgp.conf
+```
+
+## Testing the setup
 
 ### Test 1
 
@@ -74,13 +90,3 @@ $ sh clean.sh
 ### Note
 
 Always check with ```route``` whether ```a1``` sees ```140.0.0.0/24``` and ```150.0.0.0/24```, ```b1```/```c1```/```c2``` see ```100.0.0.0/24``` and ```110.0.0.0/24```
-
-## Different Setup (not yet tested)
-
-### Mininet with SDNIP
-
-```bash
-$ cd ~/sdx-parallel/examples/test-ms/mininet/
-$ sudo ./simple_sdx.py
-```
-
