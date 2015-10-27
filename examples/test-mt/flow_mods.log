@@ -1,0 +1,220 @@
+BURST: 1445949348.13
+PARTICIPANT: 0
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [1, 65535], "action": {"fwd": [1]}, "match": {"eth_dst": "08:00:27:89:3b:ff", "tcp_src": 179}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [2, 65535], "action": {"fwd": [1]}, "match": {"eth_dst": "08:00:27:89:3b:ff", "tcp_dst": 179}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [3, 65535], "action": {"fwd": [3]}, "match": {"eth_dst": "08:00:27:89:3b:9f", "tcp_src": 179}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [4, 65535], "action": {"fwd": [3]}, "match": {"eth_dst": "08:00:27:89:3b:9f", "tcp_dst": 179}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [5, 65535], "action": {"fwd": [4]}, "match": {"eth_dst": "08:00:27:92:18:1f", "tcp_src": 179}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [6, 65535], "action": {"fwd": [4]}, "match": {"eth_dst": "08:00:27:92:18:1f", "tcp_dst": 179}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [7, 65535], "action": {"fwd": [5]}, "match": {"eth_dst": "08:00:27:54:56:ea", "tcp_src": 179}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [8, 65535], "action": {"fwd": [5]}, "match": {"eth_dst": "08:00:27:54:56:ea", "tcp_dst": 179}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [9, 65535], "action": {"fwd": [6]}, "match": {"eth_dst": "08:00:27:bd:f8:b2", "tcp_src": 179}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [10, 65535], "action": {"fwd": [6]}, "match": {"eth_dst": "08:00:27:bd:f8:b2", "tcp_dst": 179}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 5, "cookie": [11, 65535], "action": {"fwd": [2]}, "match": {"arp_tpa": ["172.0.1.0", "255.255.255.0"], "eth_type": 2054}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [12, 65535], "action": {"fwd": [1]}, "match": {"eth_dst": "08:00:27:89:3b:ff", "eth_type": 2054}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [13, 65535], "action": {"fwd": [3]}, "match": {"eth_dst": "08:00:27:89:3b:9f", "eth_type": 2054}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [14, 65535], "action": {"fwd": [3], "set_eth_dst": "ff:ff:ff:ff:ff:ff"}, "match": {"eth_dst": ["00:00:00:00:00:01", "00:00:00:00:ff:ff"], "eth_type": 2054, "in_port": 2}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [15, 65535], "action": {"fwd": [4]}, "match": {"eth_dst": "08:00:27:92:18:1f", "eth_type": 2054}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [16, 65535], "action": {"fwd": [4], "set_eth_dst": "ff:ff:ff:ff:ff:ff"}, "match": {"eth_dst": ["00:00:00:00:00:02", "00:00:00:00:ff:ff"], "eth_type": 2054, "in_port": 2}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [17, 65535], "action": {"fwd": [5]}, "match": {"eth_dst": "08:00:27:54:56:ea", "eth_type": 2054}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [18, 65535], "action": {"fwd": [6]}, "match": {"eth_dst": "08:00:27:bd:f8:b2", "eth_type": 2054}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 6, "cookie": [19, 65535], "action": {"fwd": [5, 6], "set_eth_dst": "ff:ff:ff:ff:ff:ff"}, "match": {"eth_dst": ["00:00:00:00:00:03", "00:00:00:00:ff:ff"], "eth_type": 2054, "in_port": 2}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 5, "cookie": [20, 65535], "action": {"fwd": [3, 4, 5, 6, 2, 1]}, "match": {"eth_dst": "ff:ff:ff:ff:ff:ff", "eth_type": 2054}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 4, "cookie": [21, 65535], "action": {"fwd": ["outbound"], "set_eth_src": "08:00:27:89:3b:9f"}, "match": {"in_port": 3}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 2, "cookie": [22, 65535], "action": {"fwd": ["outbound"]}, "match": {"eth_dst": ["80:00:00:00:00:00", "80:00:00:00:00:00"]}}
+{"rule_type": "main-in", "mod_type": "insert", "priority": 1, "cookie": [23, 65535], "action": {"fwd": ["main-out"]}, "match": {}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 1, "cookie": [24, 65535], "action": {"fwd": ["inbound"]}, "match": {}}
+{"rule_type": "inbound", "mod_type": "insert", "priority": 3, "cookie": [25, 65535], "action": {"fwd": ["main-out"], "set_eth_dst": "00:00:00:00:00:03"}, "match": {"eth_dst": ["00:00:00:00:00:03", "00:00:00:00:ff:ff"]}}
+{"rule_type": "inbound", "mod_type": "insert", "priority": 1, "cookie": [26, 65535], "action": {"fwd": ["main-out"]}, "match": {}}
+{"rule_type": "main-out", "mod_type": "insert", "priority": 4, "cookie": [27, 65535], "action": {"fwd": [5], "set_eth_dst": "08:00:27:54:56:ea"}, "match": {"eth_dst": ["00:00:00:00:00:03", "00:00:00:ff:ff:ff"]}}
+{"rule_type": "main-out", "mod_type": "insert", "priority": 4, "cookie": [28, 65535], "action": {"fwd": [6], "set_eth_dst": "08:00:27:bd:f8:b2"}, "match": {"eth_dst": ["00:00:00:01:00:03", "00:00:00:ff:ff:ff"]}}
+{"rule_type": "main-out", "mod_type": "insert", "priority": 4, "cookie": [29, 65535], "action": {"fwd": [3], "set_eth_dst": "08:00:27:89:3b:9f"}, "match": {"eth_dst": ["00:00:00:00:00:01", "00:00:00:00:ff:ff"]}}
+{"rule_type": "main-out", "mod_type": "insert", "priority": 4, "cookie": [30, 65535], "action": {"fwd": [4], "set_eth_dst": "08:00:27:92:18:1f"}, "match": {"eth_dst": ["00:00:00:00:00:02", "00:00:00:00:ff:ff"]}}
+
+BURST: 1445949356.9
+PARTICIPANT: 1
+
+BURST: 1445949356.91
+PARTICIPANT: 2
+
+BURST: 1445949356.93
+PARTICIPANT: 3
+{"rule_type": "inbound", "mod_type": "insert", "priority": 4, "cookie": [1, 65535], "action": {"fwd": ["main-in"], "set_eth_dst": "00:00:00:00:00:03"}, "match": {"eth_dst": ["00:00:00:00:00:03", "00:00:00:00:ff:ff"], "tcp_dst": 4321}}
+{"rule_type": "inbound", "mod_type": "insert", "priority": 4, "cookie": [2, 65535], "action": {"fwd": ["main-in"], "set_eth_dst": "00:00:00:01:00:03"}, "match": {"eth_dst": ["00:00:00:00:00:03", "00:00:00:00:ff:ff"], "tcp_dst": 4322}}
+
+BURST: 1445949356.97
+PARTICIPANT: 2
+
+BURST: 1445949357.02
+PARTICIPANT: 3
+{"rule_type": "inbound", "mod_type": "insert", "priority": 4, "cookie": [1, 65535], "action": {"fwd": ["main-in"], "set_eth_dst": "00:00:00:00:00:03"}, "match": {"eth_dst": ["00:00:00:00:00:03", "00:00:00:00:ff:ff"], "tcp_dst": 4321}}
+{"rule_type": "inbound", "mod_type": "insert", "priority": 4, "cookie": [2, 65535], "action": {"fwd": ["main-in"], "set_eth_dst": "00:00:00:01:00:03"}, "match": {"eth_dst": ["00:00:00:00:00:03", "00:00:00:00:ff:ff"], "tcp_dst": 4322}}
+
+BURST: 1445949357.07
+PARTICIPANT: 3
+{"rule_type": "inbound", "mod_type": "insert", "priority": 4, "cookie": [1, 65535], "action": {"fwd": ["main-in"], "set_eth_dst": "00:00:00:00:00:03"}, "match": {"eth_dst": ["00:00:00:00:00:03", "00:00:00:00:ff:ff"], "tcp_dst": 4321}}
+{"rule_type": "inbound", "mod_type": "insert", "priority": 4, "cookie": [2, 65535], "action": {"fwd": ["main-in"], "set_eth_dst": "00:00:00:01:00:03"}, "match": {"eth_dst": ["00:00:00:00:00:03", "00:00:00:00:ff:ff"], "tcp_dst": 4322}}
+
+BURST: 1445949357.11
+PARTICIPANT: 2
+
+BURST: 1445949357.12
+PARTICIPANT: 2
+
+BURST: 1445949357.18
+PARTICIPANT: 1
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+
+BURST: 1445949357.24
+PARTICIPANT: 1
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+
+BURST: 1445949357.29
+PARTICIPANT: 1
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [1, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [2, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "remove", "priority": 0, "cookie": [3, 65535], "action": {}, "match": {"eth_src": "08:00:27:89:3b:9f"}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [1, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:02"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["20:00:00:00:00:00", "60:00:00:00:00:00"], "tcp_dst": 80}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [2, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4321}}
+{"rule_type": "outbound", "mod_type": "insert", "priority": 2, "cookie": [3, 65535], "action": {"fwd": ["inbound"], "set_eth_dst": "80:00:00:00:00:03"}, "match": {"eth_src": "08:00:27:89:3b:9f", "eth_dst": ["10:00:00:00:00:00", "50:00:00:00:00:00"], "tcp_dst": 4322}}
+
