@@ -11,20 +11,20 @@ Clone Ryu
 
 Before installing it, replace flags.py with the provided file
 
-    $ cp ~/sdx-ryu/flanc/flags.py ~/ryu/ryu/flags.py
+    $ cp ~/iSDX/flanc/flags.py ~/ryu/ryu/flags.py
     $ cd ~/ryu
     $ sudo python ./setup.py install
 
 ## Run RefMon
 
 ```bash
-$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config <path of config file>
+$ ryu-manager ~/iSDX/flanc/refmon.py --refmon-config <path of config file>
 ```
 
 To log all received flow mods to a file just run it like this:
 
 ```bash
-$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config <path of config file> --refmon-flowmodlog <path of log file>
+$ ryu-manager ~/iSDX/flanc/refmon.py --refmon-config <path of config file> --refmon-flowmodlog <path of log file>
 ```
 
 # FLANC - Reference Monitor Log Replay
@@ -34,7 +34,7 @@ $ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config <path of config file> --
 After logging all the flow mods, the flow mods can be replayed using LogClient.
 
 ```bash
-$ ryu-manager ~/sdx-ryu/flanc/refmon.py --refmon-config <path of config file>
+$ ryu-manager ~/iSDX/flanc/refmon.py --refmon-config <path of config file>
 ```
 
 ```bash
