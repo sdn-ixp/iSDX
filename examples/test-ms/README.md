@@ -35,48 +35,48 @@ The SDX route server (which is based on ExaBGP) runs in the root namespace. We c
 
 ### Mininext
 ```bash
-$ cd ~/sdx-parallel/examples/test-ms/mininext
+$ cd ~/iSDX/examples/test-ms/mininext
 $ sudo ./sdx_mininext.py
 ```
 
 ### Run RefMon
 
 ```bash
-$ ryu-manager ~/sdx-parallel/flanc/refmon.py --refmon-config ~/sdx-parallel/examples/test-ms/config/sdx_global.cfg
+$ ryu-manager ~/iSDX/flanc/refmon.py --refmon-config ~/iSDX/examples/test-ms/config/sdx_global.cfg
 ```
 
 ### Run xctrl
 
 ```bash
-$ cd ~/sdx-parallel/xctrl/
-$ ./xctrl.py ~/sdx-parallel/examples/test-ms/config/sdx_global.cfg
+$ cd ~/iSDX/xctrl/
+$ ./xctrl.py ~/iSDX/examples/test-ms/config/sdx_global.cfg
 ```
 
 ### Run arpproxy
 
 ```bash
-$ cd ~/sdx-parallel/arproxy/
+$ cd ~/iSDX/arproxy/
 $ sudo python arproxy.py test-ms
 ```
 
 ### Run xrs
 
 ```bash
-$ cd ~/sdx-parallel/xrs/
+$ cd ~/iSDX/xrs/
 $ sudo python route_server.py test-ms
 ```
 
 ### Run pctrl
 
 ```bash
-$ cd ~/sdx-parallel/pctrl/
+$ cd ~/iSDX/pctrl/
 $ sh run_pctrlr.sh
 ```
 
 ### Run ExaBGP
 
 ```bash
-exabgp ~/sdx-parallel/examples/test-ms/config/bgp.conf
+exabgp ~/iSDX/examples/test-ms/config/bgp.conf
 ```
 
 ## Testing the setup
@@ -113,7 +113,7 @@ mininext> a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2
 ## Cleanup
 In the `pctrl` directory, run the `clean` script. 
 ```bash
-$ cd ~/sdx-parallel/pctrl/
+$ cd ~/iSDX/pctrl/
 $ sh clean.sh
 ```
 
