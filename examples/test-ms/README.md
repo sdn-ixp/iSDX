@@ -48,7 +48,7 @@ $ ryu-manager ~/iSDX/flanc/refmon.py --refmon-config ~/iSDX/examples/test-ms/con
 ```
 
 ### Run xctrl (IXP Controller)
-The IXP controller installs forwarding table entries in the input and output switches in the switch fabric via the fabric manager. Because all of these rules are static, they are computed only at initialization. Moreover, the IXP controller handles ARP queries and replies in the fabric and ensures that these messages are forwarded to the respective participants’ controllers via ARP relay.
+The IXP controller initializes the sdx fabric and installs all static default forwarding rules. It also handles ARP queries and replies in the fabric and ensures that these messages are forwarded to the respective participants’ controllers via ARP relay.
 
 ```bash
 $ cd ~/iSDX/xctrl/
@@ -80,7 +80,7 @@ $ sh run_pctrlr.sh
 ```
 
 ### Run ExaBGP
-ExaBGP allows engineers to control their network from commodity servers. Think of it as Software Defined Networking using BGP by transforming BGP messages into friendly plain text or JSON.
+It is part of the `xrs` module itself and it handles the BGP sessions with all the border routers of the SDX participants.
 
 ```bash
 exabgp ~/iSDX/examples/test-ms/config/bgp.conf
