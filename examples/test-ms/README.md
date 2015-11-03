@@ -96,7 +96,7 @@ The participants have specified the following policies:
 
 _Participant A - outbound:_
 
-    matcht(dstport=80) >> fwd(B) + match(dstport=4321/4322) >> fwd(C)
+    match(dstport=80) >> fwd(B) + match(dstport=4321/4322) >> fwd(C)
 
 _Participant C - inbound:_
 
