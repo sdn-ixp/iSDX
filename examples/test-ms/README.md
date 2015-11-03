@@ -135,6 +135,7 @@ Successful `iperf` connections should look like this:
     [  3]  0.0- 2.0 sec  1.53 GBytes  6.59 Gbits/sec  
 
 In case the `iperf` connection is not successful, you should see the message, `connect failed: Connection refused.`
+Notice that here each iperf tests one of the participants' policies. The iperf has always the same destination ip, but reaches different hosts (b1, c1, c2) due to the more specific SDN policies.
 
 ## Cleanup
 In the `pctrl` directory, run the `clean` script. 
