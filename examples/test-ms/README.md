@@ -39,34 +39,40 @@ $ cd ~/iSDX/examples/test-ms/mininext
 $ sudo ./sdx_mininext.py
 ```
 
-### Run RefMon
+### Run RefMon (Fabric Manager)
+The RefMon module is based on Ryu. It listens for forwarding table modification instructions from the participant controllers and the IXP controller and installs the changes in the switch fabric. It abstracts the details of the underlying switch hardware and OpenFlow messages from the participants and the IXP controllers and also ensures isolation between the participants.
+
 
 ```bash
 $ ryu-manager ~/iSDX/flanc/refmon.py --refmon-config ~/iSDX/examples/test-ms/config/sdx_global.cfg
 ```
 
-### Run xctrl
+### Run xctrl (IXP Controller)
+The IXP controller installs forwarding table entries in the input and output switches in the switch fabric via the fabric manager. Because all of these rules are static, they are computed only at initialization. Moreover, the IXP controller handles ARP queries and replies in the fabric and ensures that these messages are forwarded to the respective participants’ controllers via ARP relay.
 
 ```bash
 $ cd ~/iSDX/xctrl/
 $ ./xctrl.py ~/iSDX/examples/test-ms/config/sdx_global.cfg
 ```
 
-### Run arpproxy
+### Run arpproxy (ARP Relay)
+This module receives ARP requests from the IXP fabric and it relays them to the corresponding participant's controller. It also receives ARP replies from the participant controllers which it relays to the IXP fabric. 
 
 ```bash
 $ cd ~/iSDX/arproxy/
 $ sudo python arproxy.py test-ms
 ```
 
-### Run xrs
+### Run xrs (BGP Relay)
+The BGP relay is based on ExaBGP and is similar to a BGP route server in terms of establishing peering sessions with the border routers. Unlike a route server, it does not perform any route selection. Instead, it multiplexes all BGP routes to the participant controllers.
 
 ```bash
 $ cd ~/iSDX/xrs/
 $ sudo python route_server.py test-ms
 ```
 
-### Run pctrl
+### Run pctrl (Participant SDN Controller)
+Each participant SDN controller computes a compressed set of forwarding table entries, which are installed into the inbound and outbound switches via the fabric manager, and continuously updates the entries in response to the changes in SDN policies and BGP updates. The participant controller receives BGP updates from the BGP relay. It processes the incoming BGP updates by selecting the best route and updating the RIBs. The participant controller also generates BGP announcements destined to the border routers of this participant, which are sent to the routers via the BGP relay.
 
 ```bash
 $ cd ~/iSDX/pctrl/
@@ -74,6 +80,7 @@ $ sh run_pctrlr.sh
 ```
 
 ### Run ExaBGP
+ExaBGP allows engineers to control their network from commodity servers. Think of it as Software Defined Networking using BGP by transforming BGP messages into friendly plain text or JSON.
 
 ```bash
 exabgp ~/iSDX/examples/test-ms/config/bgp.conf
