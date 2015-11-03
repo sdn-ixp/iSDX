@@ -8,7 +8,7 @@ from threading import Thread
 from multiprocessing.connection import Client
 import os
 home_path = os.environ['HOME']
-logfile = home_path+'/sdx-parallel/xrs/client.log'
+logfile = home_path+'/iSDX/xrs/client.log'
 
 '''Write output to stdout'''
 def _write(stdout,data):
