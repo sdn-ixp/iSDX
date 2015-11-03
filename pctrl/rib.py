@@ -12,7 +12,7 @@ class rib():
 
         with lock():
             # Create a database in RAM
-            self.db = sqlite3.connect('/home/vagrant/sdx-parallel/xrs/ribs/'+ip+'.db',check_same_thread=False)
+            self.db = sqlite3.connect('/home/vagrant/iSDX/xrs/ribs/'+ip+'.db',check_same_thread=False)
             self.db.row_factory = sqlite3.Row
             self.name = name
 
