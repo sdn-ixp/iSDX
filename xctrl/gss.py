@@ -96,13 +96,14 @@ class GSS(object):
             ### direct gratuituous ARPs only to the respective participant
             i = 0
             for port in participant.ports:
-                vmac = self.vmac_builder.part_port_match(self, participant.name, i, inbound_bit = False)
+                vmac = self.vmac_builder.part_port_match(participant.name, i, inbound_bit = False)
                 vmac_mask = self.vmac_builder.part_port_mask(False)
                 match = {"in_port": self.config.arp_proxy.ports[0].id,
                          "eth_type": ETH_TYPE_ARP,
                          "eth_dst": (vmac, vmac_mask)}
                 action = {"set_eth_dst": MAC_BROADCAST, "fwd": [port.id]}
                 self.fm_builder.add_flow_mod("insert", rule_type, ARP_PRIORITY, match, action)
+                i += 1
 
         ### flood ARP requests - but only on non switch-switch ports
         match = {"eth_type": ETH_TYPE_ARP, "eth_dst": MAC_BROADCAST}
