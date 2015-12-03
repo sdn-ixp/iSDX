@@ -283,15 +283,19 @@ class ParticipantController():
         else:
             vmac = "whoa" # MDS vmac goes here
 
-
+        arp_responses = list()
 
         # if this is gratuitous, send a reply to the part's ID
         if part_mac is None:
             gratuitous = True
             # set fields appropriately for gratuitous arps
-            eth_dst = vmac_next_hop_match(self.id, self.supersets, False)
-            tpa = vnh
-            tha = vmac
+            i = 0
+            for port in self.cfg.ports:
+                eth_dst = vmac_part_port_match(self.id, i, self.supersets, False)
+                arp_responses.append({'SPA': vnh, 'TPA': vnh,
+                                   'SHA': vmac, 'THA': vmac,
+                                   'eth_src': vmac, 'eth_dst': eth_dst})
+                i += 1
 
 
         else: # if it wasn't gratuitous
@@ -302,22 +306,17 @@ class ParticipantController():
                     part_ip = port["IP"]
                     break
             # set field appropriately for arp responses
-            eth_dst = part_mac
-            tpa = part_ip
-            tha = part_mac
-
-
-        arp_fields = {  'SPA':vnh,     'TPA':tpa, 
-                        'SHA':vmac,     'THA':tha, 
-                        'eth_src':vmac, 'eth_dst':eth_dst}
+            arp_responses.append({'SPA': vnh, 'TPA': part_ip,
+                        'SHA': vmac, 'THA': part_mac,
+                        'eth_src': vmac, 'eth_dst': part_mac})
 
         if LOG: 
             if gratuitous:
-                print self.idp, "Sending Gratuitious ARP:", arp_fields
+                print self.idp, "Sending Gratuitious ARP:", arp_responses
             else:
-                print self.idp, "Sending ARP Response:", arp_fields
-
-        self.arp_client.send(json.dumps(arp_fields))
+                print self.idp, "Sending ARP Response:", arp_responses
+        for arp_response in arp_responses:
+            self.arp_client.send(json.dumps(arp_response))
 
 
     def process_bgp_route(self, route):

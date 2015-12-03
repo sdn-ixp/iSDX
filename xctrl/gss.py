@@ -94,15 +94,15 @@ class GSS(object):
                 self.fm_builder.add_flow_mod("insert", rule_type, ARP_PRIORITY, match, action)
 
             ### direct gratuituous ARPs only to the respective participant
-            vmac = self.vmac_builder.next_hop_match(participant.name, False)
-            vmac_mask = self.vmac_builder.next_hop_mask(False)
-            match = {"in_port": self.config.arp_proxy.ports[0].id, "eth_type": ETH_TYPE_ARP, "eth_dst": (vmac, vmac_mask)}
-            action = {"set_eth_dst": MAC_BROADCAST}
-            fwd = []
+            i = 0
             for port in participant.ports:
-                fwd.append(port.id)
-            action["fwd"] = fwd
-            self.fm_builder.add_flow_mod("insert", rule_type, ARP_PRIORITY, match, action)
+                vmac = self.vmac_builder.part_port_match(self, participant.name, i, inbound_bit = False)
+                vmac_mask = self.vmac_builder.part_port_mask(False)
+                match = {"in_port": self.config.arp_proxy.ports[0].id,
+                         "eth_type": ETH_TYPE_ARP,
+                         "eth_dst": (vmac, vmac_mask)}
+                action = {"set_eth_dst": MAC_BROADCAST, "fwd": [port.id]}
+                self.fm_builder.add_flow_mod("insert", rule_type, ARP_PRIORITY, match, action)
 
         ### flood ARP requests - but only on non switch-switch ports
         match = {"eth_type": ETH_TYPE_ARP, "eth_dst": MAC_BROADCAST}
@@ -125,7 +125,8 @@ class GSS(object):
                     if mac is None:
                         mac = port.mac
                     match = {"in_port": port.id}
-                    action = {"set_eth_src": mac, "fwd": ["outbound"]}
+                    action = {"set_eth_src": mac,
+                              "fwd": ["outbound"]}
                     self.fm_builder.add_flow_mod("insert", rule_type, OUTBOUND_PRIORITY, match, action) 
 
     def handle_participant_with_inbound(self, rule_type, mask_inbound_bit):
@@ -138,7 +139,8 @@ class GSS(object):
                     i += 1
                     vmac_mask = self.vmac_builder.part_port_mask(mask_inbound_bit)
                     match = {"eth_dst": (vmac, vmac_mask)}
-                    action = {"set_eth_dst": port.mac, "fwd": [port.id]}
+                    action = {"set_eth_dst": port.mac,
+                              "fwd": [port.id]}
                     self.fm_builder.add_flow_mod("insert", rule_type, FORWARDING_PRIORITY, match, action)
 
     def default_forwarding(self, rule_type):
@@ -149,7 +151,8 @@ class GSS(object):
                 vmac_mask = self.vmac_builder.next_hop_mask(False)
                 port = participant.ports[0]
                 match = {"eth_dst": (vmac, vmac_mask)}
-                action = {"set_eth_dst": port.mac, "fwd": [port.id]}
+                action = {"set_eth_dst": port.mac,
+                          "fwd": [port.id]}
                 self.fm_builder.add_flow_mod("insert", rule_type, FORWARDING_PRIORITY, match, action)
 
     def default_forwarding_inbound(self, rule_type, fwd):
