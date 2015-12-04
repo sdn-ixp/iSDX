@@ -115,8 +115,7 @@ class GSS(object):
         self.fm_builder.add_flow_mod("insert", rule_type, ARP_BROADCAST_PRIORITY, match, action)
 
         ### forward all ARP requests to the arp switch
-        match = {"eth_type": ETH_TYPE_ARP,
-                 "eth_dst": MAC_BROADCAST}
+        match = {"eth_type": ETH_TYPE_ARP}
         action = {"fwd": ["arp"]}
         self.fm_builder.add_flow_mod("insert", rule_type, VNH_ARP_FILTER_PRIORITY, match, action)
 
