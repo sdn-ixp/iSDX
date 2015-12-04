@@ -109,7 +109,6 @@ class GSS(object):
         for participant in self.config.peers.values():
             for port in participant.ports:
                 ports.append(port.id)
-        ports.append(self.config.arp_proxy.ports[0].id)
         ports.append(self.config.route_server.ports[0].id)
 
         action = {"fwd": ports}
@@ -136,7 +135,7 @@ class GSS(object):
         self.fm_builder.add_flow_mod("insert", rule_type, DEFAULT_PRIORITY, match, action)
 
         ### send all ARP replies from the ARP proxy to the main switch
-        match = {"eth_type": ETH_TYPE_ARP, "in_port": "arp"}
+        match = {"eth_type": ETH_TYPE_ARP, "in_port": "arp proxy"}
         action = {"fwd": ["main"]}
         self.fm_builder.add_flow_mod("insert", rule_type, DEFAULT_PRIORITY, match, action)
 

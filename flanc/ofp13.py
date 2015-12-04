@@ -65,8 +65,14 @@ class FlowMod():
                 if isinstance( value, int ) or value.isdigit():
                     validated_matches["in_port"] = value
                 else:
-                    if self.rule_type in self.config.datapath_ports and value in self.config.datapath_ports[self.rule_type]:
-                        validated_matches["in_port"] = self.config.datapath_ports[self.rule_type][value]
+                    if self.config.tables:
+                        if self.rule_type == "arp" and value in self.config.datapath_ports[self.rule_type]:
+                            validated_matches["in_port"] = self.config.datapath_ports[self.rule_type][value]
+                        else:
+                            validated_matches["in_port"] = self.config.datapath_ports["main"][value]
+                    else: 
+                        if self.rule_type in self.config.datapath_ports and value in self.config.datapath_ports[self.rule_type]:
+                            validated_matches["in_port"] = self.config.datapath_ports[self.rule_type][value]
             elif match == "eth_dst":
                 if len(value) > 1:
                     validated_matches[match] = value
@@ -121,8 +127,10 @@ class FlowMod():
                             temp_fwd_actions.append(self.parser.OFPActionOutput(int(port)))
                         elif port in self.config.tables:
                             temp_goto_instructions.append(self.parser.OFPInstructionGotoTable(self.config.tables[port]))
-                        elif port in self.config.datapath_ports[self.rule_type]:
-                            temp_fwd_actions.append(self.config.datapath_ports[self.rule_type][port])
+                        elif port in self.config.datapath_ports["main"]:
+                            temp_fwd_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["main"][port]))
+                        elif port in self.config.datapath_ports["arp"]:
+                            temp_fwd_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["arp"][port]))
                 else:
                     for port in value:
                         if isinstance( port, int ) or port.isdigit():
@@ -200,4 +208,6 @@ class FlowMod():
                                           match=match)
 
     def get_dst_dp(self):
+        if self.config.tables and self.rule_type != "arp":
+            return "main"
         return self.rule_type
