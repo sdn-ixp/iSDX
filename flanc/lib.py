@@ -42,9 +42,9 @@ class Config(object):
                 self.mode = 1
         if "RefMon Settings" in config:
             if "fabric options" in config["RefMon Settings"]:
-                if self.mode == 1 and "tables" in config["RefMon Settings"]["fabric options"]:
+                if "tables" in config["RefMon Settings"]["fabric options"]:
                     self.tables = config["RefMon Settings"]["fabric options"]["tables"]
-                if self.mode == 0 and "dpids" in config["RefMon Settings"]["fabric options"]:
+                if "dpids" in config["RefMon Settings"]["fabric options"]:
                     self.dpids = config["RefMon Settings"]["fabric options"]["dpids"]
                     for k,v in self.dpids.iteritems():
                         self.dpid_2_name[v] = k
@@ -101,34 +101,50 @@ class MultiTableController():
                                                 match=match, instructions=instructions)
             self.config.datapaths["main"].send_msg(mod)
 
+        mod = self.config.parser.OFPFlowMod(datapath=self.config.datapaths["arp"],
+                                            cookie=NO_COOKIE, cookie_mask=1,
+                                            command=self.config.ofproto.OFPFC_ADD,
+                                            priority=FLOW_MISS_PRIORITY,
+                                            match=match, instructions=instructions)
+        self.config.datapaths["arp"].send_msg(mod)
+
     def switch_connect(self, dp):
-        self.config.datapaths["main"] = dp
-        self.config.ofproto = dp.ofproto
-        self.config.parser = dp.ofproto_parser
-        self.logger.info("mt_ctrlr: main switch connected")
-        self.init_fabric()
+        dp_name = self.config.dpid_2_name[dp.id]
+
+        self.config.datapaths[dp_name] = dp
+
+        if self.config.ofproto is None:
+            self.config.ofproto = dp.ofproto
+        if self.config.parser is None:
+            self.config.parser = dp.ofproto_parser
+
+        self.logger.info('mt_ctrlr: switch connect: ' + dp_name)
 
         if self.is_ready():
+            self.init_fabric()
+
             while not self.fm_queue.empty():
                 self.process_flow_mod(self.fm_queue.get())
 
     def switch_disconnect(self, dp):
-        if self.config.datapaths["main"] == dp:
-            self.logger.info("mt_ctrlr: main switch disconnected")
-            del self.config.datapaths["main"]
+        if dp.id in self.config.dpid_2_name:
+            dp_name = self.config.dpid_2_name[dp.id]
+            self.logger.info('mt_ctrlr: switch disconnect: ' + dp_name)
+            del self.config.datapaths[dp_name]
+
 
     def process_flow_mod(self, fm):
         if not self.is_ready():
             self.fm_queue.put(fm)
         else:
             mod = fm.get_flow_mod(self.config)
-            self.config.datapaths["main"].send_msg(mod)
+            self.config.datapaths[fm.get_dst_dp()].send_msg(mod)
            
     def packet_in(self, ev):
         self.logger.info("mt_ctrlr: packet in")
 
     def is_ready(self):
-        if "main" in self.config.datapaths:
+        if len(self.config.datapaths) == len(self.config.dpids):
             return True
         return False
 
@@ -203,6 +219,6 @@ class MultiSwitchController(object):
         pass
 
     def is_ready(self):
-        if len(self.config.datapaths) > 2:
+        if len(self.config.datapaths) == len(self.config.dpids):
             return True
         return False

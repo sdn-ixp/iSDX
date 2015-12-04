@@ -8,12 +8,14 @@ from flowmodmsg import FlowModMsgBuilder
 from vmac_lib import VMACBuilder
 
 # Priorities
-BGP_PRIORITY = 6
-ARP_PRIORITY = 6
-VNH_ARP_PRIORITY = 5
-ARP_BROADCAST_PRIORITY = 5
+BGP_PRIORITY = 7
+ARP_PRIORITY = 7
+ARP_BROADCAST_PRIORITY = 6
+VNH_ARP_FILTER_PRIORITY = 5
 OUTBOUND_PRIORITY = 4
 FORWARDING_PRIORITY = 4
+
+VNH_ARP_PRIORITY = 2
 
 INBOUND_PRIORITY = 3
 
@@ -73,14 +75,8 @@ class GSS(object):
                 match = {"eth_dst": port.mac, "tcp_dst": BGP}
                 self.fm_builder.add_flow_mod("insert", rule_type, BGP_PRIORITY, match, action)
 
-    def handle_ARP(self, rule_type):
-        ### direct ARP requests for VNHs to ARP proxy
-        port = self.config.arp_proxy.ports[0]
-        match = {"eth_type": ETH_TYPE_ARP, "arp_tpa": (str(self.config.vnhs.network), str(self.config.vnhs.netmask))}
-        action = {"fwd": [port.id]}
-        self.fm_builder.add_flow_mod("insert", rule_type, VNH_ARP_PRIORITY, match, action)
-
-        ### direct all ARP requests for the route server to it
+    def handle_ARP_in_main(self, rule_type):
+        ### direct all ARP responses for the route server to it
         port = self.config.route_server.ports[0]
         match = {"eth_type": ETH_TYPE_ARP, "eth_dst": port.mac}
         action = {"fwd": [port.id]}
@@ -98,15 +94,17 @@ class GSS(object):
             for port in participant.ports:
                 vmac = self.vmac_builder.part_port_match(participant.name, i, inbound_bit = False)
                 vmac_mask = self.vmac_builder.part_port_mask(False)
-                match = {"in_port": self.config.arp_proxy.ports[0].id,
+                match = {"in_port": "arp",
                          "eth_type": ETH_TYPE_ARP,
                          "eth_dst": (vmac, vmac_mask)}
                 action = {"set_eth_dst": MAC_BROADCAST, "fwd": [port.id]}
                 self.fm_builder.add_flow_mod("insert", rule_type, ARP_PRIORITY, match, action)
                 i += 1
 
-        ### flood ARP requests - but only on non switch-switch ports
-        match = {"eth_type": ETH_TYPE_ARP, "eth_dst": MAC_BROADCAST}
+        ### flood ARP requests that have gone through the arp switch, but only on non switch-switch ports
+        match = {"in_port": "arp",
+                 "eth_type": ETH_TYPE_ARP,
+                 "eth_dst": MAC_BROADCAST}
         ports = []
         for participant in self.config.peers.values():
             for port in participant.ports:
@@ -116,6 +114,31 @@ class GSS(object):
 
         action = {"fwd": ports}
         self.fm_builder.add_flow_mod("insert", rule_type, ARP_BROADCAST_PRIORITY, match, action)
+
+        ### forward all ARP requests to the arp switch
+        match = {"eth_type": ETH_TYPE_ARP,
+                 "eth_dst": MAC_BROADCAST}
+        action = {"fwd": ["arp"]}
+        self.fm_builder.add_flow_mod("insert", rule_type, VNH_ARP_FILTER_PRIORITY, match, action)
+
+    def handle_ARP_in_arp(self, rule_type):
+        ### direct ARP requests for VNHs to ARP proxy
+        port = self.config.arp_proxy.ports[0]
+        match = {"in_port": "main",
+                 "eth_type": ETH_TYPE_ARP,
+                 "arp_tpa": (str(self.config.vnhs.network), str(self.config.vnhs.netmask))}
+        action = {"fwd": [port.id]}
+        self.fm_builder.add_flow_mod("insert", rule_type, VNH_ARP_PRIORITY, match, action)
+
+        ### send all other ARP requests back
+        match = {"eth_type": ETH_TYPE_ARP, "in_port": "main"}
+        action = {"fwd": [OFPP_IN_PORT]}
+        self.fm_builder.add_flow_mod("insert", rule_type, DEFAULT_PRIORITY, match, action)
+
+        ### send all ARP replies from the ARP proxy to the main switch
+        match = {"eth_type": ETH_TYPE_ARP, "in_port": "arp"}
+        action = {"fwd": ["main"]}
+        self.fm_builder.add_flow_mod("insert", rule_type, DEFAULT_PRIORITY, match, action)
 
     def handle_participant_with_outbound(self, rule_type):
         for participant in self.config.peers.values():
@@ -202,7 +225,9 @@ class GSSmS(GSS):
 
         ## handle ARP traffic
         self.logger.info('create flow mods to handle ARP traffic')
-        self.handle_ARP("main-in")
+        self.handle_ARP_in_main("main-in")
+
+        self.handle_ARP_in_arp("arp")
 
         ## handle all participant traffic depending on whether they specified inbound/outbound policies
         self.logger.info('create flow mods to handle participant traffic')
@@ -251,7 +276,9 @@ class GSSmT(GSS):
 
         ## handle ARP traffic
         self.logger.info('create flow mods to handle ARP traffic')
-        self.handle_ARP("main-in")
+        self.handle_ARP_in_main("main-in")
+
+        self.handle_ARP_in_arp("arp")
 
         ## handle all participant traffic depending on whether they specified inbound/outbound policies
         self.logger.info('create flow mods to handle participant traffic')

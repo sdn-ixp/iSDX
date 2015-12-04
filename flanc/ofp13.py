@@ -7,7 +7,7 @@ from ryu.ofproto import inet
 class FlowMod():
     def __init__(self, config, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
-        self.rule_types = ["inbound", "outbound", "main", "main-in", "main-out"]
+        self.rule_types = ["inbound", "outbound", "main", "main-in", "main-out", "arp"]
         
         self.config = config
         self.parser = None
@@ -21,7 +21,7 @@ class FlowMod():
         self.priority = None
         self.cookie = {}
         self.matches = {}
-	self.actions = []
+        self.actions = []
 
         self.validate_flow_mod(flow_mod)
 
@@ -119,8 +119,10 @@ class FlowMod():
                     for port in value:
                         if isinstance( port, int ) or port.isdigit():
                             temp_fwd_actions.append(self.parser.OFPActionOutput(int(port)))
-                        else:
+                        elif port in self.config.tables:
                             temp_goto_instructions.append(self.parser.OFPInstructionGotoTable(self.config.tables[port]))
+                        elif port in self.config.datapath_ports[self.rule_type]:
+                            temp_fwd_actions.append(self.config.datapath_ports[self.rule_type][port])
                 else:
                     for port in value:
                         if isinstance( port, int ) or port.isdigit():
@@ -170,8 +172,12 @@ class FlowMod():
         match = self.parser.OFPMatch(**self.matches)
 
         if self.config.tables:
-            table_id = self.config.tables[self.rule_type]
-            datapath = self.config.datapaths["main"]
+            if self.rule_type == "arp":
+                table_id = 0
+                datapath = self.config.datapaths["arp"]
+            else:
+                table_id = self.config.tables[self.rule_type]
+                datapath = self.config.datapaths["main"]
         else:
             table_id = 0
             datapath = self.config.datapaths[self.rule_type]
