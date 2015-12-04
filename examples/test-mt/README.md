@@ -40,7 +40,7 @@ $ sudo python route_server.py test-mt
 
 ```bash
 $ cd ~/iSDX/pctrl/
-$ sh run_pctrlr.sh
+$ sh run_pctrlr.sh test-mt
 ```
 
 ### Run ExaBGP

@@ -76,7 +76,7 @@ Each participant SDN controller computes a compressed set of forwarding table en
 
 ```bash
 $ cd ~/iSDX/pctrl/
-$ sh run_pctrlr.sh
+$ sh run_pctrlr.sh test-ms
 ```
 
 ### Run ExaBGP
