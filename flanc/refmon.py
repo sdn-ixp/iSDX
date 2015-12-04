@@ -99,8 +99,6 @@ class RefMon(app_manager.RyuApp):
 
             origin = auth_info["participant"]
 
-            print str(msg)
-
             if "flow_mods" in msg:
 
                 # flow mod logging
