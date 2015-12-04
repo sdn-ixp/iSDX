@@ -54,14 +54,17 @@ class QuaggaTopo( Topo ):
 
         "Add switch for IXP fabric"
         main_switch = self.addSwitch( 's1' )
+        arp_switch = self.addSwitch( 's2' )
+        self.addLink(main_switch, arp_switch, 1, 1)
+
 
         # Add node for central Route Server"
         route_server = self.addHost('x1', ip = '172.0.255.254/16', mac='08:00:27:89:3b:ff', inNamespace = False)
-        self.addLink(main_switch, route_server, 1)
+        self.addLink(main_switch, route_server, 2)
 
         # Add node for ARP Proxy"
         arp_proxy = self.addHost('x2', ip = '172.0.255.253/16', mac='08:00:27:89:33:ff', inNamespace = False)
-        self.addLink(main_switch, arp_proxy, 2)
+        self.addLink(arp_switch, arp_proxy, 2)
 
         "Setup each legacy router, add a link between it and the IXP fabric"
         for host in quaggaHosts:
