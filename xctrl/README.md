@@ -5,7 +5,7 @@ This controller is in charge of pushing all the flow rules to the SDX fabric tha
 ## Run xctrl
 
 ```bash
-$ cd ~/sdx-ryu/xctrl/
+$ cd ~/iSDX/xctrl/
 $ ./xctrl.py <path of config file>
 ```
 

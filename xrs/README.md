@@ -9,6 +9,6 @@ it forwards to the `exaBGP` module.
 
 ```bash
 $ git checkout xrs
-$ cd ~/sdx-ryu/xrs/
+$ cd ~/iSDX/xrs/
 $ sudo python route_server.py <example-name> (e.g sudo python route_server.py simple)
 ```

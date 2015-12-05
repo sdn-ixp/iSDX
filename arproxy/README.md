@@ -6,7 +6,7 @@ This controller is in charge of pushing all the flow rules to the SDX fabric tha
 
 ```bash
 $ git checkout xrs
-$ cd ~/sdx-ryu/arproxy/
+$ cd ~/iSDX/arproxy/
 $ sudo python arproxy.py <example-name> (e.g sudo python arproxy.py simple)
 ```
 

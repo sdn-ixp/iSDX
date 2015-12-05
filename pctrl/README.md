@@ -10,6 +10,6 @@ dp updates to the `flanc` module.
 
 ```bash
 $ git checkout xrs
-$ cd ~/sdx-ryu/pctrl/
+$ cd ~/iSDX/pctrl/
 $ sudo python participant_controller.py <example-name> <participant id> (e.g sudo python route_server.py simple 1)
 ```

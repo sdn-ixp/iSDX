@@ -13,13 +13,14 @@ git clone https://github.com/USC-NSL/miniNExT.git miniNExT/
 cd miniNExT
 git checkout 1.4.0
 sudo make install
+cd ~
 
 # Install Requests
 sudo pip install requests
 
 # Install SDX
-cd ~
-git clone https://github.com/sdn-ixp/iSDX.git
+# use existing iSDX that is mounted by Vagrant
+#git clone https://github.com/sdn-ixp/iSDX.git
 cd iSDX
 sudo chmod 755 xrs/client.py xrs/route_server.py
 mkdir xrs/ribs
