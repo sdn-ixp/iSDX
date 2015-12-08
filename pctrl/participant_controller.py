@@ -121,7 +121,7 @@ class ParticipantController():
             for policy in self.policies['inbound']:
                 if 'action' not in policy:
                     continue
-                if 'fwd' in policy['action']:
+                if 'fwd' not in policy['action']:
                     continue
                 if int(policy['action']['fwd']) >= port_count:
                     policy['action']['fwd'] = 0
@@ -446,7 +446,7 @@ class ParticipantController():
             " Superset"
             # TODO: Do we really need to assign a VNH for each advertised prefix?
             if ('announce' in update):
-                prefix = update['announce']['prefix']
+                prefix = update['announce'].prefix
 
             if (prefix not in self.prefix_2_VNH):
                 # get next VNH and assign it the prefix

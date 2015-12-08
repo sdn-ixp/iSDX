@@ -1,4 +1,5 @@
 z.sh
+tags
 *.pyc
 *.json
 *.bak

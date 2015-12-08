@@ -2,15 +2,22 @@
 #  Author:
 #  Muhammad Shahbaz (muhammad.shahbaz@gatech.edu)
 
+from collections import namedtuple
 import os
 import sqlite3
-from threading import RLock as lock
+from threading import RLock
+
+lock = RLock()
+
+labels = ('prefix', 'next_hop', 'origin', 'as_path', 'communities', 'med',     'atomic_aggregate')
+types  = ('text',   'text',     'text',   'text',    'text',        'integer', 'boolean')
+RibTuple = namedtuple('RibTuple', labels)
 
 class rib():
 
     def __init__(self,ip,name):
 
-        with lock():
+        with lock:
             # Create a database in RAM
             self.db = sqlite3.connect('/home/vagrant/iSDX/xrs/ribs/'+ip+'.db',check_same_thread=False)
             self.db.row_factory = sqlite3.Row
@@ -18,16 +25,16 @@ class rib():
 
             # Get a cursor object
             cursor = self.db.cursor()
-            cursor.execute('''
-                        create table if not exists '''+self.name+''' (prefix text, next_hop text,
-                               origin text, as_path text, communities text, med integer, atomic_aggregate boolean)
-            ''')
-
+            stmt = (
+                    'create table if not exists '+self.name+
+                    ' ('+ ', '.join([l+' '+t for l,t in zip(labels, types)])+')'
+                    )
+            cursor.execute(stmt)
             self.db.commit()
 
     def __del__(self):
 
-        with lock():
+        with lock:
             self.db.close()
 
     def __setitem__(self,key,item):
@@ -40,42 +47,41 @@ class rib():
 
     def add(self,key,item):
 
-        with lock():
+        with lock:
+            assert(len(item) == 6)
             cursor = self.db.cursor()
-            #print '''insert into ''' + self.name + ''' (prefix, next_hop, origin, as_path, communities, med,atomic_aggregate) values(?,?,?,?,?,?,?)''',(key,item[0],item[1],item[2],item[3],item[4],item[5])
             #print "Add: ", key, item
-            key = str(key)
+            values = '"'+str(key)+'", '
             if (isinstance(item,tuple) or isinstance(item,list)):
-                cursor.execute('insert into ' + self.name + '(prefix, next_hop, origin, as_path, communities, med,atomic_aggregate) values("' + key + '","' + str(item[0]) +'","'+ str(item[1]) +'","'+ str(item[2])+'","'+ str(item[3])+'","'+ str(item[4])+'","'+ str(item[5])+'");')
+                values += ', '.join(['"'+str(x)+'"' for x in item])
             elif (isinstance(item,dict) or isinstance(item,sqlite3.Row)):
-                cursor.execute('''insert into ''' + self.name + ''' (prefix, next_hop, origin, as_path, communities, med,
-                        atomic_aggregate) values(?,?,?,?,?,?,?)''',
-                        (key,item['next_hop'],item['origin'],item['as_path'],item['communities'],item['med'],item['atomic_aggregate']))
+                values += ', '.join(['"'+str(x)+'"' for x in [item[l] for l in labels[1:]]])
+            else:
+                print 'Fatal error: item is not a recognized type'
+                sys.exit(1)
+
+            llabels = ', '.join(labels)
+            stmt = 'insert into %s (%s) values (%s)' % (self.name, llabels, values)
+            cursor.execute(stmt)
 
         #TODO: Add support for selective update
 
-    def add_many(self,items):
-
-        with lock():
-            cursor = self.db.cursor()
-
-            if (isinstance(items,list)):
-                cursor.execute('''insert into ''' + self.name + ''' (prefix, next_hop, origin, as_path, communities, med,
-                        atomic_aggregate) values(?,?,?,?,?,?,?)''', items)
-
     def get(self,key):
 
-        with lock():
+        with lock:
             cursor = self.db.cursor()
             #print "## DEBUG: Binding Param: ", self.name, key, type(key)
             key = str(key)
             cursor.execute('select * from ' + self.name + ' where prefix = "' + key + '"')
 
-            return cursor.fetchone()
+            row = cursor.fetchone()
+            if row is None:
+                return row
+            return RibTuple(*row)
 
     def get_all(self,key=None):
 
-        with lock():
+        with lock:
             cursor = self.db.cursor()
 
             if (key is not None):
@@ -83,22 +89,22 @@ class rib():
             else:
                 cursor.execute('''select * from ''' + self.name)
 
-            return cursor.fetchall()
+            return [RibTuple(*c) for c in cursor.fetchall()]
 
     def filter(self,item,value):
 
-        with lock():
+        with lock:
             cursor = self.db.cursor()
 
             script = "select * from " + self.name + " where " + item + " = '" + value + "'"
 
             cursor.execute(script)
 
-            return cursor.fetchall()
+            return [RibTuple(*c) for c in cursor.fetchall()]
 
     def update(self,key,item,value):
 
-        with lock():
+        with lock:
             cursor = self.db.cursor()
 
             script = "update " + self.name + " set " + item + " = '" + value + "' where prefix = '" + key + "'"
@@ -107,7 +113,7 @@ class rib():
 
     def update_many(self,key,item):
 
-        with lock():
+        with lock:
             cursor = self.db.cursor()
 
             if (isinstance(item,tuple) or isinstance(item,list)):
@@ -122,31 +128,38 @@ class rib():
 
     def delete(self,key):
 
-        with lock():
+        with lock:
             # TODO: Add more granularity in the delete process i.e., instead of just prefix,
             # it should be based on a conjunction of other attributes too.
 
             cursor = self.db.cursor()
-
-            #cursor.execute('''delete from ''' + self.name + ''' where prefix = ?''', (key,))
-            cursor.execute('''delete from ''' + self.name + ''' where prefix = "''' + key + '"')
+            cursor.execute('delete from '+self.name+' where prefix = "'+str(key)+'"')
 
     def delete_all(self):
 
-        with lock():
+        with lock:
             cursor = self.db.cursor()
-
-            cursor.execute('''delete from ''' + self.name)
+            cursor.execute('delete from '+self.name)
 
     def commit(self):
 
-        with lock():
+        with lock:
             self.db.commit()
 
     def rollback(self):
 
-        with lock():
+        with lock:
             self.db.rollback()
+
+    def dump(self):
+        # dump of db for debugging
+        with lock:
+            cursor = self.db.cursor()
+            cursor.execute('''select * from ''' + self.name)
+            rows = cursor.fetchall()
+        print len(rows)
+        for row in rows:
+            print row
 
 ''' main '''
 if __name__ == '__main__':

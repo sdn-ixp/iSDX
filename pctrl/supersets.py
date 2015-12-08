@@ -13,6 +13,7 @@ LOG = True
 class SuperSets():
     def __init__(self, pctrl, config_file = None):
         self.max_bits = 31
+	# XXX: TODO: Why is this 26, while calculation below would make it 27?
         self.max_initial_bits = 26
         self.best_path_size = 16
         self.VMAC_size = 48
@@ -104,12 +105,12 @@ class SuperSets():
 
         for update in updates:
             if ('withdraw' in update):
-                prefix = update['withdraw']['prefix']
+                prefix = update['withdraw'].prefix
                 # withdraws always change the bits of a VMAC
                 impacted_prefixes.append(prefix)
             if ('announce' not in update):
                 continue
-            prefix = update['announce']['prefix']
+            prefix = update['announce'].prefix
 
             # get set of all participants advertising that prefix
             new_set = get_all_participants_advertising(pctrl, prefix)
@@ -219,10 +220,18 @@ class SuperSets():
 
         # first part of the returned tuple is next hop
         route = bgp_instance.get_route('local', prefix)
-        next_hop = route[1]
+        # XXX: TODO: is this the right thing to do?
+        if route is None:
+            if LOG:
+                print "prefix", prefix, "not found in local"
+                bgp_instance.rib['local'].dump()
+            return vmac_addr
+
+        next_hop = route.next_hop
         if next_hop not in nexthop_2_part:
             if LOG: print "Next Hop", next_hop, "not found in get_vmac call!"
             return vmac_addr
+
         nexthop_part = nexthop_2_part[next_hop]
 
         # the participants who are involved in policies

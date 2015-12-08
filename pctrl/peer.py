@@ -4,9 +4,9 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 import json
-import sqlite3
+import time
 
-from rib import rib
+from ribm import rib
 from decision_process import decision_process, best_path_selection
 
 class BGPPeer():
@@ -15,14 +15,11 @@ class BGPPeer():
         self.id = id
         self.asn = asn
         self.ports = ports
+	self.prefix_lock = {}
 
-        ips = []
-        for port in ports:
-            ips.append(port["IP"])
-
-        self.rib = {"input": rib("-".join(ips),"input"),
-                    "local": rib("-".join(ips),"local"),
-                    "output": rib("-".join(ips),"output")}
+        self.rib = {"input": rib(str(self.asn),"input"),
+                    "local": rib(str(self.asn),"local"),
+                    "output": rib(str(self.asn),"output")}
 
         # peers that a participant accepts traffic from and sends advertisements to
         self.peers_in = peers_in
@@ -38,13 +35,13 @@ class BGPPeer():
             '''Goal here is to get all the routes in participant's input
             rib for this prefix. '''
             routes = []
-            routes.extend(self.get_routes('input',announce_route['prefix']))
+            routes.extend(self.get_routes('input',announce_route.prefix))
 
             if routes:
                 best_route = best_path_selection(routes)
                 # TODO: can be optimized? check to see if current route == best_route?
-                prefix = best_route['prefix']
-                self.delete_route("local",announce_route['prefix'])
+                prefix = best_route.prefix
+                self.delete_route("local",announce_route.prefix)
                 self.add_route("local", prefix, best_route)
 
             else:
@@ -56,18 +53,18 @@ class BGPPeer():
             if (deleted_route is not None):
 
                 # delete route if being used
-                if (self.get_routes('local',deleted_route['prefix'])):
-                    self.delete_route("local",deleted_route['prefix'])
+                if (self.get_routes('local',deleted_route.prefix)):
+                    self.delete_route("local",deleted_route.prefix)
 
                     # TODO: Make sure this logic is sane.
                     '''Goal here is to get all the routes in participant's input
                     rib for this prefix. '''
                     routes = []
-                    routes.extend(self.get_routes('input',deleted_route['prefix']))
+                    routes.extend(self.get_routes('input',deleted_route.prefix))
 
                     if routes:
                         best_route = best_path_selection(routes)
-                        participants[participant_name].add_route("local",best_route['prefix'],best_route)
+                        participants[participant_name].add_route("local",best_route.prefix,best_route)
 
     def update(self,route):
         updates = []
@@ -86,7 +83,7 @@ class BGPPeer():
             routes = self.rib['input'].get_all()
 
             for route_item in routes:
-                self.rib['local'].delete(route_item['prefix'])
+                self.rib['local'].delete(route_item.prefix)
             self.rib['local'].commit()
 
             self.rib["input"].delete_all()
@@ -148,11 +145,7 @@ class BGPPeer():
             # TODO: send shutdown notification to participants
 
     def add_route(self,rib_name,prefix,attributes):
-        self.rib[rib_name][prefix] = attributes
-        self.rib[rib_name].commit()
-
-    def add_many_routes(self,rib_name,routes):
-        self.rib[rib_name].add_many(routes)
+        self.rib[rib_name][prefix] = attributes[1:]
         self.rib[rib_name].commit()
 
     def get_route(self,rib_name,prefix):
@@ -189,14 +182,32 @@ class BGPPeer():
         announcements = []
         for update in updates:
             if 'announce' in update:
-                prefix = update['announce']['prefix']
+                prefix = update['announce'].prefix
             else:
-                prefix = update['withdraw']['prefix']
+                prefix = update['withdraw'].prefix
 
             prev_route = self.rib["output"][prefix]
             #prev_route["next_hop"] = str(prefix_2_VNH[prefix])
 
             best_route = self.rib["local"][prefix]
+            if best_route == None:
+                # XXX: TODO: improve on this? give a chance for change to show up in db.
+                time.sleep(.1)
+                best_route = self.rib["local"][prefix]
+            if best_route == None:
+                print '=============== best_route is None ===================='
+                print prefix
+                print '----'
+                self.rib['local'].dump()
+                print '----'
+                print updates
+                print '----'
+                print update
+                print '----'
+                print self.rib["local"][prefix]
+                print '----'
+                assert(best_route is not None)
+
             #best_route["next_hop"] = str(prefix_2_VNH[prefix])
 
 
@@ -217,7 +228,7 @@ class BGPPeer():
                     for port in ports:
                         # TODO: Create a sender queue and import the announce_route function
                         announcements.append(announce_route(port["IP"], prefix,
-                                            prefix_2_VNH[prefix], best_route["as_path"]))
+                                            prefix_2_VNH[prefix], best_route.as_path))
 
             elif ('withdraw' in update):
                 # A new announcement is only needed if the best path has changed
@@ -235,7 +246,7 @@ class BGPPeer():
                         for port in ports:
                             announcements.append(announce_route(port["IP"],
                                                  prefix, prefix_2_VNH[prefix],
-                                                 best_route["as_path"]))
+                                                 best_route.as_path))
 
                 else:
                     "Currently there is no best route to this prefix"
@@ -257,9 +268,9 @@ def bgp_routes_are_equal(route1, route2):
         return False
     if route2 is None:
         return False
-    if (route1['next_hop'] != route2['next_hop']):
+    if (route1.next_hop != route2.next_hop):
         return False
-    if (route1['as_path'] != route2['as_path']):
+    if (route1.as_path != route2.as_path):
         return False
     return True
 
