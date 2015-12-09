@@ -11,31 +11,15 @@ from ss_lib import *
 LOG = True
 
 class SuperSets():
-    def __init__(self, pctrl, config_file = None):
-        self.max_bits = 31
-	# XXX: TODO: Why is this 26, while calculation below would make it 27?
-        self.max_initial_bits = 26
-        self.best_path_size = 16
-        self.VMAC_size = 48
-        self.port_size = 8
-        if config_file is not None:
+    def __init__(self, pctrl, config):
 
-            if LOG: print pctrl.idp, "Initializing SuperSets with config file."
+        self.best_path_size =   int(config["Next Hop Bits"])
+        self.VMAC_size =        int(config["VMAC Size"])
+        self.port_size =        int(config["Port Bits"])
 
-            with open(config_file, 'r') as f:
-                config = json.load(f)
-                config = config["VMAC"]["Options"]
-                #self.max_bits =         int(config["Superset Bits"])
-                #self.max_initial_bits = self.max_bits - 4
-                self.best_path_size =   int(config["Next Hop Bits"])
-                self.VMAC_size =        int(config["VMAC Size"])
-                self.port_size =        int(config["Port Bits"])
+        self.max_bits = self.VMAC_size - self.best_path_size - 1
+        self.max_initial_bits = self.max_bits - 4
 
-                self.max_bits = self.VMAC_size - self.best_path_size - 1
-                self.max_initial_bits = self.max_bits - 4
-
-        else:
-            if LOG: print pctrl.idp, "Initializing SuperSets WITHOUT config file."
         if LOG:
             print pctrl.idp, "Max bits:", self.max_bits, "Best path bits:", self.best_path_size
             print pctrl.idp, "VMAC size:", self.VMAC_size, "Port size:", self.port_size
@@ -331,23 +315,19 @@ def get_all_participants_advertising(pctrl, prefix):
 
 
 
-""" placeholder funcs ## UNCOMMENT THESE FOR UNIT TESTS
-
-def get_all_participants_advertising(crap1, crap2):
-    if crap1 == 'poot':
-        return [2,3,4,8]
-    return [1,2,3,4,5,6]
-
-
-def get_all_participant_sets():
-    return [[1,2,3], [2,3,4], [4,5,6], [1,2,3,7], [3,4,7,8]]
-
-"""
-
-
 if __name__ == '__main__':
     """ Unit testing.
     """
+
+    def get_all_participants_advertising(crap1, crap2):
+        if crap1 == 'poot':
+            return [2,3,4,8]
+        return [1,2,3,4,5,6]
+
+
+    def get_all_participant_sets():
+        return [[1,2,3], [2,3,4], [4,5,6], [1,2,3,7], [3,4,7,8]]
+
     part_name = 3
 
     out =   {
@@ -381,8 +361,12 @@ if __name__ == '__main__':
     sdx = FakeSDX()
 
 
-
-    ss = SuperSets(sdx, None, part_name)
+    config = {
+            "VMAC Size"     : "48",
+            "Next Hop Bits" : "16",
+            "Port Bits"     : "10",
+            }
+    ss = SuperSets(sdx, config)
     print ss.initial_computation()
     print ss.supersets
 

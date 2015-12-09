@@ -68,7 +68,7 @@ class ParticipantController():
 
         # Superset related params
         if self.cfg.vmac_mode == SUPERSETS:
-            self.supersets = SuperSets(self, config_file=config_file)
+            self.supersets = SuperSets(self, self.cfg.vmac_options)
         else:
             # TODO: create similar class and variables for MDS
             self.mds = None
@@ -121,9 +121,7 @@ class ParticipantController():
             for policy in self.policies['inbound']:
                 if 'action' not in policy:
                     continue
-                if 'fwd' not in policy['action']:
-                    continue
-                if int(policy['action']['fwd']) >= port_count:
+                if 'fwd' in policy['action'] and int(policy['action']['fwd']) >= port_count:
                     policy['action']['fwd'] = 0
 
 
