@@ -148,6 +148,15 @@ class MultiTableController():
             return True
         return False
 
+    def send_barrier_request(self):
+        request = self.config.parser.OFPBarrierRequest(self.config.datapaths["main"])
+        self.config.datapaths["main"].send_msg(request)
+
+    def handle_barrier_reply(self, datapath):
+        if self.config.datapaths["main"] == datapath:
+            return True
+        return False
+
 class MultiSwitchController(object):
     def __init__(self, config):
         self.logger = logging.getLogger('MultiSwitchController')
@@ -220,5 +229,19 @@ class MultiSwitchController(object):
 
     def is_ready(self):
         if len(self.config.datapaths) == len(self.config.dpids):
+            return True
+        return False
+
+    def send_barrier_request(self):
+        if self.is_ready():
+            dp = self.config.datapaths["outbound"]
+            request = self.config.parser.OFPBarrierRequest(dp)
+            dp.send_msg(request)
+            return True
+        else:
+            return False
+
+    def handle_barrier_reply(self, datapath):
+        if self.config.datapaths["outbound"] == datapath:
             return True
         return False
