@@ -11,7 +11,7 @@ import argparse
 from threading import Thread
 from multiprocessing.connection import Listener
 from netaddr import *
-
+from threading import RLock as lock
 from peer import BGPPeer as BGPPeer
 from supersets import SuperSets
 from ss_rule_scheme import *
@@ -19,6 +19,9 @@ from lib import *
 from ss_lib import *
 
 import time
+#import atexit
+#from signal import signal, SIGTERM
+#from sys import exit
 
 sys.path.insert(0, '../xctrl/')
 from flowmodmsg import FlowModMsgBuilder
@@ -33,7 +36,6 @@ SUPERSETS = 0
 MDS       = 1
 
 
-
 class ParticipantController():
     def __init__(self, id, config_file, policy_file):
         # participant id
@@ -43,6 +45,7 @@ class ParticipantController():
 
         # used to signal termination
         self.run = True
+        self.prefix_lock = {}
 
         # Initialize participant params
         self.cfg = PConfig(config_file, self.id)
@@ -53,7 +56,6 @@ class ParticipantController():
 
 
         self.load_policies(policy_file)
-
 
         # The port 0 MAC is used for tagging outbound rules as belonging to us
         self.port0_mac = self.cfg.port0_mac
@@ -137,6 +139,8 @@ class ParticipantController():
         rule_msgs = init_inbound_rules(self.id, self.policies, 
                                         self.supersets, final_switch)
 
+        #TODO: Initialize Outbound Policies from RIB
+        if LOG: print self.idp, "Rule Messages:: ", rule_msgs
         if "changes" in rule_msgs:
             self.dp_queued.extend(rule_msgs["changes"])
 
@@ -316,15 +320,24 @@ class ParticipantController():
         for arp_response in arp_responses:
             self.arp_client.send(json.dumps(arp_response))
 
+    def getlock(self, prefixes):
+        prefixes.sort()
+        hsh = "".join(prefixes)
+        if hsh not in self.prefix_lock:
+            #print "First Lock:: ", hsh
+            self.prefix_lock[hsh] = lock()
+        #else:
+            #print "Repeat :: ", hsh
+        return self.prefix_lock[hsh]
 
     def process_bgp_route(self, route):
         "Process each incoming BGP advertisement"
-        start = time.time()
+        tstart = time.time()
 
         reply = ''
         # Map to update for each prefix in the route advertisement.
         updates = self.bgp_instance.update(route)
-
+        #print "process_bgp_route:: ", updates
         # TODO: This step should be parallelized
         # TODO: The decision process for these prefixes is going to be same, we
         # should think about getting rid of such redundant computations.
@@ -333,9 +346,9 @@ class ParticipantController():
             self.vnh_assignment(update)
 
         if TIMING:
-            elapsed = time.time() - start
+            elapsed = time.time() - tstart
             print self.idp, "Time taken for decision process:", elapsed
-            start = time.time()
+            tstart = time.time()
 
 
         if self.cfg.vmac_mode == 0:
@@ -345,9 +358,9 @@ class ParticipantController():
             ss_changes, ss_changed_prefs = self.supersets.update_supersets(self, updates)
 
             if TIMING:
-                elapsed = time.time() - start
+                elapsed = time.time() - tstart
                 print self.idp, "Time taken to update supersets:", elapsed
-                start = time.time()
+                tstart = time.time()
 
 
 
@@ -381,9 +394,9 @@ class ParticipantController():
 
 
             if TIMING:
-                elapsed = time.time() - start
+                elapsed = time.time() - tstart
                 print self.idp, "Time taken to deal with ss_changes:", elapsed
-                start = time.time()
+                tstart = time.time()
 
 
         ################## END SUPERSET RESPONSE ##################
@@ -397,9 +410,9 @@ class ParticipantController():
 
 
         if TIMING:
-            elapsed = time.time() - start
+            elapsed = time.time() - tstart
             print self.idp, "Time taken to push dp msgs:", elapsed
-            start = time.time()
+            tstart = time.time()
 
 
         changed_vnhs, announcements = self.bgp_instance.bgp_update_peers(updates,
@@ -422,9 +435,9 @@ class ParticipantController():
 
 
         if TIMING:
-            elapsed = time.time() - start
+            elapsed = time.time() - tstart
             print self.idp, "Time taken to send garps/announcements:", elapsed
-            start = time.time()
+            tstart = time.time()
 
 
         return reply
@@ -495,6 +508,9 @@ if __name__ == '__main__':
     ctrlr_thread = Thread(target=ctrlr.start)
     ctrlr_thread.daemon = True
     ctrlr_thread.start()
+
+    #atexit.register(ctrlr.stop)
+    #signal(SIGTERM, lambda signum, stack_frame: exit(1))
 
     while ctrlr_thread.is_alive():
         try:
