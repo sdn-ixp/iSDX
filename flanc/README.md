@@ -4,16 +4,17 @@ The reference monitor (refmon.py) is a ryu module and requires [Ryu](http://osrg
 
 __Install Ryu__
 
-Clone Ryu  
+If you haven't already done so, install git and python-pip:
+```bash
+$ sudo apt-get install -y git python-pip
+```
 
-    $ cd ~  
-    $ git clone git://github.com/osrg/ryu.git  
+Run setup/ryu-setup.sh
+```bash
+$ sh setup/ryu-setup.sh
+```
 
-Before installing it, replace flags.py with the provided file
-
-    $ cp ~/iSDX/flanc/flags.py ~/ryu/ryu/flags.py
-    $ cd ~/ryu
-    $ sudo python ./setup.py install
+This will install ryu along with dependencies, and also extend the supported flags with the provided ryu-flags.py.
 
 ## Run RefMon
 
