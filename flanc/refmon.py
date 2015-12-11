@@ -53,7 +53,7 @@ class RefMon(app_manager.RyuApp):
         # configure flow mod logging
         log_file_path = CONF['refmon']['flowmodlog']
         if log_file_path is not None:
-            log_file = os.path.abspath(CONF['refmon']['flowmodlog'])
+            log_file = os.path.abspath(log_file_path)
             self.flow_mod_log = open(log_file, "w")
         else:
             self.flow_mod_log = None
