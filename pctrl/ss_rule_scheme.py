@@ -147,7 +147,7 @@ def build_inbound_rules_for(participant_id, in_policies, ss_instance, final_swit
 
         rule = {"rule_type":"inbound", "priority":INBOUND_HIT_PRIORITY,
                 "match":match_args, "action":actions, "mod_type":"insert",
-                "cookie":(policy["cookie"],2**16-1)}    
+                "cookie":(policy["cookie"],2**16-1)}
 
         rules.append(rule)
 
@@ -168,7 +168,7 @@ def init_inbound_rules(participant_id, policies, ss_instance, final_switch):
 
         in_policies = policies['inbound']
 
-        rules = build_inbound_rules_for(participant_id, in_policies, 
+        rules = build_inbound_rules_for(participant_id, in_policies,
                                         ss_instance, final_switch)
 
         dp_msgs["changes"] = rules
