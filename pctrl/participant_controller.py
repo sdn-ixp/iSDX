@@ -136,8 +136,9 @@ class ParticipantController():
         if self.cfg.dp_mode == MULTITABLE:
             final_switch = "main-out"
 
-        rule_msgs = init_inbound_rules(self.id, self.policies, 
+        rule_msgs = init_inbound_rules(self.id, self.policies,
                                         self.supersets, final_switch)
+
         if LOG: print self.idp, "Rule Messages INBOUND:: ", rule_msgs
 
         #TODO: Initialize Outbound Policies from RIB
@@ -308,6 +309,7 @@ class ParticipantController():
                 if part_mac == port["MAC"]:
                     part_ip = port["IP"]
                     break
+
             # set field appropriately for arp responses
             arp_responses.append({'SPA': vnh, 'TPA': part_ip,
                         'SHA': vmac, 'THA': part_mac,
@@ -318,6 +320,7 @@ class ParticipantController():
                 print self.idp, "Sending Gratuitious ARP:", arp_responses
             else:
                 print self.idp, "Sending ARP Response:", arp_responses
+
         for arp_response in arp_responses:
             self.arp_client.send(json.dumps(arp_response))
 
@@ -489,7 +492,6 @@ if __name__ == '__main__':
 
     print idp, "Starting controller with config file: ", config_file
     print idp, "and policy file: ", policy_file
-
 
     # start controller
     ctrlr = ParticipantController(args.id, config_file, policy_file)

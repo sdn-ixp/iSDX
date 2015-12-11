@@ -6,7 +6,6 @@
 from collections import namedtuple
 import os
 import sys
-from StringIO import StringIO
 import globs
 import socket,struct
 from pymongo import MongoClient
@@ -26,26 +25,28 @@ class rib():
         self.db = self.client['demo']
         self.session = self.db[self.name]
 
-    def save_rib(self, path, outfile_name = "rib.db"):
 
+    def save_rib(self, path, outfile_name = "rib.db"):
         print "stub function"
+
 
     def __del__(self):
         #self.cluster.shutdown()
         pass
 
-    def __setitem__(self,key,item):
 
+    def __setitem__(self,key,item):
         self.add(key,item)
 
-    def __getitem__(self,key):
 
+    def __getitem__(self,key):
         return self.get(key)
+
 
     def add(self,key,item):
         #print "Add new row: ", key, item
         if (isinstance(item,tuple) or isinstance(item,list)):
-            print 'len item:', len(item), item
+            #print 'len item:', len(item), item
             assert (len(item) == 6)
             # Use cassandra session object
             in_stmt = {}
@@ -78,7 +79,6 @@ class rib():
 
 
     def get(self,key):
-
         key = str(key)
         rows = self.session.find({"prefix": key})
         if rows.count() == 0:
@@ -86,13 +86,14 @@ class rib():
         items = rows[0]
         return RibTuple(*[items[l] for l in labels])
 
+
     #def get_prefix_neighbor(self,key, neighbor):
     #    key = str(key)
     #    row = self.session.find_one({"prefix": key, "neighbor": neighbor})
     #    return row
 
-    def get_all(self,key=None):
 
+    def get_all(self,key=None):
         rows = []
         if (key is not None):
             rows = self.session.find({"prefix": key})
@@ -101,14 +102,15 @@ class rib():
 
         return [RibTuple(*[row[l] for l in labels]) for row in rows]
 
-    def filter(self,item,value):
 
+    def filter(self,item,value):
         rows = self.session.find({item: value})
         return [RibTuple(*[row[l] for l in labels]) for row in rows]
 
-    def update(self,key,item,value):
 
+    def update(self,key,item,value):
         rows = self.session.update_one({"prefix": key},{"$set":{ item: value}})
+
 
     def update_with_prefix_neighbor(self,prefix,item):
         #print "Update with Prefix", self.name, prefix, item
@@ -140,27 +142,30 @@ class rib():
             else:
                 self.add(prefix, item)
 
-    def delete(self,key):
 
+    def delete(self,key):
         # TODO: Add more granularity in the delete process i.e., instead of just prefix,
         # it should be based on a conjunction of other attributes too.
         self.session.delete_many({"prefix": key})
 
-    def delete_prefix_neighbor(self, prefix, neighbor):
 
+    def delete_prefix_neighbor(self, prefix, neighbor):
         # Deleting one entry in prefix's column that matches on neighbor
         self.session.delete_one({"prefix": prefix, "neighbor": neighbor})
 
+
     def delete_all(self):
         self.session.delete_many({})
+
 
     def commit(self):
         #print "previous commit, does nothing"
         pass
 
-    def rollback(self):
 
+    def rollback(self):
         print "previous rollback, does nothing"
+
 
     def dump(self):
         # dump of db for debugging
@@ -172,7 +177,6 @@ class rib():
 
 ''' main '''
 if __name__ == '__main__':
-
     #TODO Update test
 
     myrib = rib('ashello', 'test', False)

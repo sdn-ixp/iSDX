@@ -16,7 +16,6 @@ RibTuple = namedtuple('RibTuple', labels)
 class rib():
 
     def __init__(self,ip,name):
-
         with lock:
             # Create a database in RAM
             self.db = sqlite3.connect('/home/vagrant/iSDX/xrs/ribs/'+ip+'.db',check_same_thread=False)
@@ -32,21 +31,21 @@ class rib():
             cursor.execute(stmt)
             self.db.commit()
 
-    def __del__(self):
 
+    def __del__(self):
         with lock:
             self.db.close()
 
-    def __setitem__(self,key,item):
 
+    def __setitem__(self,key,item):
         self.add(key,item)
 
-    def __getitem__(self,key):
 
+    def __getitem__(self,key):
         return self.get(key)
 
-    def add(self,key,item):
 
+    def add(self,key,item):
         with lock:
             assert(len(item) == 6)
             cursor = self.db.cursor()
@@ -66,8 +65,8 @@ class rib():
 
         #TODO: Add support for selective update
 
-    def get(self,key):
 
+    def get(self,key):
         with lock:
             cursor = self.db.cursor()
             #print "## DEBUG: Binding Param: ", self.name, key, type(key)
@@ -79,8 +78,8 @@ class rib():
                 return row
             return RibTuple(*row)
 
-    def get_all(self,key=None):
 
+    def get_all(self,key=None):
         with lock:
             cursor = self.db.cursor()
 
@@ -91,8 +90,8 @@ class rib():
 
             return [RibTuple(*c) for c in cursor.fetchall()]
 
-    def filter(self,item,value):
 
+    def filter(self,item,value):
         with lock:
             cursor = self.db.cursor()
 
@@ -102,8 +101,8 @@ class rib():
 
             return [RibTuple(*c) for c in cursor.fetchall()]
 
-    def update(self,key,item,value):
 
+    def update(self,key,item,value):
         with lock:
             cursor = self.db.cursor()
 
@@ -111,8 +110,8 @@ class rib():
 
             cursor.execute(script)
 
-    def update_many(self,key,item):
 
+    def update_many(self,key,item):
         with lock:
             cursor = self.db.cursor()
 
@@ -126,30 +125,30 @@ class rib():
                             (item['next_hop'],item['origin'],item['as_path'],item['communities'],item['med'],
                              item['atomic_aggregate'],key))
 
-    def delete(self,key):
 
+    def delete(self,key):
         with lock:
             # TODO: Add more granularity in the delete process i.e., instead of just prefix,
             # it should be based on a conjunction of other attributes too.
-
             cursor = self.db.cursor()
             cursor.execute('delete from '+self.name+' where prefix = "'+str(key)+'"')
 
-    def delete_all(self):
 
+    def delete_all(self):
         with lock:
             cursor = self.db.cursor()
             cursor.execute('delete from '+self.name)
 
-    def commit(self):
 
+    def commit(self):
         with lock:
             self.db.commit()
 
-    def rollback(self):
 
+    def rollback(self):
         with lock:
             self.db.rollback()
+
 
     def dump(self):
         # dump of db for debugging
@@ -161,9 +160,9 @@ class rib():
         for row in rows:
             print row
 
+
 ''' main '''
 if __name__ == '__main__':
-
     #TODO Update test
 
     myrib = rib('1.2.3.4', 'test')
@@ -179,4 +178,4 @@ if __name__ == '__main__':
 
     val = myrib.filter('as_path', '300')
 
-    print val[0]['next_hop']
+    print val[0].next_hop

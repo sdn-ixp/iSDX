@@ -14,7 +14,6 @@ lock = RLock()
 
 class SuperSets():
     def __init__(self, pctrl, config):
-
         self.best_path_size =   int(config["Next Hop Bits"])
         self.VMAC_size =        int(config["VMAC Size"])
         self.port_size =        int(config["Port Bits"])
@@ -67,7 +66,7 @@ class SuperSets():
                     if fwd_part not in rulecounts:
                         rulecounts[fwd_part] = 0
                     rulecounts[fwd_part] += 1
-        print pctrl.idp, ": RuleCounts:: ",rulecounts
+        print pctrl.idp, ": RuleCounts:: ", rulecounts
 
         return rulecounts
 
@@ -267,8 +266,6 @@ class SuperSets():
         vmac_addr = ':'.join([vmac_addr[i]+vmac_addr[i+1] for i in range(0,self.VMAC_size/4,2)])
 
         return vmac_addr
-
-
 
 
 def get_prefix2part_sets(pctrl):
