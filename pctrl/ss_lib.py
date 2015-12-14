@@ -49,7 +49,10 @@ def minimize_ss_rules_greedy(peerSets, ruleCounts, max_bits):
 
 
     # the longest superset determines the current mask size
-    maxLength = max([len(prefix) for prefix in peerSets])
+    if peerSets:
+        maxLength = max([len(prefix) for prefix in peerSets])
+    else:
+        maxLength = 0
 
     while (len(peerSets) > 1):
         m = len(peerSets)

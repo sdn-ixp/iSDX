@@ -136,10 +136,21 @@ class ParticipantController():
         if self.cfg.dp_mode == MULTITABLE:
             final_switch = "main-out"
 
+        self.init_vnh_assignment()
+
         rule_msgs = init_inbound_rules(self.id, self.policies,
                                         self.supersets, final_switch)
 
         if LOG: print self.idp, "Rule Messages INBOUND:: ", rule_msgs
+
+        rule_msgs2 = init_outbound_rules(self, self.id, self.policies,
+                                        self.supersets, final_switch)
+
+        if LOG: print self.idp, "Rule Messages OUTBOUND:: ", rule_msgs2
+        if "changes" in rule_msgs2:
+            if "changes" not in rule_msgs:
+                rule_msgs['changes'] = []
+            rule_msgs['changes'] += rule_msgs2['changes']
 
         #TODO: Initialize Outbound Policies from RIB
         if LOG: print self.idp, "Rule Messages:: ", rule_msgs
@@ -326,18 +337,20 @@ class ParticipantController():
 
     def getlock(self, prefixes):
         prefixes.sort()
-        hsh = "".join(prefixes)
+        hsh = "-".join(prefixes)
         if hsh not in self.prefix_lock:
-            #print "First Lock:: ", hsh
+            #print "getlock: First Lock:: ", hsh
             self.prefix_lock[hsh] = lock()
         #else:
-            #print "Repeat :: ", hsh
+            #print "getlock: Repeat :: ", hsh
         return self.prefix_lock[hsh]
 
     def process_bgp_route(self, route):
-            "Process each incoming BGP advertisement"
-            tstart = time.time()
+        "Process each incoming BGP advertisement"
+        tstart = time.time()
 
+        prefixes = get_prefixes_from_announcements(route)
+        with self.getlock(prefixes):
             reply = ''
             # Map to update for each prefix in the route advertisement.
             updates = self.bgp_instance.update(route)
@@ -462,6 +475,47 @@ class ParticipantController():
             "Disjoint"
             # TODO: @Robert: Place your logic here for VNH assignment for MDS scheme
             if LOG: print self.idp, "VNH assignment called for disjoint vmac_mode"
+
+
+    def init_vnh_assignment(self):
+        "Assign VNHs for the advertised prefixes"
+        if self.cfg.vmac_mode == 0:
+            " Superset"
+            # TODO: Do we really need to assign a VNH for each advertised prefix?
+            self.bgp_instance.rib["local"].dump()
+            prefixes = self.bgp_instance.rib["local"].get_prefixes()
+            #print 'init_vnh_assignment: prefixes:', prefixes
+            #print 'init_vnh_assignment: prefix_2_VNH:', self.prefix_2_VNH
+            for prefix in prefixes:
+                if (prefix not in self.prefix_2_VNH):
+                    # get next VNH and assign it the prefix
+                    self.num_VNHs_in_use += 1
+                    vnh = str(self.cfg.VNHs[self.num_VNHs_in_use])
+
+                    self.prefix_2_VNH[prefix] = vnh
+                    self.VNH_2_prefix[vnh] = prefix
+        else:
+            "Disjoint"
+            # TODO: @Robert: Place your logic here for VNH assignment for MDS scheme
+            if LOG: print self.idp, "VNH assignment called for disjoint vmac_mode"
+
+
+def get_prefixes_from_announcements(route):
+    prefixes = []
+    if ('update' in route['neighbor']['message']):
+        if ('announce' in route['neighbor']['message']['update']):
+            announce = route['neighbor']['message']['update']['announce']
+            if ('ipv4 unicast' in announce):
+                for next_hop in announce['ipv4 unicast'].keys():
+                    for prefix in announce['ipv4 unicast'][next_hop].keys():
+                        prefixes.append(prefix)
+
+        elif ('withdraw' in route['neighbor']['message']['update']):
+            withdraw = route['neighbor']['message']['update']['withdraw']
+            if ('ipv4 unicast' in withdraw):
+                for prefix in withdraw['ipv4 unicast'].keys():
+                    prefixes.append(prefix)
+    return prefixes
 
 
 if __name__ == '__main__':

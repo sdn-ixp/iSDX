@@ -70,12 +70,12 @@ class rib():
         #TODO: Add support for selective update
 
 
-    #def get_prefixes(self):
-    #    rows = self.session.find()
-    #    output_rows = []
-    #    for row in rows:
-    #        output_rows.append({"prefix": row['prefix']})
-    #    return output_rows
+    def get_prefixes(self):
+        rows = self.session.find()
+        output_rows = []
+        for row in rows:
+            output_rows.append(row['prefix'])
+        return output_rows
 
 
     def get(self,key):

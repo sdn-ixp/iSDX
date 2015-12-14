@@ -176,6 +176,20 @@ def init_inbound_rules(participant_id, policies, ss_instance, final_switch):
         return dp_msgs
 
 
+# initialize all outbound rules
+def init_outbound_rules(pctrl, participant_id, policies, ss_instance, final_switch):
+    dp_msgs = {"type": "new", "changes": []}
+    if ('outbound' not in policies):
+        return {}
+    else:
+        sdx_msgs = ss_instance.initial_computation(pctrl)
+        if len(sdx_msgs['changes']) > 0:
+            flow_msgs = update_outbound_rules(sdx_msgs, policies,
+                                              ss_instance, pctrl.port0_mac)
+            dp_msgs["changes"] = flow_msgs
+
+        return dp_msgs
+
 
 def msg_clear_all_outbound(policies, port0_mac):
     "Construct and return a flow mod which removes all our outbound rules"
