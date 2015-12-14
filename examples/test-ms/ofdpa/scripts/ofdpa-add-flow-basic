@@ -1,0 +1,38 @@
+#!/bin/bash
+
+VLAN=1
+
+HOST=localhost
+PORT=8080
+DPID=1
+
+
+if [ $# -ne 2 ]; then
+    echo usage: "$0 <inport> <outport>"
+    exit 1
+fi
+
+INPORT=$1
+OUTPORT=$2
+let "GROUP_ID = ($VLAN << 16) + $OUTPORT"
+
+MSG="{
+    'dpid': $DPID,
+    'table_id': 60,
+    'priority': 4,
+    'match':{
+        'in_port': $INPORT,
+        'dl_vlan': 1
+    },
+    'actions':[
+        {
+            'type':'GROUP',
+            'group_id': $GROUP_ID
+        }
+    ]
+ }"
+
+echo $MSG
+
+curl -X POST -d "$MSG" \
+	http://$HOST:$PORT/stats/flowentry/add

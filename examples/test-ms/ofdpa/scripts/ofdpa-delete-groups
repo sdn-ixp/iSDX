@@ -1,0 +1,14 @@
+#!/bin/bash
+
+HOST=localhost
+PORT=8080
+DPID=1
+
+GROUP_IDS=`curl -s -X GET http://$HOST:$PORT/stats/groupdesc/$DPID |
+  perl -ne 'while (s/group_id...(\d+)//) {print "$1\n"}'`
+
+for g in $GROUP_IDS; do
+    echo "deleting $g"
+    curl -X POST -d "{'dpid': $DPID,'group_id': $g}" \
+	http://$HOST:$PORT/stats/groupentry/delete
+ done

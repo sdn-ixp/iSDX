@@ -1,0 +1,39 @@
+#!/bin/bash
+
+VLAN=1
+
+HOST=localhost
+PORT=8080
+DPID=1
+
+if [ $# -ne 1 ]; then
+    echo usage: "$0 <port>"
+    exit 1
+fi
+
+OPORT=$1
+let "GROUP_ID = ($VLAN << 16) + $OPORT"
+
+MSG="{
+    'dpid': $DPID,
+    'type': 'INDIRECT',
+    'group_id': $GROUP_ID,
+    'buckets':[
+        {
+            'actions': [
+                {
+                    'type': 'OUTPUT',
+                    'port': $OPORT
+                },
+                {
+                    'type': 'POP_VLAN'
+                }
+            ]
+        }
+    ]
+ }"
+
+echo "adding $GROUP_ID"
+
+curl -X POST -d "$MSG" \
+	http://$HOST:$PORT/stats/groupentry/add

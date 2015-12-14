@@ -1,0 +1,6 @@
+#!/bin/bash
+
+HOST=localhost
+PORT=8080
+
+curl -X DELETE http://$HOST:$PORT/stats/flowentry/clear/1
