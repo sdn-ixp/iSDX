@@ -9,10 +9,14 @@ from threading import RLock
 
 lock = RLock()
 
-labels = ('prefix', 'next_hop', 'origin', 'as_path', 'communities', 'med',     'atomic_aggregate')
-types  = ('text',   'text',     'text',   'text',    'text',        'integer', 'boolean')
+labels = ('prefix', 'neighbor', 'next_hop', 'origin', 'as_path', 'communities', 'med',     'atomic_aggregate')
+types  = ('text',   'text',     'text',     'text',   'text',    'text',        'integer', 'boolean')
 RibTuple = namedtuple('RibTuple', labels)
 
+#TODO: fix to be compatible with ribm interface
+#TODO: need to use RibTuple on input, and use prefix from RibTuple as key, rather than separate arg.
+#TODO: need to convert as_path from string to list on input and back on output.
+#TODO: need to implement missing routines
 class rib():
 
     def __init__(self,ip,name):
@@ -37,24 +41,24 @@ class rib():
             self.db.close()
 
 
-    def __setitem__(self,key,item):
-        self.add(key,item)
+    #def __setitem__(self,key,item):
+        #self.add(key,item)
 
 
-    def __getitem__(self,key):
-        return self.get(key)
+    #def __getitem__(self,key):
+        #return self.get(key)
 
 
     def add(self,key,item):
         with lock:
-            assert(len(item) == 6)
+            assert(len(item) == len(labels))
             cursor = self.db.cursor()
             #print "Add: ", key, item
             values = '"'+str(key)+'", '
             if (isinstance(item,tuple) or isinstance(item,list)):
-                values += ', '.join(['"'+str(x)+'"' for x in item])
-            elif (isinstance(item,dict) or isinstance(item,sqlite3.Row)):
-                values += ', '.join(['"'+str(x)+'"' for x in [item[l] for l in labels[1:]]])
+                values += ', '.join(['"'+str(x)+'"' for x in item[1:]])
+            #elif (isinstance(item,dict) or isinstance(item,sqlite3.Row)):
+                #values += ', '.join(['"'+str(x)+'"' for x in [item[l] for l in labels[1:]]])
             else:
                 print 'Fatal error: item is not a recognized type'
                 sys.exit(1)

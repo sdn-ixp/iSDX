@@ -482,7 +482,7 @@ class ParticipantController():
         if self.cfg.vmac_mode == 0:
             " Superset"
             # TODO: Do we really need to assign a VNH for each advertised prefix?
-            self.bgp_instance.rib["local"].dump()
+            #self.bgp_instance.rib["local"].dump()
             prefixes = self.bgp_instance.rib["local"].get_prefixes()
             #print 'init_vnh_assignment: prefixes:', prefixes
             #print 'init_vnh_assignment: prefix_2_VNH:', self.prefix_2_VNH

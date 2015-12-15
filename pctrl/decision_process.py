@@ -25,6 +25,7 @@ def decision_process(route):
 
                 # TODO: can be optimized? check to see if current route == best_route?
                 participants[participant_name].delete_route("local",announce_route['prefix'])
+                #print 'decision_process: best_route:', type(best_route), best_route
                 participants[participant_name].add_route("local",best_route['prefix'],best_route)
 
     elif('withdraw' in route):
@@ -46,6 +47,7 @@ def decision_process(route):
                         best_route = best_path_selection(routes)
                         best_routes.append({'withdraw':best_route})
 
+                        #print 'decision_process: best_route:', type(best_route), best_route
                         participants[participant_name].add_route("local",best_route['prefix'],best_route)
 
     return best_routes
@@ -159,12 +161,10 @@ def best_path_selection(routes):
 
 ''' Helper functions '''
 def aspath_length(as_path):
-    ases = as_path.split()
-    return len(ases)
+    return len(as_path)
 
 def get_advertised_as(as_path):
-    ases = as_path.split()
-    return ases[0]
+    return as_path[0]
 
 def ip_to_long(ip):
     return struct.unpack('!L', socket.inet_aton(ip))[0]

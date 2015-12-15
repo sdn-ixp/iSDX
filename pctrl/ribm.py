@@ -11,7 +11,7 @@ import socket,struct
 from pymongo import MongoClient
 
 # have all the rib implementations return a consistent interface
-labels = ('prefix', 'next_hop', 'origin', 'as_path', 'communities', 'med', 'atomic_aggregate')
+labels = ('prefix', 'neighbor', 'next_hop', 'origin', 'as_path', 'communities', 'med', 'atomic_aggregate')
 RibTuple = namedtuple('RibTuple', labels)
 
 def ip_to_long(ip):
@@ -35,39 +35,22 @@ class rib():
         pass
 
 
-    def __setitem__(self,key,item):
-        self.add(key,item)
-
-
     def __getitem__(self,key):
         return self.get(key)
 
 
-    def add(self,key,item):
-        #print "Add new row: ", key, item
-        if (isinstance(item,tuple) or isinstance(item,list)):
-            #print 'len item:', len(item), item
-            assert (len(item) == 6)
-            # Use cassandra session object
-            in_stmt = {}
-            for i,v in enumerate(labels[1:]):
-                in_stmt[v] = item[i]
-            #print "Insert data", self.name ,in_stmt
-            #print row.inserted_id, self.get_prefix_neighbor(key, item[0])
-        elif (isinstance(item,dict)):
-            # XXX: WARNING: I think in_stmt references same memory as item.
-            # XXX: So adding 'prefix' to in_stmt will also add to item.
-            in_stmt = item
-        else:
-            print 'Fatal error: item is not a recognized type'
-            sys.exit(1)
+    def add(self, item):
+        print "Add new row: ", item
+        assert(isinstance(item, RibTuple))
 
-        in_stmt['prefix'] = str(key)
+        in_stmt = {}
+        for i,v in enumerate(labels):
+            in_stmt[v] = item[i]
+
         # avoid adding duplicates
         rows = self.session.find(in_stmt)
         if rows.count() == 0:
             self.session.insert_one(in_stmt)
-        #TODO: Add support for selective update
 
 
     def get_prefixes(self):
@@ -87,10 +70,12 @@ class rib():
         return RibTuple(*[items[l] for l in labels])
 
 
-    #def get_prefix_neighbor(self,key, neighbor):
-    #    key = str(key)
-    #    row = self.session.find_one({"prefix": key, "neighbor": neighbor})
-    #    return row
+    def get_prefix_neighbor(self,key, neighbor):
+        key = str(key)
+        row = self.session.find_one({"prefix": key, "neighbor": neighbor})
+        if row is None:
+            return row
+        return RibTuple(*[row[l] for l in labels])
 
 
     def get_all(self,key=None):
@@ -108,39 +93,14 @@ class rib():
         return [RibTuple(*[row[l] for l in labels]) for row in rows]
 
 
-    def update(self,key,item,value):
-        rows = self.session.update_one({"prefix": key},{"$set":{ item: value}})
-
-
-    def update_with_prefix_neighbor(self,prefix,item):
-        #print "Update with Prefix", self.name, prefix, item
-        if (isinstance(item,tuple) or isinstance(item,list)):
-            assert (len(item) == 7)
-            neighbor = item[0]
-            if self.get_prefix_neighbor(prefix, neighbor) is not None:
-                in_stmt = {"prefix": prefix, "neighbor": item[0],
-                        "next_hop": item[1], "origin": item[2],
-                        "as_path": item[3], "communities": item[4],
-                        "med": item[5], "atomic_aggregate": item[6]}
-                rows = self.session.update_one({"prefix": prefix, "neighbor": neighbor},{"$set": in_stmt})
-                #print rows.matched_count
-            else:
-                self.add(prefix, item)
-        elif (isinstance(item,dict)):
-            neighbor = item["neighbor"]
-            item["prefix"] = prefix
-            #print "From Get", self.get_prefix_neighbor(prefix, neighbor)
-
-            if self.get_prefix_neighbor(prefix, neighbor) is not None:
-                in_stmt = {"prefix": prefix, "neighbor": neighbor,
-                        "next_hop": item["next_hop"], "origin": item["origin"],
-                        "as_path": item["as_path"], "communities": item["communities"],
-                        "med": item["med"], "atomic_aggregate": item["atomic_aggregate"]}
-                #print "in Statement: ", in_stmt
-                rows = self.session.update_one({"prefix": prefix, "neighbor": neighbor},{"$set": in_stmt})
-                #print rows.matched_count
-            else:
-                self.add(prefix, item)
+    def update_with_prefix_neighbor(self, item):
+        assert(isinstance(item, RibTuple))
+        if self.get_prefix_neighbor(item.prefix, item.neighbor) is not None:
+            in_stmt = dict((k,v) for k,v in zip(labels, item))
+            rows = self.session.update_one({"prefix": item.prefix, "neighbor": item.neighbor},{"$set": in_stmt})
+            #print rows.matched_count
+        else:
+            self.add(item)
 
 
     def delete(self,key):
@@ -172,7 +132,7 @@ class rib():
         rows = self.session.find()
         print rows.count()
         for row in rows:
-            print row
+            print tuple(k+'='+str(row[k]) for k in labels)
 
 
 ''' main '''
