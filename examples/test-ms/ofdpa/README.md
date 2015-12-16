@@ -152,7 +152,7 @@ sending traffic through the switch with `ping` and `iperf` (not shown).
 We tested performance with `iperf` as shown below. The client and server `iperf` processes
 ran in different containers to force the packets to go through the switch.  We also dumped
 the packet counts from the switch to verify that the traffic was truly going through the switch.
-Note that the transfer rate is 9.4Gb/s, close to the limit on the 10GB/s links.
+Note that the transfer rate is 9.4Gb/s, close to the limit on the 10Gb/s links.
  ````
 em2:~# iperf -s
 ------------------------------------------------------------
