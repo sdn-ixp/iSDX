@@ -5,5 +5,5 @@ PORT=8080
 DPID=1
 
 curl -X GET http://$HOST:$PORT/stats/groupdesc/$DPID 2> /dev/null|
-perl -ne 'while (s/("actions[^]]*?\]).*?("group_id.. (\d+))//) {  printf "$2(0x%x)\t$1\n", $3;}'
+perl -ne 'while (s/("actions[^]]*?\]).*?("group_id.. (\d+))//) {  printf "$2\t(0x%x)\t$1\n", $3;}'
 
