@@ -1,0 +1,22 @@
+#!/bin/bash
+
+HOST=localhost
+PORT=8080
+DPID=1
+
+FILTER=cat
+while getopts "p:n" opt; do
+    case $opt in
+	p) FILTER="grep in_port...$OPTARG\}"
+	    ;;
+	n) FILTER="grep -v packet_count...0"
+	    ;;
+	\?) echo "Unknown arg: $OPTARG" >&2
+	    exit 1;
+	    ;;
+    esac
+done
+
+curl -X GET http://$HOST:$PORT/stats/flow/$DPID 2> /dev/null|
+perl -ne 'while (s/("actions[^]]*?\]).*?("packet_count.. (\d+)).*?("priority.. \d+).*?("match": {[^}]*})//) {  printf "$5, $1, $4, $2\n";}' | $FILTER
+
