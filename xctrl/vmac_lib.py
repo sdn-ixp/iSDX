@@ -50,7 +50,7 @@ class VMACBuilder(object):
 
 
 
-class FakeSDX():
+class FakeSDX(object):
     def __init__(self, config):
         self.max_bits = 30
         self.max_initial_bits = 26

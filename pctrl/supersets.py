@@ -12,7 +12,7 @@ LOG = True
 
 lock = RLock()
 
-class SuperSets():
+class SuperSets(object):
     def __init__(self, pctrl, config):
         self.best_path_size =   int(config["Next Hop Bits"])
         self.VMAC_size =        int(config["VMAC Size"])
@@ -330,7 +330,7 @@ if __name__ == '__main__':
                 ]
             }
 
-    class FakeSDX():
+    class FakeSDX(object):
         def __init__(self):
             self.VMAC_size = 48
             self.superset_id_size = 5

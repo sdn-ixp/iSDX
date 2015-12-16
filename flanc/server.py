@@ -11,7 +11,7 @@ from multiprocessing import Queue
 from multiprocessing.connection import Listener
 
 ''' Server of Reference Monitor to Receive Flow Mods '''
-class Server():
+class Server(object):
 
     def __init__(self, refmon, address, port, key):
         self.logger = logging.getLogger('RefMon Server')

@@ -132,7 +132,7 @@ class PConfig(object):
         return GenericClient(conn_info["AH_SOCKET"][0], conn_info["AH_SOCKET"][1])
 
 
-class GenericClient():
+class GenericClient(object):
     def __init__(self, address, port, key = ""):
         self.address = address
         self.port = int(port)

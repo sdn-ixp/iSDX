@@ -10,7 +10,7 @@ from multiprocessing.connection import Client
 
 LOG = False
 
-class RefMonClient():
+class RefMonClient(object):
     def __init__(self, address, port, key):
         self.address = address
         self.port = int(port)

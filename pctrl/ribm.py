@@ -14,7 +14,7 @@ from threading import RLock
 labels = ('prefix', 'neighbor', 'next_hop', 'origin', 'as_path', 'communities', 'med', 'atomic_aggregate')
 RibTuple = namedtuple('RibTuple', labels)
 
-class rib():
+class rib(object):
 
     def __init__(self,table_suffix,name):
         self.name = name + "_" + str(table_suffix)

@@ -343,7 +343,7 @@ if __name__ == '__main__':
 
     supersets = [[1,2], [2,3], [3,4,5,6]]
 
-    class FakeSS():
+    class FakeSS(object):
         def __init__(self):
             self.max_bits = 31
             self.max_initial_bits = 27

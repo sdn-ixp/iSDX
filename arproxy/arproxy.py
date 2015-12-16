@@ -26,7 +26,7 @@ LOG = True
 idp = "ARP:"
 
 
-class ArpProxy():
+class ArpProxy(object):
 
     def __init__(self, config_file):
         self.run = True

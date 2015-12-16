@@ -12,7 +12,7 @@ from decision_process import decision_process, best_path_selection
 
 LOG = True
 
-class BGPPeer():
+class BGPPeer(object):
 
     def __init__(self, id, asn, ports, peers_in, peers_out):
         self.id = id

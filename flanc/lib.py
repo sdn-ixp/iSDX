@@ -77,7 +77,7 @@ class InvalidConfigError(Exception):
     def __str__(self):
         return repr(self.flow_mod)
 
-class MultiTableController():
+class MultiTableController(object):
     def __init__(self, config):
         self.config = config
         self.logger = logging.getLogger('MultiTableController')

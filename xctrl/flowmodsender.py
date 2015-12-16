@@ -5,7 +5,7 @@
 import json
 import requests
 
-class FlowModSender():
+class FlowModSender(object):
     def __init__(self, url):
         self.url = url
 

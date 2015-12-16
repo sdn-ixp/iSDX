@@ -21,7 +21,7 @@ from core import XRS, XRSPeer
 
 LOG = True
 
-class route_server():
+class route_server(object):
 
     def __init__(self, config_file):
         self.idp = "XRS:"

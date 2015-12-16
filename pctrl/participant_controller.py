@@ -36,7 +36,7 @@ SUPERSETS = 0
 MDS       = 1
 
 
-class ParticipantController():
+class ParticipantController(object):
     def __init__(self, id, config_file, policy_file):
         # participant id
         self.id = id

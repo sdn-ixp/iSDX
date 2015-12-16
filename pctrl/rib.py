@@ -15,7 +15,7 @@ labels = ('prefix', 'neighbor', 'next_hop', 'origin', 'as_path', 'communities', 
 types  = ('text',   'text',     'text',     'text',   'text',    'text',        'integer', 'boolean')
 RibTuple = namedtuple('RibTuple', labels)
 
-class rib():
+class rib(object):
 
     def __init__(self,ip,name):
         with lock:

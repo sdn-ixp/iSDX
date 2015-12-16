@@ -3,4 +3,4 @@ sudo rm ~/iSDX/xrs/ribs/*.db
 sudo killall python
 sudo killall exabgp
 sudo fuser -k 6633/tcp
-python clean_mongo.py
+python ~/iSDX/pctrl/clean_mongo.py

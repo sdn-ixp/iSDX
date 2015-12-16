@@ -10,7 +10,7 @@ from netaddr import *
 ### I(X)P (R)oute (S)erver (XRS) Class
 ###
 
-class XRS():
+class XRS(object):
     def __init__(self):
         self.server = None
         self.ah_socket = None
@@ -30,7 +30,7 @@ class XRS():
 ### I(X)P (R)oute (S)erver (XRS) Peer Class
 ###
 
-class XRSPeer():
+class XRSPeer(object):
     def __init__(self, asn, ports, peers_in, peers_out, eh_socket):
         self.asn = asn
         self.ports = ports

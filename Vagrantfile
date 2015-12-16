@@ -31,8 +31,9 @@ Vagrant.configure("2") do |config|
   config.ssh.forward_x11 = true
 
 
-  config.vm.synced_folder ".", "/home/vagrant/iSDX", type: "rsync",
-    rsync__exclude: ".git/"
-  #config.vm.synced_folder ".", "/home/vagrant/iSDX"
+  #config.vm.synced_folder ".", "/home/vagrant/iSDX", type: "rsync",
+    #rsync__exclude: ".git/"
+  config.vm.synced_folder ".", "/home/vagrant/iSDX"
+  #config.vm.synced_folder ".", "/home/vagrant/iSDX", owner: "quagga", group: "quaggavty"
 
 end

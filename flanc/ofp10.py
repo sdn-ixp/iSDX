@@ -4,7 +4,7 @@
 from ryu.ofproto import ether
 from ryu.ofproto import inet
 
-class FlowMod():
+class FlowMod(object):
     def __init__(self, config, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
         self.rule_types = ["inbound", "outbound", "main", "main-in", "main-out"]
