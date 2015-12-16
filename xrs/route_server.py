@@ -84,7 +84,7 @@ class route_server():
                             self.send_update(id, route)
 
             except Queue.Empty:
-                if LOG: 
+                if LOG:
                     if waiting == 0:
                         print self.idp, "Waiting for BGP update..."
                         waiting = 1

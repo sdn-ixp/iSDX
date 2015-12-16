@@ -66,7 +66,7 @@ class SuperSets():
                     if fwd_part not in rulecounts:
                         rulecounts[fwd_part] = 0
                     rulecounts[fwd_part] += 1
-        print pctrl.idp, ": RuleCounts:: ", rulecounts
+        print pctrl.idp, ": RuleCounts::", rulecounts
 
         return rulecounts
 
