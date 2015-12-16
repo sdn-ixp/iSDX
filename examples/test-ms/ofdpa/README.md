@@ -5,7 +5,9 @@ have taken the following steps to demonstrate this.
 
 1. Configure three hardware switches in the iSDX multi-switch (MS) configuration as shown
 below. The switches we chose are Quanta LY2.  To support iSDX's requirement of OpenFlow
-1.3, we installed OF-DPA 2.0 running on Open Network Linux.  The switches are connected to
+1.3, we installed
+[OF-DPA 2.0](http://lumanetworks.github.io/of-dpa/doc/html/d8/dd0/OFDPA_OVERVIEW.html)
+running on Open Network Linux.  The switches are connected to
 two Linux machines (Dell R630's) via 10GB links as shown.  
 
  **Current Wiring Configuration**
@@ -29,12 +31,19 @@ Matching on various combinations of:
 
  iSDX originally also used two features that we found are not supported by OF-DPA:
  matching on the ARP_TPA and multicast in concert with setting the eth_dst (for ARP).  To
- work around this limitation, we moved these features to a software switch (OVS) as shown
+ work around these limitations, we moved these features to a software switch (OVS) as shown
  in the figure.  
 
  **OF-DPA Matching**  
- OF-DPA defines a pipeline of flow tables, each of which supports different types of
- rules.  Only one of these tables, the Policy ACL table, is relevant to iSDX.  The Policy
+ [OF-DPA defines a pipeline of flow tables]
+ (https://github.com/Broadcom-Switch/of-dpa/blob/master/OF-DPA-2.0/OFDPA_ASSV-ETP200-R.pdf),
+ each of which supports different types of 
+ rules.
+ (The formal definition of these rules is described [here]
+ (https://github.com/Broadcom-Switch/of-dpa/blob/master/OF-DPA-2.0/ofdpa-v2.0.0.2.ttp.json)
+ using [OpenFlow Table Type patterns]
+ (https://www.opennetworking.org/images/stories/downloads/sdn-resources/onf-specifications/openflow/OpenFlow%20Table%20Type%20Patterns%20v1.0.pdf).)
+ Only one of these tables, the Policy ACL table, is relevant to iSDX.  The Policy
  ACL table (table 60) supports matching on the fields listed above, however, it also
  requires that
  all matched packets be VLAN tagged.  The documentation leads one to believe that the VLAN
