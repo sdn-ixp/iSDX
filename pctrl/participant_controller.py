@@ -140,21 +140,20 @@ class ParticipantController():
 
         rule_msgs = init_inbound_rules(self.id, self.policies,
                                         self.supersets, final_switch)
-
         if LOG: print self.idp, "Rule Messages INBOUND:: ", rule_msgs
 
         rule_msgs2 = init_outbound_rules(self, self.id, self.policies,
                                         self.supersets, final_switch)
-
         if LOG: print self.idp, "Rule Messages OUTBOUND:: ", rule_msgs2
-        if "changes" in rule_msgs2:
-            if "changes" not in rule_msgs:
+
+        if 'changes' in rule_msgs2:
+            if 'changes' not in rule_msgs:
                 rule_msgs['changes'] = []
             rule_msgs['changes'] += rule_msgs2['changes']
 
         #TODO: Initialize Outbound Policies from RIB
         if LOG: print self.idp, "Rule Messages:: ", rule_msgs
-        if "changes" in rule_msgs:
+        if 'changes' in rule_msgs:
             self.dp_queued.extend(rule_msgs["changes"])
 
 

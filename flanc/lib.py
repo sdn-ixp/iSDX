@@ -85,7 +85,7 @@ class MultiTableController():
 
         self.fm_queue = Queue()
 
-    def init_fabric(self):    
+    def init_fabric(self):
         # install table-miss flow entry
         self.logger.info("mt_ctrlr: init fabric")
         match = self.config.parser.OFPMatch()
@@ -93,11 +93,11 @@ class MultiTableController():
         instructions = [self.config.parser.OFPInstructionActions(self.config.ofproto.OFPIT_APPLY_ACTIONS, actions)]
 
         for table in self.config.tables.values():
-            mod = self.config.parser.OFPFlowMod(datapath=self.config.datapaths["main"], 
-                                                cookie=NO_COOKIE, cookie_mask=1, 
-                                                table_id=table, 
-                                                command=self.config.ofproto.OFPFC_ADD, 
-                                                priority=FLOW_MISS_PRIORITY, 
+            mod = self.config.parser.OFPFlowMod(datapath=self.config.datapaths["main"],
+                                                cookie=NO_COOKIE, cookie_mask=1,
+                                                table_id=table,
+                                                command=self.config.ofproto.OFPFC_ADD,
+                                                priority=FLOW_MISS_PRIORITY,
                                                 match=match, instructions=instructions)
             self.config.datapaths["main"].send_msg(mod)
 
@@ -139,7 +139,7 @@ class MultiTableController():
         else:
             mod = fm.get_flow_mod(self.config)
             self.config.datapaths[fm.get_dst_dp()].send_msg(mod)
-           
+
     def packet_in(self, ev):
         self.logger.info("mt_ctrlr: packet in")
 
@@ -204,16 +204,16 @@ class MultiSwitchController(object):
 
         for datapath in self.config.datapaths.values():
             if self.config.ofv  == "1.3":
-                mod = self.config.parser.OFPFlowMod(datapath=datapath, 
-                                                    cookie=NO_COOKIE, cookie_mask=3, 
-                                                    command=self.config.ofproto.OFPFC_ADD, 
-                                                    priority=FLOW_MISS_PRIORITY, 
+                mod = self.config.parser.OFPFlowMod(datapath=datapath,
+                                                    cookie=NO_COOKIE, cookie_mask=3,
+                                                    command=self.config.ofproto.OFPFC_ADD,
+                                                    priority=FLOW_MISS_PRIORITY,
                                                     match=match, instructions=instructions)
             else:
-                mod = self.config.parser.OFPFlowMod(datapath=datapath, 
-                                                    cookie=NO_COOKIE, 
-                                                    command=self.config.ofproto.OFPFC_ADD, 
-                                                    priority=FLOW_MISS_PRIORITY, 
+                mod = self.config.parser.OFPFlowMod(datapath=datapath,
+                                                    cookie=NO_COOKIE,
+                                                    command=self.config.ofproto.OFPFC_ADD,
+                                                    priority=FLOW_MISS_PRIORITY,
                                                     match=match, actions=actions)
             datapath.send_msg(mod)
 

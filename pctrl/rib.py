@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #  Author:
 #  Muhammad Shahbaz (muhammad.shahbaz@gatech.edu)
+#  Arpit Gupta (arpitg@cs.princeton.edu)
 
 from collections import namedtuple
 import os
@@ -9,14 +10,11 @@ from threading import RLock
 
 lock = RLock()
 
+# have all the rib implementations return a consistent interface
 labels = ('prefix', 'neighbor', 'next_hop', 'origin', 'as_path', 'communities', 'med',     'atomic_aggregate')
 types  = ('text',   'text',     'text',     'text',   'text',    'text',        'integer', 'boolean')
 RibTuple = namedtuple('RibTuple', labels)
 
-#TODO: fix to be compatible with ribm interface
-#TODO: need to use RibTuple on input, and use prefix from RibTuple as key, rather than separate arg.
-#TODO: need to convert as_path from string to list on input and back on output.
-#TODO: need to implement missing routines
 class rib():
 
     def __init__(self,ip,name):
@@ -26,12 +24,15 @@ class rib():
             self.db.row_factory = sqlite3.Row
             self.name = name
 
-            # Get a cursor object
-            cursor = self.db.cursor()
+            qs = ', '.join(['?']*len(labels))
+            self.insertStmt = 'insert into %s values (%s)' % (self.name, qs)
+
             stmt = (
                     'create table if not exists '+self.name+
                     ' ('+ ', '.join([l+' '+t for l,t in zip(labels, types)])+')'
                     )
+
+            cursor = self.db.cursor()
             cursor.execute(stmt)
             self.db.commit()
 
@@ -41,117 +42,141 @@ class rib():
             self.db.close()
 
 
-    #def __setitem__(self,key,item):
-        #self.add(key,item)
+    # special case for as_path: externally it is list of ints, but internally (in the db) a string.
+    def _as_path_list2str(self, as_path):
+        return ' '.join(str(ap) for ap in as_path)
 
+    def _as_path_str2list(self, as_path):
+        return [int(ap) for ap in as_path.split()]
 
-    #def __getitem__(self,key):
-        #return self.get(key)
+    def _as_path_kwargs(self, kwargs):
+        if 'as_path' in kwargs:
+            kwargs['as_path'] = self._as_path_list2str(kwargs['as_path'])
 
+    def _ri2db(self, item):
+        return tuple(item[:4]) + (self._as_path_list2str(item[4]),) + tuple(item[5:])
 
-    def add(self,key,item):
-        with lock:
-            assert(len(item) == len(labels))
-            cursor = self.db.cursor()
-            #print "Add: ", key, item
-            values = '"'+str(key)+'", '
-            if (isinstance(item,tuple) or isinstance(item,list)):
-                values += ', '.join(['"'+str(x)+'"' for x in item[1:]])
-            #elif (isinstance(item,dict) or isinstance(item,sqlite3.Row)):
-                #values += ', '.join(['"'+str(x)+'"' for x in [item[l] for l in labels[1:]]])
-            else:
-                print 'Fatal error: item is not a recognized type'
-                sys.exit(1)
+    def _db2ri(self, item):
+        item = tuple(item)
+        return RibTuple(*(item[:4]) + (self._as_path_str2list(item[4]),) + tuple(item[5:]))
 
-            llabels = ', '.join(labels)
-            stmt = 'insert into %s (%s) values (%s)' % (self.name, llabels, values)
+    def _doSelectUnsafe(self, kwargs):
+        cursor = self.db.cursor()
+
+        if kwargs:
+            self._as_path_kwargs(kwargs)
+            keys, values = zip(*kwargs.items())
+            stmt = (
+                    'select * from '+self.name+' where ' +
+                    ' and '.join(k+' = ?' for k in keys)
+                    )
+            cursor.execute(stmt, values)
+        else:
+            stmt = 'select * from '+self.name
             cursor.execute(stmt)
 
-        #TODO: Add support for selective update
+        return cursor
 
 
-    def get(self,key):
+    def add(self, item):
+        assert isinstance(item, RibTuple)
+
         with lock:
-            cursor = self.db.cursor()
-            #print "## DEBUG: Binding Param: ", self.name, key, type(key)
-            key = str(key)
-            cursor.execute('select * from ' + self.name + ' where prefix = "' + key + '"')
+            #print "Add:", item
+            # see if already present
+            cursor = self._doSelectUnsafe(item._asdict())
+            row = cursor.fetchone()
+            if row is not None:
+                return
 
+            # not present; insert
+            item = self._ri2db(item)
+            cursor.execute(self.insertStmt, item)
+            self.db.commit()
+
+    def get(self, **kwargs):
+        assert len(kwargs)
+        assert set(kwargs.keys()).issubset(set(labels))
+
+        with lock:
+            cursor = self._doSelectUnsafe(kwargs)
             row = cursor.fetchone()
             if row is None:
                 return row
-            return RibTuple(*row)
+            return self._db2ri(row)
 
 
-    def get_all(self,key=None):
+    def get_all(self, **kwargs):
+        assert set(kwargs.keys()).issubset(set(labels))
+
         with lock:
-            cursor = self.db.cursor()
+            cursor = self._doSelectUnsafe(kwargs)
+            return [self._db2ri(c) for c in cursor.fetchall()]
 
-            if (key is not None):
-                cursor.execute('select * from ' + self.name + ' where prefix = "' + key + '"')
+
+    def get_prefixes(self):
+        with lock:
+            cursor = self._doSelectUnsafe({})
+
+            output = [c['prefix'] for c in cursor.fetchall()]
+            return sorted(output)
+
+
+    def update(self, names, item):
+        # validate names
+        if isinstance(names, str):
+            names = (names,)
+        assert names
+        assert isinstance(names, tuple) or isinstance(names, list)
+        assert set(names).issubset(set(labels))
+        # validate item
+        assert isinstance(item, RibTuple)
+
+        ds = dict((name, value) for name, value in item._asdict().items() if name in names)
+
+        with lock:
+            # get rows with given parameters
+            cursor = self._doSelectUnsafe(ds)
+            row = cursor.fetchone()
+            if row is None:
+                # not present, so insert
+                cursor.execute(self.insertStmt, self._ri2db(item))
             else:
-                cursor.execute('''select * from ''' + self.name)
-
-            return [RibTuple(*c) for c in cursor.fetchall()]
-
-
-    def filter(self,item,value):
-        with lock:
-            cursor = self.db.cursor()
-
-            script = "select * from " + self.name + " where " + item + " = '" + value + "'"
-
-            cursor.execute(script)
-
-            return [RibTuple(*c) for c in cursor.fetchall()]
-
-
-    def update(self,key,item,value):
-        with lock:
-            cursor = self.db.cursor()
-
-            script = "update " + self.name + " set " + item + " = '" + value + "' where prefix = '" + key + "'"
-
-            cursor.execute(script)
-
-
-    def update_many(self,key,item):
-        with lock:
-            cursor = self.db.cursor()
-
-            if (isinstance(item,tuple) or isinstance(item,list)):
-                cursor.execute('''update ''' + self.name + ''' set next_hop = ?, origin = ?, as_path = ?,
-                            communities = ?, med = ?, atomic_aggregate = ? where prefix = ?''',
-                            (item[0],item[1],item[2],item[3],item[4],item[5],key))
-            elif (isinstance(item,dict) or isinstance(item,sqlite3.Row)):
-                cursor.execute('''update ''' + self.name + ''' set next_hop = ?, origin = ?, as_path = ?,
-                            communities = ?, med = ?, atomic_aggregate = ? where prefix = ?''',
-                            (item['next_hop'],item['origin'],item['as_path'],item['communities'],item['med'],
-                             item['atomic_aggregate'],key))
-
-
-    def delete(self,key):
-        with lock:
-            # TODO: Add more granularity in the delete process i.e., instead of just prefix,
-            # it should be based on a conjunction of other attributes too.
-            cursor = self.db.cursor()
-            cursor.execute('delete from '+self.name+' where prefix = "'+str(key)+'"')
-
-
-    def delete_all(self):
-        with lock:
-            cursor = self.db.cursor()
-            cursor.execute('delete from '+self.name)
-
-
-    def commit(self):
-        with lock:
+                # present, so update
+                # make custom update statement based on search criteria
+                others = tuple(label for label in labels if label not in names)
+                updateStmt = (
+                        'update '+self.name+' set ' +
+                        ', '.join(other+' = ?' for other in others) +
+                        ' where ' +
+                        ' and '.join(name+' = ?' for name in names)
+                        )
+                item = RibTuple(*self._ri2db(item))
+                ovalues = tuple(getattr(item, other) for other in others)
+                nvalues = tuple(getattr(item, name) for name in names)
+                cursor.execute(updateStmt, ovalues + nvalues)
             self.db.commit()
 
 
-    def rollback(self):
+    def delete(self, **kwargs):
+        assert set(kwargs.keys()).issubset(set(labels))
+
         with lock:
-            self.db.rollback()
+            cursor = self.db.cursor()
+
+            if kwargs:
+                self._as_path_kwargs(kwargs)
+                keys, values = zip(*kwargs.items())
+                stmt = (
+                        'delete from '+self.name+' where ' +
+                        ' and '.join(k+' = ?' for k in keys)
+                        )
+                cursor.execute(stmt, values)
+            else:
+                stmt = 'delete from '+self.name
+                cursor.execute(stmt)
+
+            self.db.commit()
 
 
     def dump(self):
@@ -163,23 +188,3 @@ class rib():
         print len(rows)
         for row in rows:
             print row
-
-
-''' main '''
-if __name__ == '__main__':
-    #TODO Update test
-
-    myrib = rib('1.2.3.4', 'test')
-
-    myrib['100.0.0.1/16'] = ('172.0.0.2', 'igp', '100, 200, 300', '0', 'false')
-    #myrib['100.0.0.1/16'] = ['172.0.0.2', 'igp', '100, 200, 300', '0', 'false']
-    #myrib['100.0.0.1/16'] = {'next_hop':'172.0.0.2', 'origin':'igp', 'as_path':'100, 200, 300',
-    #                          'med':'0', 'atomic_aggregate':'false'}
-    myrib.commit()
-
-    myrib.update('100.0.0.1/16', 'next_hop', '190.0.0.2')
-    myrib.commit()
-
-    val = myrib.filter('as_path', '300')
-
-    print val[0].next_hop

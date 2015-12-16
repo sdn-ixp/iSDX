@@ -50,7 +50,7 @@ class BGPPeer():
             routes = self.rib['input'].get_all()
 
             for route_item in routes:
-                self.rib['local'].delete(route_item.prefix)
+                self.rib['local'].delete(prefix=route_item.prefix)
 
             self.rib["input"].delete_all()
 
@@ -59,9 +59,10 @@ class BGPPeer():
                 attribute = route['neighbor']['message']['update']['attribute']
 
                 origin = attribute['origin'] if 'origin' in attribute else ''
+
                 as_path = attribute['as-path'] if 'as-path' in attribute else []
-                #as_path = ' '.join(map(str,temp_as_path)).replace('[','').replace(']','').replace(',','')
                 #print "AS PATH SYNTAX::", type(as_path), as_path
+
                 med = attribute['med'] if 'med' in attribute else ''
 
                 community = attribute['community'] if 'community' in attribute else ''
@@ -210,7 +211,6 @@ class BGPPeer():
                 assert(best_route is not None)
             #print  idp, "**********best route for: ", prefix, "route:: ", best_route
 
-
             if ('announce' in update):
                 # Check if best path has changed for this prefix
                 if not bgp_routes_are_equal(best_route, prev_route):
@@ -285,17 +285,17 @@ class BGPPeer():
 
     def get_route(self,rib_name,prefix):
         with self.getlock(prefix):
-            return self.rib[rib_name][prefix]
+            return self.rib[rib_name].get(prefix=prefix)
 
 
     def get_route_with_neighbor(self,rib_name,prefix, neighbor):
         with self.getlock(prefix):
-            return self.rib[rib_name].get_prefix_neighbor(prefix, neighbor)
+            return self.rib[rib_name].get(prefix=prefix, neighbor=neighbor)
 
 
     def get_routes(self,rib_name,prefix):
         with self.getlock(prefix):
-            return self.rib[rib_name].get_all(prefix)
+            return self.rib[rib_name].get_all(prefix=prefix)
 
 
     def get_all_routes(self, rib_name):
@@ -304,12 +304,12 @@ class BGPPeer():
 
     def delete_route(self,rib_name,prefix):
         with self.getlock(prefix):
-            self.rib[rib_name].delete(prefix)
+            self.rib[rib_name].delete(prefix=prefix)
 
 
     def delete_route_with_neighbor(self,rib_name,prefix, neighbor):
         with self.getlock(prefix):
-            self.rib[rib_name].delete_prefix_neighbor(prefix, neighbor)
+            self.rib[rib_name].delete(prefix=prefix, neighbor=neighbor)
 
 
     def delete_all_routes(self,rib_name):
@@ -318,15 +318,12 @@ class BGPPeer():
 
 
     def filter_route(self,rib_name,item,value):
-        return self.rib[rib_name].filter(item,value)
+        return self.rib[rib_name].get_all(**{item:value})
 
 
     def update_route(self,rib_name,attributes):
         with self.getlock(attributes.prefix):
-            #self.rib[rib_name].delete(prefix)
-            #self.rib[rib_name][prefix] = attributes
-            #neighbor = attributes["neighbor"]
-            self.rib[rib_name].update_with_prefix_neighbor(attributes)
+            self.rib[rib_name].update(('prefix', 'neighbor'), attributes)
 
 
 def bgp_routes_are_equal(route1, route2):
