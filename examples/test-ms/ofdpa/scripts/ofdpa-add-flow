@@ -36,7 +36,7 @@ my $group_id = ($vlan << 16) + $port_out;
 #print "gid is $group_id\n";
 
 my $port_in_str = $port_in ? "'in_port': $port_in," : '';
-my $eth_type_str = $eth_type_arp ? "'eth_type': 2048," : '';
+my $eth_type_str = $eth_type_arp ? "'eth_type': 2054," : '';
 my $eth_src_in_str = $eth_src_in ? "'eth_src': \"$eth_src_in\"," : '';
 my $eth_dst_in_str = $eth_dst_in ? "'eth_dst': \"$eth_dst_in\"," : '';
 my $tcp_src_str = $tcp_src ? "'tcp_src': $tcp_src," : '';
