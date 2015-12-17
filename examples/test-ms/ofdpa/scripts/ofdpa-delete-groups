@@ -12,3 +12,13 @@ for g in $GROUP_IDS; do
     curl -X POST -d "{'dpid': $DPID,'group_id': $g}" \
 	http://$HOST:$PORT/stats/groupentry/delete
  done
+
+# do it again, since some may not have been removed the first time due to refs
+GROUP_IDS=`curl -s -X GET http://$HOST:$PORT/stats/groupdesc/$DPID |
+  perl -ne 'while (s/group_id...(\d+)//) {print "$1\n"}'`
+
+for g in $GROUP_IDS; do
+    echo "deleting $g"
+    curl -X POST -d "{'dpid': $DPID,'group_id': $g}" \
+	http://$HOST:$PORT/stats/groupentry/delete
+ done
