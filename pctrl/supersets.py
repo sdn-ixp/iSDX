@@ -8,8 +8,6 @@ import json
 from ss_lib import *
 from threading import RLock
 
-LOG = True
-
 lock = RLock()
 
 class SuperSets(object):
@@ -21,9 +19,10 @@ class SuperSets(object):
         self.max_bits = self.VMAC_size - self.best_path_size - 1
         self.max_initial_bits = self.max_bits - 4
 
-        if LOG:
-            print pctrl.idp, "Max bits:", self.max_bits, "Best path bits:", self.best_path_size
-            print pctrl.idp, "VMAC size:", self.VMAC_size, "Port size:", self.port_size
+        self.logger = pctrl.logger
+
+        self.logger.debug("Max bits: "+str(self.max_bits)+" Best path bits: "+str(self.best_path_size))
+        self.logger.debug("VMAC size: "+str(self.VMAC_size)+" Port size: "+str(self.port_size))
 
         # this is decided each time a recomputation occurs
         self.mask_size = 0
@@ -32,7 +31,7 @@ class SuperSets(object):
 
 
     def initial_computation(self, pctrl):
-        if LOG: print pctrl.idp, "Superset intial computation running..",
+        self.logger.debug("Superset intial computation running..")
 
         self.recompute_all_supersets(pctrl)
 
@@ -45,9 +44,7 @@ class SuperSets(object):
                                            "position": part_index})
         sdx_msgs = {"type":"new", "changes":changes}
 
-        if LOG:
-            print pctrl.idp, "Superset computation complete. Supersets:"
-            print pctrl.idp, ">>", self.supersets, "sdx_msgs:", sdx_msgs
+        self.logger.debug("Superset computation complete. Supersets: >> "+str(self.supersets)+" sdx_msgs: "+str(sdx_msgs))
 
         return sdx_msgs
 
@@ -66,7 +63,7 @@ class SuperSets(object):
                     if fwd_part not in rulecounts:
                         rulecounts[fwd_part] = 0
                     rulecounts[fwd_part] += 1
-        print pctrl.idp, ": RuleCounts::", rulecounts
+        self.logger.debug(": RuleCounts:: "+str(rulecounts))
 
         return rulecounts
 
@@ -75,7 +72,7 @@ class SuperSets(object):
         with lock:
             policies = pctrl.policies
 
-            if LOG: print pctrl.idp, "Updating supersets..."
+            self.logger.debug("Updating supersets...")
 
             sdx_msgs = {"type": "update", "changes": []}
 
@@ -114,7 +111,7 @@ class SuperSets(object):
 
                 # if no merge is possible, recompute from scratch
                 if expansion_index == -1:
-                    if LOG: print pctrl.idp, "No SS merge was possible. Recomputing."
+                    self.logger.debug("No SS merge was possible. Recomputing.")
                     self.recompute_all_supersets(pctrl)
 
                     sdx_msgs = {"type": "new", "changes": []}
@@ -136,9 +133,8 @@ class SuperSets(object):
                     new_members = list(new_set.difference(bestSuperset))
                     bestSuperset.extend(new_members)
 
-                    if LOG:
-                        print pctrl.idp, "Merge possible. Merging", new_set, "into superset", bestSuperset,
-                        print "with new members", new_members
+                    self.logger.debug("Merge possible. Merging "+str(new_set)+" into superset "+str(bestSuperset))
+                    self.logger.debug("with new members "+str(new_members))
 
                     for participant in new_members:
                         sdx_msgs["changes"].append({"participant_id": participant,
@@ -151,7 +147,7 @@ class SuperSets(object):
 
     def recompute_all_supersets(self, pctrl):
 
-        if LOG: print pctrl.idp, "~Recomputing all Supersets...",
+        self.logger.debug("~Recomputing all Supersets...")
 
         self.rulecounts = self.recompute_rulecounts(pctrl)
         # get all sets of participants advertising the same prefix
@@ -174,10 +170,8 @@ class SuperSets(object):
             self.id_size = int(math.ceil(math.log(len(self.supersets), 2)))
             self.mask_size -= self.id_size
 
-        if LOG:
-            print "done.~"
-            print pctrl.idp, "Supersets:"
-            print pctrl.idp, ">>", self.supersets
+        self.logger.debug("done.~")
+        self.logger.debug("Supersets: >> "+str(self.supersets))
 
 
 
@@ -193,7 +187,7 @@ class SuperSets(object):
         vmac_addr = ""
 
         if vnh not in VNH_2_prefix:
-            if LOG: print "VNH", vnh, "not found in get_vmac call!"
+            self.logger.debug("VNH "+str(vnh)+" not found in get_vmac call!")
             return vmac_addr
         prefix = VNH_2_prefix[vnh]
 
@@ -201,14 +195,13 @@ class SuperSets(object):
         # first part of the returned tuple is next hop
         route = bgp_instance.get_route('local', prefix)
         if route is None:
-            if LOG:
-                print "prefix", prefix, "not found in local"
-                bgp_instance.rib['local'].dump()
+            self.logger.debug("prefix "+str(prefix)+" not found in local")
+            bgp_instance.rib['local'].dump(self.logger)
             return vmac_addr
 
         next_hop = route.next_hop
         if next_hop not in nexthop_2_part:
-            if LOG: print "Next Hop", next_hop, "not found in get_vmac call!"
+            self.logger.debug("Next Hop "+str(next_hop)+" not found in get_vmac call!")
             return vmac_addr
 
         nexthop_part = nexthop_2_part[next_hop]
@@ -229,9 +222,9 @@ class SuperSets(object):
                 ss_id = i
                 break
         if ss_id == -1:
-            if LOG: print pctrl.idp, "In get_vmac: Prefix", prefix, "doesn't belong to any superset (This should never happen) >>"
-            if LOG: print pctrl.idp, ">> Supersets at the moment of failure:", self.supersets
-            if LOG: print pctrl.idp, ">> Set of advertisers of prefix", prefix, "is", prefix_set
+            self.logger.error("In get_vmac: Prefix "+str(prefix)+" doesn't belong to any superset (This should never happen) >>")
+            self.logger.error(">> Supersets at the moment of failure: "+str(self.supersets))
+            self.logger.error(">> Set of advertisers of prefix "+str(prefix)+" is "+str(prefix_set))
             return vmac_addr
 
 
@@ -248,8 +241,7 @@ class SuperSets(object):
             set_bitstring += '0' * pad_len
 
 
-        # debug
-        #if LOG: print "****DEBUG: Next Hop part", type(nexthop_part), self.best_path_size, type(ss_id), self.id_size
+        #self.logger.debug("****DEBUG: Next Hop part "+str(type(nexthop_part))+' '+str(self.best_path_size)+' '+str(type(ss_id))+' '+str(self.id_size))
 
         id_bitstring = '{num:0{width}b}'.format(num=ss_id, width=self.id_size)
 
@@ -259,7 +251,7 @@ class SuperSets(object):
 
 
         if len(vmac_bitstring) != 48:
-            print "BAD VMAC SIZE!! FIELDS ADD UP TO", len(vmac_bitstring)
+            self.logger.error("BAD VMAC SIZE!! FIELDS ADD UP TO "+str(len(vmac_bitstring)))
 
         # convert bitstring to hexstring and then to a mac address
         vmac_addr = '{num:0{width}x}'.format(num=int(vmac_bitstring,2), width=self.VMAC_size/4)
@@ -277,7 +269,7 @@ def get_prefix2part_sets(pctrl):
         group = get_all_participants_advertising(pctrl, prefix)
         groups.append(group)
 
-    if LOG: print pctrl.idp, "Prefix2Part called. Returning", groups[:5], "(this should not be empty)", len(groups)
+    pctrl.logger.debug("Prefix2Part called. Returning "+str(groups[:5])+"(this should not be empty) "+str(len(groups)))
 
     return groups
 
@@ -287,7 +279,7 @@ def get_all_participants_advertising(pctrl, prefix):
     nexthop_2_part = pctrl.nexthop_2_part
 
     routes = bgp_instance.get_routes('input',prefix)
-    print "Supersets all routes:: ", routes
+    pctrl.logger.debug("Supersets all routes:: "+str(routes))
 
     parts = set([])
 
@@ -297,7 +289,7 @@ def get_all_participants_advertising(pctrl, prefix):
         if next_hop in nexthop_2_part:
             parts.add(nexthop_2_part[next_hop])
         else:
-            if LOG: print pctrl.idp, "In subcall of prefix2part: Next hop", next_hop, "NOT in nexthop_2_part"
+            pctrl.logger.debug("In subcall of prefix2part: Next hop "+str(next_hop)+" NOT in nexthop_2_part")
 
     return parts
 

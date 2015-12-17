@@ -9,7 +9,9 @@ from multiprocessing.connection import Listener
 ''' bgp server '''
 class server(object):
 
-    def __init__(self):
+    def __init__(self, logger):
+        self.logger = logger
+
         self.listener = Listener(('localhost', 6000), authkey='xrs')
 
         self.sender_queue = Queue()
@@ -17,7 +19,7 @@ class server(object):
 
     def start(self):
         self.conn = self.listener.accept()
-        print 'Connection accepted from', self.listener.last_accepted
+        self.logger.debug('Connection accepted from '+str(self.listener.last_accepted))
 
         self.sender = Thread(target=_sender, args=(self.conn,self.sender_queue))
         self.sender.start()

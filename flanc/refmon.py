@@ -2,7 +2,10 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 import os
-import logging
+import sys
+sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import util.log
+
 import json
 
 from ryu.base import app_manager
@@ -37,7 +40,7 @@ class RefMon(app_manager.RyuApp):
         #wsgi = kwargs['wsgi']
         #wsgi.register(FlowModReceiver, self)
 
-        self.logger = logging.getLogger('ReferenceMonitor')
+        self.logger = util.log.getLogger('ReferenceMonitor')
         self.logger.info('refmon: start')
 
         # retrieve command line arguments

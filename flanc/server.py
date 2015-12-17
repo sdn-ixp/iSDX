@@ -3,7 +3,11 @@
 #  Muhammad Shahbaz (muhammad.shahbaz@gatech.edu)
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-import logging
+import os
+import sys
+sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import util.log
+
 import json
 
 from threading import Thread
@@ -14,7 +18,7 @@ from multiprocessing.connection import Listener
 class Server(object):
 
     def __init__(self, refmon, address, port, key):
-        self.logger = logging.getLogger('RefMon Server')
+        self.logger = util.log.getLogger('RefMon_Server')
         self.logger.info('server: start')
 
         self.refmon = refmon

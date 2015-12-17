@@ -5,6 +5,11 @@
 from netaddr import *
 import math
 
+import os
+import sys
+sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import util.log
+logger = util.log.getLogger('ss_lib')
 
 def bitsRequired(supersets):
     """ How many bits are needed to represent any set in this construction?
@@ -304,9 +309,9 @@ def get_vmac_test(prefix_set, ss_instance):
             ss_id = i
             break
     if ss_id == -1:
-        if LOG: print pctrl.idp, "Prefix", prefix, "doesn't belong to any superset? >>"
-        if LOG: print pctrl.idp, ">> Supersets:", self.SuperSets
-        if LOG: print pctrl.idp, ">> Set of prefix", prefix, "=", prefix_set
+        logger.debug("Prefix "+str(prefix)+" doesn't belong to any superset? >>")
+        logger.debug(">> Supersets: "+str(self.SuperSets))
+        logger.debug(">> Set of prefix "+str(prefix)+" = "+str(prefix_set))
         return vmac_addr
 
     peers_out = [1,2,3,4,5,6]
@@ -324,8 +329,7 @@ def get_vmac_test(prefix_set, ss_instance):
         set_bitstring += '0' * pad_len
 
 
-    # debug
-    #if LOG: print "****DEBUG: Next Hop part", type(nexthop_part), self.best_path_size, type(ss_id), self.id_size
+    #logger.debug("****DEBUG: Next Hop part "+str(type(nexthop_part))+' '+str(self.best_path_size)+' '+str(type(ss_id))+' '+str(self.id_size))
 
     id_bitstring = '{num:0{width}b}'.format(num=ss_id, width=self.id_size)
 

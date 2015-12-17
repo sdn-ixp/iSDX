@@ -29,7 +29,6 @@ class rib(object):
 
 
     def add(self, item):
-        print "Add new row: ", item
         assert(isinstance(item, RibTuple))
 
         in_stmt = {}
@@ -91,12 +90,12 @@ class rib(object):
         self.session.delete_many(kwargs)
 
 
-    def dump(self):
+    def dump(self, logger):
         # dump of db for debugging
         rows = self.session.find()
-        print rows.count()
+        logger.debug(str(rows.count()))
         for row in rows:
-            print tuple(k+'='+str(row[k]) for k in labels), row['_id']
+            logger.debug(str(tuple(k+'='+str(row[k]) for k in labels), row['_id']))
 
 
 ''' main '''

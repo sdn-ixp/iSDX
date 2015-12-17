@@ -20,7 +20,7 @@ class FlowMod(object):
         self.priority = None
         self.cookie = None
         self.matches = {}
-	self.actions = []
+        self.actions = []
 
         self.validate_flow_mod(flow_mod)
 

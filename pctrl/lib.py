@@ -15,10 +15,6 @@ from flowmodmsg import FlowModMsgBuilder
 
 # from bgp_interface import get_all_participants_advertising
 
-LOG = False
-
-
-
 MULTISWITCH = 0
 MULTITABLE  = 1
 

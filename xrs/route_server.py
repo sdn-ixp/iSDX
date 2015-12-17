@@ -17,16 +17,17 @@ from threading import Thread,Event
 from server import server as Server
 from core import XRS, XRSPeer
 
+import os
+import sys
+sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import util.log
+logger = util.log.getLogger('XRS')
 
-
-LOG = True
 
 class route_server(object):
 
     def __init__(self, config_file):
-        self.idp = "XRS:"
-
-        if LOG: print self.idp, "Initializing the Route Server."
+        logger.info("Initializing the Route Server.")
 
         # Init the Route Server
         self.server = None
@@ -47,7 +48,7 @@ class route_server(object):
         self.parse_config(config_file)
 
         # Initialize a XRS Server
-        self.server = Server()
+        self.server = Server(logger)
         self.run = True
 
         """
@@ -58,7 +59,7 @@ class route_server(object):
 
 
     def start(self):
-        if LOG: print self.idp, "Starting the Server to handle incoming BGP Updates."
+        logger.info("Starting the Server to handle incoming BGP Updates.")
         self.server.start()
 
         waiting = 0
@@ -71,7 +72,7 @@ class route_server(object):
 
                 waiting = 0
 
-                if LOG: print self.idp, "Got route from ExaBGP.", route, type(route)
+                logger.debug("Got route from ExaBGP. "+str(route)+' '+str(type(route)))
 
                 # Received BGP route advertisement from ExaBGP
                 for id, peer in self.participants.iteritems():
@@ -84,23 +85,19 @@ class route_server(object):
                             self.send_update(id, route)
 
             except Queue.Empty:
-                if LOG:
-                    if waiting == 0:
-                        print self.idp, "Waiting for BGP update..."
-                        waiting = 1
-                    else:
-                        waiting = (waiting % 30) + 1
-                        if waiting == 30:
-                            print ''
-                        else:
-                            print '.',
-                            sys.stdout.flush()
+                if waiting == 0:
+                    logger.debug("Waiting for BGP update...")
+                    waiting = 1
+                else:
+                    waiting = (waiting % 30) + 1
+                    if waiting == 30:
+                        logger.debug("Waiting for BGP update...")
 
 
     def parse_config(self, config_file):
         # loading config file
 
-        if LOG: print self.idp, "Parsing config...",
+        logger.debug("Begin parsing config...")
 
         config = json.load(open(config_file, 'r'))
 
@@ -142,13 +139,13 @@ class route_server(object):
             # create peer and add it to the route server environment
             self.participants[int(participant_name)] = XRSPeer(asn, ports, peers_in, peers_out, eh_socket)
 
-        if LOG: print "done."
+        logger.debug("Done parsing config")
 
 
     def set_announcement_handler(self):
         '''Start the listener socket for BGP Announcements'''
 
-        if LOG: print self.idp, "Starting the announcement handler..."
+        logger.info("Starting the announcement handler...")
 
         self.listener_eh = Listener(self.ah_socket, authkey=None)
         ps_thread = Thread(target=self.start_ah)
@@ -159,13 +156,13 @@ class route_server(object):
     def start_ah(self):
         '''Announcement Handler '''
 
-        if LOG: print self.idp, "Announcement Handler started."
+        logger.info("Announcement Handler started.")
 
         while True:
             conn_ah = self.listener_eh.accept()
             tmp = conn_ah.recv()
 
-            if LOG: print self.idp, "Received an announcement."
+            logger.debug("Received an announcement.")
 
             announcement = json.loads(tmp)
             self.server.sender_queue.put(announcement)
@@ -178,7 +175,7 @@ class route_server(object):
         # TODO: Explore what is better, persistent client sockets or
         # new socket for each BGP update
         "Send this BGP route to participant id's controller"
-        if LOG: print self.idp, "Sending a route update to participant", id
+        logger.debug("Sending a route update to participant "+str(id))
         conn = Client(tuple(self.participants[id].eh_socket), authkey = None)
         data = {}
         data['bgp'] = route
@@ -189,7 +186,7 @@ class route_server(object):
 
     def stop(self):
 
-        if LOG: print self.idp, "Stopping."
+        logger.info("Stopping.")
         self.run = False
 
 def main(argv):

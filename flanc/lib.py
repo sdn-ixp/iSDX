@@ -1,8 +1,12 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+import os
+import sys
+sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import util.log
+
 import json
-import logging
 
 from Queue import Queue
 
@@ -80,7 +84,7 @@ class InvalidConfigError(Exception):
 class MultiTableController(object):
     def __init__(self, config):
         self.config = config
-        self.logger = logging.getLogger('MultiTableController')
+        self.logger = util.log.getLogger('MultiTableController')
         self.logger.info('mt_ctrlr: creating an instance of MultiTableController')
 
         self.fm_queue = Queue()
@@ -159,7 +163,7 @@ class MultiTableController(object):
 
 class MultiSwitchController(object):
     def __init__(self, config):
-        self.logger = logging.getLogger('MultiSwitchController')
+        self.logger = util.log.getLogger('MultiSwitchController')
         self.logger.info('ms_ctrlr: creating an instance of MultiSwitchController')
 
         self.datapaths = {}

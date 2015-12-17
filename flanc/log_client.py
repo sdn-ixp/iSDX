@@ -2,7 +2,11 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-import logging
+import os
+import sys
+sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import util.log
+
 import json
 import argparse
 
@@ -17,7 +21,7 @@ from time import sleep, time, strptime, mktime
 class LogClient(object):
 
     def __init__(self, address, port, authkey, input_file, debug = False, timing = False):
-        self.logger = logging.getLogger('log_client')
+        self.logger = util.log.getLogger('log_client')
         if debug:
             self.logger.setLevel(logging.DEBUG)
         self.logger.info('server: start')

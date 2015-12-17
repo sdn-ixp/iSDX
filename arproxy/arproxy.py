@@ -16,14 +16,15 @@ from multiprocessing.connection import Listener, Client
 
 from utils import parse_packet, parse_eth_frame, parse_arp_packet, craft_arp_packet, craft_eth_frame, craft_garp_response
 
+sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import util.log
+logger = util.log.getLogger('arp')
+
 ETH_BROADCAST = 'ff:ff:ff:ff:ff:ff'
 ETH_TYPE_ARP = 0x0806
 
 SUPERSETS = 0
 MDS       = 1
-
-LOG = True
-idp = "ARP:"
 
 
 class ArpProxy(object):
@@ -96,7 +97,7 @@ class ArpProxy(object):
             self.raw_socket.bind((self.interface, 0))
             self.raw_socket.settimeout(1.0)
         except socket.error as msg:
-            print 'Failed to create socket. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+            logger.exception('Failed to create socket. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
             sys.exit()
 
 
@@ -109,8 +110,7 @@ class ArpProxy(object):
                 packet, eth_frame, arp_packet = parse_packet(raw_packet)
 
                 arp_type = struct.unpack("!h", arp_packet["oper"])[0]
-                if LOG:
-                    print idp, "Received ARP-" + ("REQUEST" if (arp_type == 1) else "REPLY") +" SRC: "+eth_frame["src_mac"]+" / "+arp_packet["src_ip"]+" "+"DST: "+eth_frame["dst_mac"]+" / "+arp_packet["dst_ip"]
+                logger.debug("Received ARP-" + ("REQUEST" if (arp_type == 1) else "REPLY") +" SRC: "+eth_frame["src_mac"]+" / "+arp_packet["src_ip"]+" "+"DST: "+eth_frame["dst_mac"]+" / "+arp_packet["dst_ip"])
 
                 if arp_type == 1:
                     # check if the arp request stems from one of the participants
@@ -126,8 +126,7 @@ class ArpProxy(object):
                         """
                         response_vmac = self.get_vmac_default(requester_srcmac, requested_ip)
                         if response_vmac != "":
-                            if LOG:
-                                print "ARP-PROXY: reply with VMAC "+response_vmac
+                            logger.debug("ARP-PROXY: reply with VMAC "+response_vmac)
 
                             data = self.craft_arp_packet(arp_packet, response_vmac)
                             eth_packet = self.craft_eth_frame(eth_frame, response_vmac, data)
@@ -135,14 +134,14 @@ class ArpProxy(object):
                         """
 
             except socket.timeout:
-                if LOG:
-                    pass
-                    #print 'Socket Timeout Occured'
+                # prints about once per second
+                #logger.debug('Socket Timeout Occured')
+                pass
 
 
     def set_garp_listener(self):
         "Set listener for ARP replies from the participants' controller"
-        if LOG: print idp, "Starting the ARP  listener"
+        logger.info("Starting the ARP  listener")
         self.listener_garp = Listener(self.garp_socket, authkey=None)
         ps_thread = Thread(target=self.start_garp_handler)
         ps_thread.daemon = True
@@ -150,10 +149,10 @@ class ArpProxy(object):
 
 
     def start_garp_handler(self):
-        if LOG: print idp, "ARP Response Handler started "
+        logger.info("ARP Response Handler started")
         while True:
             conn_ah = self.listener_garp.accept()
-            if LOG: print idp, "Connection from a pctrl accepted."
+            logger.info("Connection from a pctrl accepted.")
             tmp = conn_ah.recv()
             self.process_garp(json.loads(tmp))
             reply = "Gratuitous ARP response processed"
@@ -174,11 +173,10 @@ class ArpProxy(object):
             SHA = VMAC, SPA = vnhip, 
             THA = VMAC, TPA = vnhip
         """
-        if LOG: 
-            if data["THA"] == data["eth_dst"]:
-                print idp, "ARP Reply relayed:", data
-            else:
-                print idp, "Gratuitous ARP relayed:", data
+        if data["THA"] == data["eth_dst"]:
+            logger.debug("ARP Reply relayed: "+str(data))
+        else:
+            logger.debug("Gratuitous ARP relayed: "+str(data))
 
         garp_message = craft_garp_response(**data)
         self.raw_socket.send(garp_message)
@@ -190,8 +188,7 @@ class ArpProxy(object):
             requester_id = self.portmac_2_participant[requester_srcmac]
             if requester_id in self.participants:
                 # ARP request is sent by participant with its own SDN controller
-                if LOG:
-                    print idp, "relay ARP-REQUEST to participant "+str(requester_id)
+                logger.debug("relay ARP-REQUEST to participant "+str(requester_id))
                 eh_socket = Client(self.participants[requester_id]["eh_socket"])
                 data = {}
                 data['arp'] = [requester_srcmac, requested_ip]
@@ -219,7 +216,7 @@ def main(argv):
     base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"config"))
     config_file = os.path.join(base_path, "sdx_global.cfg")
 
-    if LOG: print idp, "Launching ARP Proxy with config file", config_file
+    logger.info("Launching ARP Proxy with config file "+str(config_file))
 
     # start arp proxy
     sdx_ap = ArpProxy(config_file)

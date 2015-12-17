@@ -179,12 +179,12 @@ class rib(object):
             self.db.commit()
 
 
-    def dump(self):
+    def dump(self, logger):
         # dump of db for debugging
         with lock:
             cursor = self.db.cursor()
             cursor.execute('''select * from ''' + self.name)
             rows = cursor.fetchall()
-        print len(rows)
+        logger.dump(str(len(rows)))
         for row in rows:
-            print row
+            logger.dump(str(row))
