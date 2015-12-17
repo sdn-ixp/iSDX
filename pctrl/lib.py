@@ -2,25 +2,23 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-import requests
+import errno
 import json
-from netaddr import *
 from multiprocessing.connection import Client
-from peer import BGPPeer as BGPPeer
-
+from netaddr import IPNetwork
+from socket import error as SocketError
 import sys
+
 sys.path.insert(0,'../xctrl')
 from flowmodmsg import FlowModMsgBuilder
+from peer import BGPPeer as BGPPeer
 
-
-# from bgp_interface import get_all_participants_advertising
 
 MULTISWITCH = 0
 MULTITABLE  = 1
 
 SUPERSETS = 0
 MDS       = 1
-
 
 
 class PConfig(object):
@@ -91,12 +89,12 @@ class PConfig(object):
 
 
 
-    def get_arp_client(self):
+    def get_arp_client(self, logger):
         config = self.config
 
         conn_info = config["ARP Proxy"]
 
-        return GenericClient(conn_info["GARP_SOCKET"][0], conn_info["GARP_SOCKET"][1])
+        return GenericClient(conn_info["GARP_SOCKET"][0], conn_info["GARP_SOCKET"][1], '', logger, 'arp')
 
 
     def get_eh_info(self):
@@ -107,7 +105,7 @@ class PConfig(object):
         return tuple(conn_info)
 
 
-    def get_refmon_client(self):
+    def get_refmon_client(self, logger):
         config = self.config
 
         conn_info = config["RefMon Server"]
@@ -117,26 +115,45 @@ class PConfig(object):
 
         key = config["Participants"][self.id]["Flanc Key"]
 
-        return GenericClient(address, port, key)
+        return GenericClient(address, port, key, logger, 'refmon')
 
 
-    def get_xrs_client(self):
+    def get_xrs_client(self, logger):
         config = self.config
 
         conn_info = config["Route Server"]
 
-        return GenericClient(conn_info["AH_SOCKET"][0], conn_info["AH_SOCKET"][1])
+        return GenericClient(conn_info["AH_SOCKET"][0], conn_info["AH_SOCKET"][1], '', logger, 'xrs')
 
 
 class GenericClient(object):
-    def __init__(self, address, port, key = ""):
+    def __init__(self, address, port, key, logger, sname):
         self.address = address
         self.port = int(port)
         self.key = key
+        self.logger = logger
+        self.serverName = sname
+
 
     def send(self, msg):
-        #conn = Client((self.address, self.port), authkey=str(self.key))
-        conn = Client((self.address, self.port))
+        # TODO: Busy wait will do for initial startup but for dealing with server down in the middle of things
+        # TODO: then busy wait is probably inappropriate.
+        while True: # keep going until we break out inside the loop
+            try:
+                self.logger.debug('Attempting to connect to '+self.serverName+' server at '+str(self.address)+' port '+str(self.port))
+                conn = Client((self.address, self.port))
+                self.logger.debug('Connect to '+self.serverName+' successful.')
+                break
+            except SocketError as serr:
+                if serr.errno == errno.ECONNREFUSED:
+                    self.logger.debug('Connect to '+self.serverName+' failed because connection was refused (the server is down). Trying again.')
+                else:
+                    # Not a recognized error. Treat as fatal.
+                    self.logger.debug('Connect to '+self.serverName+' gave socket error '+str(serr.errno))
+                    raise serr
+            except:
+                self.logger.exception('Connect to '+self.serverName+' threw unknown exception')
+                raise
 
         conn.send(msg)
 

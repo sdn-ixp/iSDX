@@ -91,17 +91,15 @@ class ParticipantController(object):
         self.logger.debug("Trace: Started controller for participant")
 
         # Route server client, Reference monitor client, Arp Proxy client
-        self.xrs_client = self.cfg.get_xrs_client()
-        self.arp_client = self.cfg.get_arp_client()
-        self.refmon_client = self.cfg.get_refmon_client()
+        self.xrs_client = self.cfg.get_xrs_client(self.logger)
+        self.arp_client = self.cfg.get_arp_client(self.logger)
+        self.refmon_client = self.cfg.get_refmon_client(self.logger)
          # class for building flow mod msgs to the reference monitor
         self.fm_builder = FlowModMsgBuilder(self.id, self.refmon_client.key)
-
 
         # Send flow rules for initial policies to the SDX's Reference Monitor
         self.initialize_dataplane()
         self.push_dp()
-
 
         # Start the event handler
         eh_socket = self.cfg.get_eh_info()
@@ -542,7 +540,7 @@ if __name__ == '__main__':
 
     policy_file = os.path.join(policy_path, policy_filename)
 
-    logger = util.log.getLogger("P_" + str(id))
+    logger = util.log.getLogger("P_" + str(args.id))
 
     logger.info("Starting controller with config file: "+str(config_file))
     logger.info("and policy file: "+str(policy_file))

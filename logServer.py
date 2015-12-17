@@ -1,11 +1,11 @@
 import asyncore
+import datetime
 import logging, logging.handlers
 import os
 import pickle
 import socket
 import struct
 import sys
-import time
 
 class MyFormatter(logging.Formatter):
     "Custom logging formatter to return usecs as part of time"
@@ -13,36 +13,29 @@ class MyFormatter(logging.Formatter):
         logging.Formatter.__init__(self, *args, **kwargs)
 
     def formatTime(self, record, datefmt=None):
-        t = time.time()
-        ts = time.localtime()
-        ti = int(t)
-        tf = t - ti
-        return '%04d%02d%02d %02d%02d%02d.%06d' % (
-                ts.tm_year,
-                ts.tm_mon,
-                ts.tm_mday,
-                ts.tm_hour,
-                ts.tm_min,
-                ts.tm_sec,
-                int(tf*1000000))
+	return datetime.datetime.now().strftime('%Y%m%d %H%M%S.%f')
 
-def getLogger(fname):
+def getLogger(fname=None):
     format='%(asctime)s:%(levelname)s:%(name)s:%(filename)s %(lineno)d:%(message)s'
     formatter = MyFormatter(format)
 
-    fh = logging.FileHandler(fname)
-    fh.setFormatter(formatter)
+    logger = logging.getLogger('sdx')
+
+    if fname:
+        fh = logging.FileHandler(fname)
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
 
     ch = logging.StreamHandler()
     ch.setFormatter(formatter)
-
-    logger = logging.getLogger('sdx')
-    logger.addHandler(fh)
     logger.addHandler(ch)
 
     return logger
 
-globalLogger = getLogger(sys.argv[1])
+fname = None
+if len(sys.argv) > 1:
+    fname = sys.argv[1]
+globalLogger = getLogger(fname)
 
 class LogRecordHandler(asyncore.dispatcher):
 
