@@ -1,0 +1,85 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Getopt::Long;
+
+my $vlan = 1;
+
+my $host = 'localhost';
+my $port = '8080';
+my $dpid = 1;
+my $priority = 0;
+my($port_in,$eth_type_arp,$eth_src_in,$eth_dst_in);
+my($tcp_src,$tcp_dst,$eth_src_out,$eth_dst_out);
+my($show_msg);
+
+GetOptions("dpid=i" => \$dpid,
+	   "priority=i" => \$priority,
+
+	   "port_in=i" => \$port_in,
+	   "eth_type_arp" => \$eth_type_arp,
+	   "eth_src_in=s" => \$eth_src_in,
+	   "eth_dst_in=s" => \$eth_dst_in,
+	   "tcp_src=i" => \$tcp_src,
+	   "tcp_dst=i" => \$tcp_dst,
+
+	   "eth_src_out=s" => \$eth_src_out,
+	   "eth_dst_out=s" => \$eth_dst_out,
+
+	   "show_msg" => \$show_msg
+    ) or die("Bad option argument");
+
+my $port_out = shift or die("Missing output port argument");
+
+my $group_id = ($vlan << 16) + $port_out;
+
+#print "gid is $group_id\n";
+
+my $port_in_str = $port_in ? "'in_port': $port_in," : '';
+my $eth_type_str = $eth_type_arp ? "'eth_type': 2048," : '';
+my $eth_src_in_str = $eth_src_in ? "'eth_src': \"$eth_src_in\"," : '';
+my $eth_dst_in_str = $eth_dst_in ? "'eth_dst': \"$eth_dst_in\"," : '';
+my $tcp_src_str = $tcp_src ? "'tcp_src': $tcp_src," : '';
+my $tcp_dst_str = $tcp_dst ? "'tcp_dst': $tcp_dst," : '';
+my $ip_proto_str = ($tcp_src || $tcp_dst) ? "'ip_proto': 6," : '';
+
+mac_usage() if ($eth_src_in && $eth_src_in !~ /^(..)(:..){5}(\/(..)(:..){5})?$/);
+mac_usage() if ($eth_dst_in && $eth_dst_in !~ /^(..)(:..){5}(\/(..)(:..){5})?$/);
+mac_usage() if ($eth_src_out && $eth_src_out !~ /^(..)(:..){5}(\/(..)(:..){5})?$/);
+mac_usage() if ($eth_dst_out && $eth_dst_out !~ /^(..)(:..){5}(\/(..)(:..){5})?$/);
+
+my $msg = <<ENDMSG;
+{
+    'dpid': $dpid,
+    'table_id': 60,
+    'priority': $priority,
+    'match':{
+	$port_in_str
+	$eth_type_str
+	$eth_src_in_str
+	$eth_dst_in_str
+	$tcp_src_str
+	$tcp_dst_str
+	$ip_proto_str
+        'dl_vlan': 1
+    },
+    'actions':[
+        {
+            'type':'GROUP',
+            'group_id': $group_id
+        }
+    ]
+}
+ENDMSG
+
+print "$msg\n" if $show_msg;
+
+my $rc = system('curl', '-f', '-X', 'POST', '-d', "$msg", "http://$host:$port/stats/flowentry/add");
+
+print "Create flow request failed\n" if $rc;
+
+
+sub mac_usage {
+    print "MAC format bad.  Should be e.g., aa:bb:cc:dd:ee:ff or aa:bb:cc:dd:ee:ff/ff:00:00:00:00:ff\n";
+    exit 1
+}
