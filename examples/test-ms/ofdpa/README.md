@@ -88,31 +88,31 @@ in the previous step prints a few 'Connection refused' messages.)
  $ bin/ryu-manager --verbose ryu.app.ofctl_rest
  ````
 ### Installing Test Flow Rules (and Related Groups)
-Use the provided 'ofdpa-*' scripts to set up a test flow.  These scripts use `curl` to send messages
+Use the provided 'ofdpa_*' scripts to set up a test flow.  These scripts use `curl` to send messages
 to the Ryu REST interface using the syntax found
 [here](http://ryu.readthedocs.org/en/latest/app/ofctl_rest.html).
 First, create an L2 Interface Group for port 7.  If a rule references this group, any
 packets that match the rule will be sent to port 7.
  ````
- $ ofdpa-add-group-intf 7
+ $ ofdpa_add_group_intf 7
  ````
 Then create an L2 Rewrite Group that overwrites the dest MAC address and forwards the
 packet out on port 7 via the L2 Interface Group.  In this case, the MAC address we are
 writing corresponds to the host interface connected to port 7.
  ````
- $ ofdpa-add-group-rewrite 7 44:a8:42:32:5d:59
+ $ ofdpa_add_group_rewrite 7 44:a8:42:32:5d:59
  ````
 Do the same thing for port 8:
  ````bash
- $ ofdpa-add-group-intf 8
- $ ofdpa-add-group-rewrite 8 44:a8:42:32:5d:5b
+ $ ofdpa_add_group_intf 8
+ $ ofdpa_add_group_rewrite 8 44:a8:42:32:5d:5b
  ````
 Finally, create simple flow rules that forward packets from port 7 to port 8 and from port 8 to
 port 7.  These flows rules reference the L2 Interface Groups created above.  (At the moment,
 these scripts do not use the L2 Rewrite Groups that we just created.)
  ````
- $ ofdpa-add-flow-basic 7 8
- $ ofdpa-add-flow-basic 8 7
+ $ ofdpa_add_flow_basic 7 8
+ $ ofdpa_add_flow_basic 8 7
  ````
 ### Dumping Groups and Rules
 You can dump the groups and rules either using commands on the switch or via the OF interface.  
@@ -135,13 +135,13 @@ Using commands on the switch:
  ````
 Using scripts based on the OF interface:
  ````
- $ ofdpa-show-groups 
+ $ ofdpa_show_groups 
 "group_id": 65544	    (0x10008)	    "actions": ["OUTPUT:8", "POP_VLAN"]
 "group_id": 268435464	(0x10000008)	"actions": ["GROUP:65544", "SET_FIELD: {eth_dst:44:a8:42:32:5d:5b}"]
 "group_id": 65543	    (0x10007)	    "actions": ["OUTPUT:7", "POP_VLAN"]
 "group_id": 268435463	(0x10000007)	"actions": ["GROUP:65543", "SET_FIELD: {eth_dst:44:a8:42:32:5d:59}"]
 
- $ ofdpa-show-flows 
+ $ ofdpa_show_flows 
 "match": {"dl_vlan": "1", "in_port": 7}, "actions": ["GROUP:65544"], "priority": 4, "packet_count": 300
 "match": {"dl_vlan": "1", "in_port": 8}, "actions": ["GROUP:65543"], "priority": 4, "packet_count": 299
  ````
