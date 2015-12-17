@@ -41,6 +41,9 @@ sub usage {
     my $cmd = basename($0);
     print <<END_USAGE;
 usage: $cmd <options..> output_port
+    Create a new flow and create the groups it uses as needed
+    (unless 'skip_intf_group' is specified).
+
     General OpenFlow Options:
       --dpid <n>
       --priority <n>
