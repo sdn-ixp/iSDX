@@ -75,12 +75,17 @@ For the initial testing, we used the following configuration:
 Configuration](https://docs.google.com/drawings/d/1QHrcgNcjwR5H5EvDLtqaz93rxjewIARrKszlBA7NkNo/pub?w=960&h=720)
 On the Quanta switch (ssh in to it via management interface) start the OF-DPA service and
 agent.  The agent will try to connect to the Ryu controller, which in our setup is at
-`10.0.0.100:6633`.  The datapath ID (`--dpid=1`) uniquely identifies this switch to the controller.  When
-additional switches are added to the configuration, they will need to use different dpids.
+`10.0.0.100:6633`.  The datapath ID (`--dpid=1`) uniquely identifies this switch to the controller.  When additional switches are added to the configuration, they will need to use different dpids.
+The OF-DPA agent that we run on the switch is `brcm-indigo-ofdpa-agent`.
+There is an alternative agent called `indigo-ofdpa-agent`; however, in our experimentation we
+found that the latter does not properly handle the ethertype for ARP.
+[This forum post]
+(https://groups.google.com/a/openflowhub.org/forum/#!msg/floodlight-dev/VA78jF9LYjg/xhccoffDeMoJ)
+ briefly discusses the two implementations.
  ````
  # service ofdpa restart
  # sleep 20 	 # delay until service is really up
- # indigo-ofdpa-ofagent --controller=10.0.0.100:6633 --dpid=1
+ # brcm-indigo-ofdpa-ofagent --controller=10.0.0.100:6633 --dpid=1
  ````
 On the controller VM, start Ryu with REST interface.  (Make sure to wait until the agent
 in the previous step prints a few 'Connection refused' messages.)
@@ -177,3 +182,5 @@ TCP window size: 85.0 KByte (default)
 
 4. **_Port iSDX to the OF-DPA-Based Hardware Configuration_**  
 TBD
+
+hello world
