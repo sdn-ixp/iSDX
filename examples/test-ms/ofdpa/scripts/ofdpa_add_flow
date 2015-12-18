@@ -126,7 +126,7 @@ if ($eth_src_out || $eth_dst_out) {
     }
     # need to use L2 Rewrite Group -- create one on the fly
     # (if it exists already, no big deal)
-    $group_id = ((crc32($eth_src_out . $eth_dst_out) >> 8) + $port_out) | 0x10000000;
+    $group_id = ((crc32($eth_src_out . $eth_dst_out) >> 8) + $ports_out[0]) | 0x10000000;
     $eth_src_out_str = $eth_src_out ? 
 	",{'type':'SET_FIELD', 'field':'eth_src', 'value':\"$eth_src_out\"}" : '';
     $eth_dst_out_str = $eth_dst_out ? 
