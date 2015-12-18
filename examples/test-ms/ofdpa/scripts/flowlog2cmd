@@ -6,6 +6,7 @@ use strict;
 
 while (<>) {
     next if !/rule_type/;
+    next if /4294967288/;
 
     my $args = '';
 
@@ -47,6 +48,8 @@ while (<>) {
 	$outport =~ s/inbound/3/;
 	$outport =~ s/outbound/2/;
 	$outport =~ s/main-in/1/;
+	$outport =~ s/main/1/;
+	$outport =~ s/arp/20/;
     } else {
 	print "Ignoring rule -- no fwd port specified\n";
 	next;
