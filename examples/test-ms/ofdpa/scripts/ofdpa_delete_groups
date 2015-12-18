@@ -2,7 +2,13 @@
 
 HOST=localhost
 PORT=8080
-DPID=1
+
+if [ $# -ne 1 ]; then
+    CMD=`basename $0`
+    echo "usage: $CMD <dpid>"
+    exit 1
+fi
+DPID=$1
 
 GROUP_IDS=`curl -s -X GET http://$HOST:$PORT/stats/groupdesc/$DPID |
   perl -ne 'while (s/group_id...(\d+)//) {print "$1\n"}'`

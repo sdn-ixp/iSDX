@@ -24,9 +24,9 @@ while (<>) {
 
     while (s/\[(\S{17}) (\S{17})\]/$1\/$2/) {}
 #    print;
-    $args .= " --eth_src $1" if / eth_src (\S+)/;
+    $args .= " --eth_src_in $1" if / eth_src (\S+)/;
     $args .= " --eth_dst_in $1" if / eth_dst (\S+)/;
-    $args .= " --eth_type arp" if /eth_type 2054/;
+    $args .= " --eth_type_arp" if /eth_type 2054/;
 
     s/arp proxy/arp_proxy/;
     my $in_port = $1 if /in_port (\S+)/;
@@ -55,5 +55,5 @@ while (<>) {
     $args .= " --tcp_src $1" if /tcp_src (\d+)/;
     $args .= " --tcp_dst $1" if /tcp_dst (\d+)/;
 
-    print "ofdpa_add_flow $args\n";
+    print "ofdpa_add_flow $args $outport\n";
 }

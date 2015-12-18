@@ -2,8 +2,16 @@
 
 HOST=localhost
 PORT=8080
-DPID=1
+
+if [ $# -ne 1 ]; then
+    CMD=`basename $0`
+    echo "usage: $CMD <dpid>"
+    exit 1
+fi
+DPID=$1
 
 curl -X GET http://$HOST:$PORT/stats/groupdesc/$DPID 2> /dev/null|
-perl -ne 'while (s/("actions[^]]*?\]).*?("group_id.. (\d+))//) {  printf "$2\t(0x%x)\t$1\n", $3;}'
+perl -ne 's/.*?buckets//; @a = split("buckets"); foreach (@a) {my @b; while (s/"actions[^]]*?\]//) {push(@b,$&)} print "$& " if /"group_id.. (\d+)/; print join(" ", @b) . "\n"}'
+
+# perl -ne 'while (s/("actions[^]]*?\]).*?("group_id.. (\d+))//) {  printf "$2\t(0x%x)\t$1\n", $3;}'
 

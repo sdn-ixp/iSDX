@@ -35,12 +35,14 @@ GetOptions("dpid=i" => \$dpid,
 	   "skip_intf_group" => \$skip_intf_group
     ) or die("Bad option argument");
 
-my $port_out = shift or usage();
+my @ports_out = @ARGV;
+usage() if !@ports_out;
+my $mcast = scalar(@ports_out) > 1;
 
 sub usage {
     my $cmd = basename($0);
     print <<END_USAGE;
-usage: $cmd <options..> output_port
+usage: $cmd <options..> output_ports...
     Create a new flow and create the groups it uses as needed
     (unless 'skip_intf_group' is specified).
 
@@ -79,11 +81,15 @@ mac_usage() if ($eth_dst_in && $eth_dst_in !~ /^(..)(:..){5}(\/(..)(:..){5})?$/)
 mac_usage() if ($eth_src_out && $eth_src_out !~ /^(..)(:..){5}(\/(..)(:..){5})?$/);
 mac_usage() if ($eth_dst_out && $eth_dst_out !~ /^(..)(:..){5}(\/(..)(:..){5})?$/);
 
-# create L2 Interface Group (may already exist)
-my $intf_group = ($vlan << 16) + $port_out;
-my $group_id = $intf_group;
+my($port_out,$intf_group,@intf_groups,$group_id);
 
-my $igroup_msg = <<END_IGROUP;
+foreach $port_out (@ports_out) {
+# create L2 Interface Group (may already exist)
+    $intf_group = ($vlan << 16) + $port_out;
+    $group_id = $intf_group;
+    push(@intf_groups, $intf_group);
+
+    my $igroup_msg = <<END_IGROUP;
 {
     'dpid': $dpid,
     'type': 'INDIRECT',
@@ -98,20 +104,26 @@ my $igroup_msg = <<END_IGROUP;
                 {
                     'type': 'POP_VLAN'
                 }
-            ]
+		]
         }
-    ]
+	]
 }
 END_IGROUP
 
-if (!$skip_intf_group) {
-    print "$igroup_msg\n" if $show_msg;
-    $rc = system('curl', '-f', '-X', 'POST', '-d', "$igroup_msg", "http://$host:$port/stats/groupentry/add");
-    print "Create interface group request failed\n" if $rc;
+    if (!$skip_intf_group) {
+	print "$igroup_msg\n" if $show_msg;
+	$rc = system('curl', '-f', '-X', 'POST', '-d', "$igroup_msg", "http://$host:$port/stats/groupentry/add");
+	print "Create interface group request failed\n" if $rc;
+    }
 }
 
+# Handle L2 Rewrite
 my($eth_src_out_str,$eth_dst_out_str);
 if ($eth_src_out || $eth_dst_out) {
+    if ($mcast) {
+	print "OF-DPA does not support the combination of multicast with L2 Rewrite\n";
+	exit 1;
+    }
     # need to use L2 Rewrite Group -- create one on the fly
     # (if it exists already, no big deal)
     $group_id = ((crc32($eth_src_out . $eth_dst_out) >> 8) + $port_out) | 0x10000000;
@@ -144,6 +156,32 @@ END_RGROUP
 
     $rc = system('curl', '-f', '-X', 'POST', '-d', "$rgroup_msg", "http://$host:$port/stats/groupentry/add");
     print "Create rewrite group request failed\n" if $rc;
+}
+
+# Handle Multicast
+if ($mcast) {
+    # create L2 mcast group
+    my $crc = 0;
+    my @actions;
+    foreach (@intf_groups) {
+	$crc = crc32($_, $crc);
+	push(@actions, "{'actions':[{'type':'GROUP','group_id': $_ }]}");
+    }
+    my $action_str = join(',', @actions);
+    $group_id = ($crc >> 16) | ($vlan << 16) | 0x30000000;
+    my $mgroup_msg = <<END_MGROUP;
+{
+    'dpid': $dpid,
+    'type': 'INDIRECT',
+    'group_id': $group_id,
+    'buckets':[
+	$action_str
+    ]
+}
+END_MGROUP
+    print "$mgroup_msg\n" if $show_msg;
+    $rc = system('curl', '-f', '-X', 'POST', '-d', "$mgroup_msg", "http://$host:$port/stats/groupentry/add");
+    print "Create multicast group request failed\n" if $rc;
 }
 
 my $flow_msg = <<ENDMSG;

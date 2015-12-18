@@ -2,7 +2,13 @@
 
 HOST=localhost
 PORT=8080
-DPID=1
+
+if [ $# -ne 1 ]; then
+    CMD=`basename $0`
+    echo "usage: $CMD <dpid>"
+    exit 1
+fi
+DPID=$1
 
 FILTER=cat
 while getopts "p:n" opt; do
