@@ -1,0 +1,4 @@
+"match": {"dl_vlan": "1"}, "actions": ["GROUP:65539"], "priority": 1, "packet_count": 0
+"match": {"tp_dst": 80, "dl_dst": "20:00:00:00:00:00/60:00:00:00:00:00", "dl_vlan": "1", "dl_src": "08:00:27:89:3b:9f", "nw_proto": 6}, "actions": ["GROUP:268608240"], "priority": 2, "packet_count": 0
+"match": {"tp_dst": 4321, "dl_dst": "10:00:00:00:00:00/50:00:00:00:00:00", "dl_vlan": "1", "dl_src": "08:00:27:89:3b:9f", "nw_proto": 6}, "actions": ["GROUP:276145632"], "priority": 2, "packet_count": 0
+"match": {"tp_dst": 4322, "dl_dst": "10:00:00:00:00:00/50:00:00:00:00:00", "dl_vlan": "1", "dl_src": "08:00:27:89:3b:9f", "nw_proto": 6}, "actions": ["GROUP:276145632"], "priority": 2, "packet_count": 0

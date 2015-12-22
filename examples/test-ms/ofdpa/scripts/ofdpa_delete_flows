@@ -1,0 +1,11 @@
+#!/bin/bash
+
+HOST=localhost
+PORT=8080
+
+if [ $# -ne 1 ]; then
+    CMD=`basename $0`
+    echo "usage: $CMD <dpid>"
+    exit 1
+fi
+curl -X DELETE http://$HOST:$PORT/stats/flowentry/clear/$1

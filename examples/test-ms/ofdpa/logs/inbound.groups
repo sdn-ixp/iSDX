@@ -1,0 +1,3 @@
+"group_id": 65537 "actions": ["OUTPUT:1", "POP_VLAN"]
+"group_id": 271958682 "actions": ["GROUP:65537", "SET_FIELD: {eth_dst:00:00:00:01:00:03}"]
+"group_id": 278115731 "actions": ["GROUP:65537", "SET_FIELD: {eth_dst:00:00:00:00:00:03}"]

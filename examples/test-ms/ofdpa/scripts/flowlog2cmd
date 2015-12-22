@@ -1,0 +1,62 @@
+#!/usr/bin/perl -w
+
+# Translate flowlog format into ofdpa-add-flow commands
+
+use strict;
+
+while (<>) {
+    next if !/rule_type/;
+    next if /4294967288/;
+
+    my $args = '';
+
+    # preprocessing to simplify parsing
+    s/: / /g;
+    s/[,"{}]//g;
+    die('parse failed') if !/rule_type (\S+).*mod_type (\S+).*priority (\d+)/;
+    my($rule_type,$mod_type,$priority) = ($1,$2,$3);
+    $args .= " --priority $priority";
+
+    next if $mod_type ne 'insert';
+
+    my $outport = $1 if /fwd \[(.*?)\]/;
+    $args .= " --eth_dst_out $1" if /set_eth_dst (\S+)/;
+    $args .= " --eth_src_out $1" if /set_eth_src (\S+)/;
+
+    while (s/\[(\S{17}) (\S{17})\]/$1\/$2/) {}
+#    print;
+    $args .= " --eth_src_in $1" if / eth_src (\S+)/;
+    $args .= " --eth_dst_in $1" if / eth_dst (\S+)/;
+    $args .= " --eth_type_arp" if /eth_type 2054/;
+
+    s/arp proxy/arp_proxy/;
+    my $in_port = $1 if /in_port (\S+)/;
+    if ($in_port) {
+	$in_port =~ s/main/19/; # not sure of this
+	$in_port =~ s/arp_proxy/0/; # ??
+	$in_port =~ s/arp/20/;
+	$args .= " --port_in $in_port";
+    }
+
+    $rule_type =~ s/main-in/1/;
+    $rule_type =~ s/outbound/2/;
+    $rule_type =~ s/inbound/3/;
+    $rule_type =~ s/arp/4/;
+    $args = "--dpid $rule_type $args";
+
+    if ($outport) {
+	$outport =~ s/inbound/3/;
+	$outport =~ s/outbound/2/;
+	$outport =~ s/main-in/1/;
+	$outport =~ s/main/1/;
+	$outport =~ s/arp/20/;
+    } else {
+	print "Ignoring rule -- no fwd port specified\n";
+	next;
+    }
+
+    $args .= " --tcp_src $1" if /tcp_src (\d+)/;
+    $args .= " --tcp_dst $1" if /tcp_dst (\d+)/;
+
+    print "ofdpa_add_flow $args $outport\n";
+}

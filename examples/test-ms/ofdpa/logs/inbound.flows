@@ -1,0 +1,4 @@
+"match": {"dl_dst": "00:00:00:00:00:03/00:00:00:00:ff:ff", "dl_vlan": "1"}, "actions": ["GROUP:278115731"], "priority": 3, "packet_count": 0
+"match": {"dl_vlan": "1"}, "actions": ["GROUP:65537"], "priority": 1, "packet_count": 0
+"match": {"dl_dst": "00:00:00:00:00:03/00:00:00:00:ff:ff", "dl_vlan": "1", "nw_proto": 6, "tp_dst": 4321}, "actions": ["GROUP:278115731"], "priority": 4, "packet_count": 0
+"match": {"dl_dst": "00:00:00:00:00:03/00:00:00:00:ff:ff", "dl_vlan": "1", "nw_proto": 6, "tp_dst": 4322}, "actions": ["GROUP:271958682"], "priority": 4, "packet_count": 0

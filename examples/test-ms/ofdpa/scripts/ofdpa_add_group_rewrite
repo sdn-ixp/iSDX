@@ -1,0 +1,52 @@
+#!/bin/bash
+
+VLAN=1
+
+HOST=localhost
+PORT=8080
+DPID=1
+
+
+if [ $# -ne 1 -a $# -ne 2 ]; then
+    echo usage: "$0 <port> [<mac>]"
+    exit 1
+fi
+
+OPORT=$1
+if [ $# -eq 1 ]; then
+    if [ $OPORT -eq 7 ]; then MAC="44:a8:42:32:5d:59"; fi
+    if [ $OPORT -eq 8 ]; then MAC="44:a8:42:32:5d:5b"; fi
+else
+    MAC=$2
+fi
+
+let "GROUP_ID = (1 << 28) + $OPORT"
+let "REF_GROUP_ID = ($VLAN << 16) + $OPORT"
+
+MSG="{
+    'dpid': $DPID,
+    'type': 'INDIRECT',
+    'group_id': $GROUP_ID,
+    'buckets':[
+        {
+            'actions': [
+                {
+                    'type': 'GROUP',
+                    'group_id': $REF_GROUP_ID
+                },
+                {
+                    'type': 'SET_FIELD',
+                    'field': 'eth_dst',
+                    'value': \"$MAC\"
+                }
+
+            ]
+        }
+    ]
+ }"
+
+echo "adding $GROUP_ID"
+echo $MSG
+
+curl -X POST -d "$MSG" \
+	http://$HOST:$PORT/stats/groupentry/add

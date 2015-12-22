@@ -1,0 +1,22 @@
+#!/bin/bash
+
+HOST=localhost
+PORT=8080
+DPID=1
+
+FILTER=cat
+while getopts "p:n" opt; do
+    case $opt in
+	p) FILTER="grep port_no...$OPTARG.\" "
+	    ;;
+	n) FILTER="grep -v rx_packets...0..tx_packets...0"
+	    ;;
+	\?) echo "Unknown arg: $OPTARG" >&2
+	    exit 1;
+	    ;;
+    esac
+done
+
+curl -X GET http://$HOST:$PORT/stats/port/$DPID 2> /dev/null|
+perl -ne 'while (s/("rx_packets.. \d+).*?("port_no.. \d+).*?("tx_packets.. \d+)//) {  print "$2 $1 $3\n";}' | $FILTER
+
