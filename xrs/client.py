@@ -3,12 +3,13 @@
 #  Muhammad Shahbaz (muhammad.shahbaz@gatech.edu)
 #  Arpit Gupta
 
-import sys
-from threading import Thread
 from multiprocessing.connection import Client
 import os
+import sys
+from threading import Thread
+
 home_path = os.environ['HOME']
-logfile = home_path+'/iSDX/xrs/client.log'
+logfile = os.path.join(home_path, 'iSDX/xrs/client.log')
 
 '''Write output to stdout'''
 def _write(stdout,data):

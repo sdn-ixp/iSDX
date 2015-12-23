@@ -3,10 +3,9 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 import json
-
-from threading import Thread
 from multiprocessing import Queue
 from multiprocessing.connection import Client
+from threading import Thread
 
 LOG = False
 

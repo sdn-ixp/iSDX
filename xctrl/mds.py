@@ -2,9 +2,8 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-import logging
-
 from flowmodmsg import FlowModMsgBuilder
+import util.log
 
 # Priorities
 BGP_PRIORITY = 4
@@ -151,7 +150,7 @@ class MDS(object):
 class MDSmS(MDS):
     def __init__(self, sender, config):
         super(MDSmS, self).__init__(sender, config)
-        self.logger = logging.getLogger('MDSmS')
+        self.logger = util.log.getLogger('MDSmS')
         self.fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
  
     def start(self):
@@ -193,7 +192,7 @@ class MDSmS(MDS):
 class MDSmT(MDS):
     def __init__(self, sender, config):
         super(MDSmT, self).__init__(sender, config)
-        self.logger = logging.getLogger('MDSmT')
+        self.logger = util.log.getLogger('MDSmT')
         self.fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
 
     def start(self):

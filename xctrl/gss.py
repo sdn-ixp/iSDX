@@ -2,9 +2,9 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-import logging
 
 from flowmodmsg import FlowModMsgBuilder
+import util.log
 from vmac_lib import VMACBuilder
 
 # Priorities
@@ -206,7 +206,7 @@ class GSS(object):
 class GSSmS(GSS):
     def __init__(self, sender, config):
         super(GSSmS, self).__init__(sender, config)
-        self.logger = logging.getLogger('GSSmS')
+        self.logger = util.log.getLogger('GSSmS')
         self.fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
  
     def start(self):
@@ -257,7 +257,7 @@ class GSSmS(GSS):
 class GSSmT(GSS):
     def __init__(self, sender, config):
         super(GSSmT, self).__init__(sender, config)
-        self.logger = logging.getLogger('GSSmT')
+        self.logger = util.log.getLogger('GSSmT')
         self.fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
 
     def start(self):

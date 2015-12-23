@@ -1,6 +1,6 @@
-import struct
 import binascii
 import socket
+import struct
 
 ETH_BROADCAST = 'ff:ff:ff:ff:ff:ff'
 ETH_TYPE_ARP = 0x0806

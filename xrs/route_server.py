@@ -4,23 +4,17 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 #  Arpit Gupta (Princeton)
 
-import os
-import json
-import sys
 import argparse
-import time
-
+import json
 from multiprocessing.connection import Listener, Client
-
-import Queue
-from threading import Thread,Event
-from server import server as Server
-from core import XRS, XRSPeer
-
 import os
-import sys
-sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import Queue
+from threading import Thread
+
+from core import XRSPeer
+from server import server as Server
 import util.log
+
 logger = util.log.getLogger('XRS')
 
 
@@ -190,6 +184,10 @@ class route_server(object):
         self.run = False
 
 def main(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('dir', help='the directory of the example')
+    args = parser.parse_args()
+
     # locate config file
     base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"config"))
     config_file = os.path.join(base_path, "sdx_global.cfg")
@@ -205,11 +203,3 @@ def main(argv):
             rs_thread.join(1)
         except KeyboardInterrupt:
             sdx_rs.stop()
-
-''' main '''
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('dir', help='the directory of the example')
-    args = parser.parse_args()
-
-    main(args)

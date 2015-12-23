@@ -3,7 +3,6 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 import json
-
 from netaddr import IPNetwork
 
 ''' Config Parser '''

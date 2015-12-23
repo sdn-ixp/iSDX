@@ -2,31 +2,24 @@
 #  Arpit Gupta (Princeton)
 #  Robert MacDavid (Princeton)
 
-import os
-import sys
-import time
-import json
 import argparse
-
-from threading import Thread
+#import atexit
+import json
 from multiprocessing.connection import Listener
 from netaddr import *
-from threading import RLock as lock
-from peer import BGPPeer as BGPPeer
-from supersets import SuperSets
-from ss_rule_scheme import *
-from lib import *
-from ss_lib import *
-
-import time
-#import atexit
+import os
 #from signal import signal, SIGTERM
 #from sys import exit
+from threading import RLock, Thread
+import time
 
-sys.path.insert(0, '../xctrl/')
-from flowmodmsg import FlowModMsgBuilder
-sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from lib import *
+from peer import BGPPeer
+from ss_lib import *
+from ss_rule_scheme import *
+from supersets import SuperSets
 import util.log
+from xctrl.flowmodmsg import FlowModMsgBuilder
 
 TIMING = True
 
@@ -338,7 +331,7 @@ class ParticipantController(object):
         hsh = "-".join(prefixes)
         if hsh not in self.prefix_lock:
             #self.logger.debug("First Lock:: "+str(hsh))
-            self.prefix_lock[hsh] = lock()
+            self.prefix_lock[hsh] = RLock()
         #else:
             #self.logger.debug("Repeat :: "+str(hsh))
         return self.prefix_lock[hsh]
@@ -516,7 +509,7 @@ def get_prefixes_from_announcements(route):
     return prefixes
 
 
-if __name__ == '__main__':
+def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('dir', help='the directory of the example')
     parser.add_argument('id', type=int,

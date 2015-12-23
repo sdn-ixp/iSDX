@@ -7,12 +7,8 @@
 from threading import RLock
 import time
 
-from ribm import rib, RibTuple
 from decision_process import decision_process, best_path_selection
-
-import os
-import sys
-sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from ribm import rib, RibTuple
 import util.log
 
 

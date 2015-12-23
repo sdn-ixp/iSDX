@@ -2,9 +2,9 @@
 #  Author:
 #  Muhammad Shahbaz (muhammad.shahbaz@gatech.edu)
 
-from threading import Thread
 from multiprocessing import Queue
 from multiprocessing.connection import Listener
+from threading import Thread
 
 ''' bgp server '''
 class server(object):

@@ -3,7 +3,7 @@
 #  Muhammad Shahbaz (muhammad.shahbaz@gatech.edu)
 #  Sean Donovan
 
-import socket,struct
+import socket, struct
 
 def decision_process(route):
     best_routes = []

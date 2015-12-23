@@ -7,11 +7,9 @@ import json
 from multiprocessing.connection import Client
 from netaddr import IPNetwork
 from socket import error as SocketError
-import sys
 
-sys.path.insert(0,'../xctrl')
-from flowmodmsg import FlowModMsgBuilder
-from peer import BGPPeer as BGPPeer
+from xctrl.flowmodmsg import FlowModMsgBuilder
+from peer import BGPPeer
 
 
 MULTISWITCH = 0

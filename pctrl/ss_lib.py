@@ -2,13 +2,11 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-from netaddr import *
 import math
+from netaddr import *
 
-import os
-import sys
-sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import util.log
+
 logger = util.log.getLogger('ss_lib')
 
 def bitsRequired(supersets):

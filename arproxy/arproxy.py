@@ -3,21 +3,18 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 #  Arpit Gupta (Princeton)
 
-import os
-import sys
+import argparse
 import json
+from multiprocessing.connection import Listener, Client
+from netaddr import IPNetwork, IPAddress
+import os
 import socket
 import struct
-import argparse
+from threading import Thread
 
-from threading import Thread,Event
-from netaddr import IPNetwork, IPAddress
-from multiprocessing.connection import Listener, Client
-
-from utils import parse_packet, parse_eth_frame, parse_arp_packet, craft_arp_packet, craft_eth_frame, craft_garp_response
-
-sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import util.log
+from utils import parse_packet, craft_arp_packet, craft_eth_frame, craft_garp_response
+
 logger = util.log.getLogger('arp')
 
 ETH_BROADCAST = 'ff:ff:ff:ff:ff:ff'
@@ -98,7 +95,7 @@ class ArpProxy(object):
             self.raw_socket.settimeout(1.0)
         except socket.error as msg:
             logger.exception('Failed to create socket. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
-            sys.exit()
+            raise
 
 
     def start_arp_listener(self):
@@ -212,6 +209,10 @@ class ArpProxy(object):
 
 
 def main(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('dir', help='the directory of the example')
+    args = parser.parse_args()
+
     # locate config file
     base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"config"))
     config_file = os.path.join(base_path, "sdx_global.cfg")
@@ -230,13 +231,3 @@ def main(argv):
             ap_thread.join(1)
         except KeyboardInterrupt:
             sdx_ap.stop()
-
-
-''' main '''
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('dir', help='the directory of the example')
-    args = parser.parse_args()
-
-    main(args)

@@ -2,21 +2,19 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-import os
 import argparse
-import logging
-
+import os
 from threading import Thread
 
-#from flowmodsender import FlowModSender # REST API
 from client import RefMonClient # Socket
-from lib import Config
 from gss import GSSmS, GSSmT
+from lib import Config
 from mds import MDSmS, MDSmT
+import util.log
 
 class xCtrl(object):
     def __init__(self, config_file):
-        self.logger = logging.getLogger('xctrl')
+        self.logger = util.log.getLogger('xctrl')
         self.logger.info('init')
 
         self.config = Config(config_file)
@@ -47,29 +45,22 @@ class xCtrl(object):
         self.logger.info('stop')
 
 def main(argv):
-    # logging - log level
-    logging.basicConfig(level=logging.INFO)
- 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('config', help='path of config file')
+    args = parser.parse_args() 
+
     # locate config file
     config_file = os.path.abspath(args.config)
-    
+
     # start central sdx controller
     xctrl = xCtrl(config_file)
 
     xctrl_thread = Thread(target=xctrl.start)
     xctrl_thread.daemon = True
     xctrl_thread.start()
-    
+
     while xctrl_thread.is_alive():
         try:
             xctrl_thread.join(1)
         except KeyboardInterrupt:
             xctrl.stop()
-    
-''' main '''    
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('config', help='path of config file')
-    args = parser.parse_args() 
-    
-    main(args)

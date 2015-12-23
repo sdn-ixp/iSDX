@@ -3,11 +3,8 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 from netaddr import *
-import math
 
-import sys
-sys.path.insert(0, '../pctrl')
-import ss_lib
+import pctrl.ss_lib as ss_lib
 
 #                
 ### VMAC AND VMAC MASK BUILDERS

@@ -4,11 +4,9 @@
 #  Arpit Gupta (arpitg@cs.princeton.edu)
 
 from collections import namedtuple
-import os
-import sys
-import globs
 from pymongo import MongoClient
-from threading import RLock
+
+import globs
 
 # have all the rib implementations return a consistent interface
 labels = ('prefix', 'neighbor', 'next_hop', 'origin', 'as_path', 'communities', 'med', 'atomic_aggregate')

@@ -4,9 +4,9 @@
 #  Robert MacDavid (Princeton)
 
 import json
+from threading import RLock
 
 from ss_lib import *
-from threading import RLock
 
 lock = RLock()
 
