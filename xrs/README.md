@@ -5,10 +5,4 @@ and the `pctrlr` module respectively. It receives BGP updates from the `exaBGP` 
 forwards them to the `pctrlr`. It also receives announcements from the `pctrlr` which
 it forwards to the `exaBGP` module.
 
-## Run xrs
-
-```bash
-$ git checkout xrs
-$ cd ~/iSDX/xrs/
-$ sudo python route_server.py <example-name> (e.g sudo python route_server.py simple)
-```
+See examples/test-ms/README.md for an example of how to run xrs along with everything else.

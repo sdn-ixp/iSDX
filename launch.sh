@@ -1,11 +1,11 @@
 RUN_DIR=~/iSDX
 RIBS_DIR=$RUN_DIR/xrs/ribs
-TEST_DIR=test-ms
+TEST_DIR=$1
 LOG_FILE=SDXLog.log
 
 set -x
 
-case $1 in
+case $2 in
     (1)
         if [ ! -d $RIBS_DIR ]
         then

@@ -6,10 +6,4 @@ control interface (high-level policy changes). It processes incoming network eve
 BGP announcements and data plane updates. It sends the BGP announcements to the `xrs` module and
 dp updates to the `flanc` module. 
 
-## Run pctrl
-
-```bash
-$ git checkout xrs
-$ cd ~/iSDX/pctrl/
-$ sudo python participant_controller.py <example-name> <participant id> (e.g sudo python route_server.py simple 1)
-```
+See examples/test-ms/README.md for an example of how to run pctrl along with everything else.
