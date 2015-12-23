@@ -1,17 +1,16 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-import os
-import sys
-sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-import util.log
 
 import json
-
 from Queue import Queue
 
-from ryu.ofproto import ether
-from ryu.ofproto import inet
+import os
+import sys
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
+import util.log
 
 # PRIORITIES
 FLOW_MISS_PRIORITY = 0

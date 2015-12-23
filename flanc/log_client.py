@@ -2,28 +2,26 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-import os
-import sys
-sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-import util.log
-
-import json
 import argparse
-
-from threading import Thread
-from Queue import Empty
+import json
 from multiprocessing import Queue
 from multiprocessing.connection import Client
+from Queue import Empty
+from threading import Thread
+from time import sleep, time
 
-from time import sleep, time, strptime, mktime
+import os
+import sys
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
+import util.log
 
 ''' LogClient for Reference Monitor '''
 class LogClient(object):
 
     def __init__(self, address, port, authkey, input_file, debug = False, timing = False):
         self.logger = util.log.getLogger('log_client')
-        if debug:
-            self.logger.setLevel(logging.DEBUG)
         self.logger.info('server: start')
 
         self.timing = timing
@@ -148,9 +146,6 @@ class LogClient(object):
         return sleep_time
 
 def main(argv):
-    # logging - log level
-    logging.basicConfig(level=logging.INFO)
-
     log_client_instance = LogClient(args.ip, args.port, args.key, args.input, True, args.timing)
     log_client_instance.start()
 

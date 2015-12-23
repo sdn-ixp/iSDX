@@ -3,16 +3,16 @@
 #  Muhammad Shahbaz (muhammad.shahbaz@gatech.edu)
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+import json
+from multiprocessing.connection import Listener
+from threading import Thread
+
 import os
 import sys
-sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
 import util.log
-
-import json
-
-from threading import Thread
-from multiprocessing import Queue
-from multiprocessing.connection import Listener
 
 ''' Server of Reference Monitor to Receive Flow Mods '''
 class Server(object):
@@ -50,4 +50,4 @@ class Server(object):
 
     def stop(self):
         self.receive = False
-	self.receiver.join(1)
+        self.receiver.join(1)

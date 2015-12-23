@@ -1,31 +1,28 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-import os
-import sys
-sys.path.insert(1, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-import util.log
-
 import json
+from multiprocessing import Queue
+import os
+from Queue import Empty
+from time import time
 
+from ryu import cfg
 from ryu.base import app_manager
 from ryu.controller import ofp_event
-from ryu.controller.handler import MAIN_DISPATCHER, DEAD_DISPATCHER 
-from ryu.controller.handler import set_ev_cls
+from ryu.controller.handler import MAIN_DISPATCHER, DEAD_DISPATCHER, set_ev_cls
 from ryu.ofproto import ofproto_v1_0, ofproto_v1_3
-# REST API from ryu.app.wsgi import WSGIApplication
-from ryu import cfg
 
 from lib import MultiSwitchController, MultiTableController, Config, InvalidConfigError
 from ofp10 import FlowMod as OFP10FlowMod
 from ofp13 import FlowMod as OFP13FlowMod
-
-# REST API from rest import FlowModReceiver
-
 from server import Server
-from multiprocessing import Queue
-from Queue import Empty
-from time import time
+
+import sys
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
+import util.log
 
 LOG = True
 
