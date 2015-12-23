@@ -7,6 +7,13 @@ from netaddr import IPNetwork
 
 ''' Config Parser '''
 class Config(object):
+
+    MULTISWITCH = 0
+    MULTITABLE  = 1
+
+    SUPERSETS = 0
+    MDS       = 1
+
     def __init__(self, config_file):    
         self.mode = None
 
@@ -33,10 +40,16 @@ class Config(object):
 
     def parse_config(self, config):
         if "Mode" in config:
-            self.mode = 0 if config["Mode"] == "Multi-Switch" else 1
+            if config["Mode"] == "Multi-Switch":
+                self.mode = self.MULTISWITCH
+            if config["Mode"] == "Multi-Table":
+                self.mode = self.MULTITABLE
         if "VMAC" in config:
             if "Mode" in config["VMAC"]:
-                self.vmac_mode = 0 if config["VMAC"]["Mode"] == "MDS" else 1
+                if config["VMAC"]["Mode"] == "Superset":
+                    self.vmac_mode = self.SUPERSETS
+                if config["VMAC"]["Mode"] == "MDS":
+                    self.vmac_mode = self.MDS
             if "Options" in config["VMAC"]:
                 self.vmac_options = config["VMAC"]["Options"]
         if "RefMon Server" in config:
@@ -69,6 +82,18 @@ class Config(object):
                               for i in range(0, len(participant["Ports"]))]
                       
                 self.peers[participant_name] = Participant(participant_name, ports, inbound_rules, outbound_rules)
+
+    def isMultiSwitchMode(self):
+        return self.mode == self.MULTISWITCH
+
+    def isMultiTableMode(self):
+        return self.mode == self.MULTITABLE
+
+    def isSupersetsMode(self):
+        return self.vmac_mode == self.SUPERSETS
+
+    def isMDSMode(self):
+        return self.vmac_mode == self.MDS
 
 
 class Peer(object):

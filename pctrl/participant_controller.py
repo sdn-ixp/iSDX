@@ -30,12 +30,6 @@ from supersets import SuperSets
 
 TIMING = True
 
-MULTISWITCH = 0
-MULTITABLE  = 1
-
-SUPERSETS = 0
-MDS       = 1
-
 
 class ParticipantController(object):
     def __init__(self, id, config_file, policy_file, logger):
@@ -70,7 +64,7 @@ class ParticipantController(object):
 
 
         # Superset related params
-        if self.cfg.vmac_mode == SUPERSETS:
+        if self.cfg.isSupersetsMode():
             self.supersets = SuperSets(self, self.cfg.vmac_options)
         else:
             # TODO: create similar class and variables for MDS
@@ -133,7 +127,7 @@ class ParticipantController(object):
         self.logger.info("Initializing inbound rules")
 
         final_switch = "main-in"
-        if self.cfg.dp_mode == MULTITABLE:
+        if self.cfg.isMultiTableMode():
             final_switch = "main-out"
 
         self.init_vnh_assignment()
@@ -276,7 +270,7 @@ class ParticipantController(object):
 
 
         # add flow rules for the new policies
-        if self.cfg.vmac_mode == SUPERSETS:
+        if self.cfg.isSupersetsMode():
             dp_msgs = ss_process_policy_change(self.supersets, add_policies, remove_policies, policies,
                                                 self.port_count, self.port0_mac)
         else:
@@ -293,7 +287,7 @@ class ParticipantController(object):
 
     def process_arp_request(self, part_mac, vnh):
         vmac = ""
-        if self.cfg.vmac_mode == SUPERSETS:
+        if self.cfg.isSupersetsMode():
             vmac = self.supersets.get_vmac(self, vnh)
         else:
             vmac = "whoa" # MDS vmac goes here
@@ -365,7 +359,7 @@ class ParticipantController(object):
                 self.logger.debug("Time taken for decision process: "+str(elapsed))
                 tstart = time.time()
 
-            if self.cfg.vmac_mode == 0:
+            if self.cfg.isSupersetsMode():
             ################## SUPERSET RESPONSE TO BGP ##################
                 # update supersets
                 "Map the set of BGP updates to a list of superset expansions."
@@ -456,7 +450,7 @@ class ParticipantController(object):
 
     def vnh_assignment(self, update):
         "Assign VNHs for the advertised prefixes"
-        if self.cfg.vmac_mode == 0:
+        if self.cfg.isSupersetsMode():
             " Superset"
             # TODO: Do we really need to assign a VNH for each advertised prefix?
             if ('announce' in update):
@@ -477,7 +471,7 @@ class ParticipantController(object):
 
     def init_vnh_assignment(self):
         "Assign VNHs for the advertised prefixes"
-        if self.cfg.vmac_mode == 0:
+        if self.cfg.isSupersetsMode():
             " Superset"
             # TODO: Do we really need to assign a VNH for each advertised prefix?
             #self.bgp_instance.rib["local"].dump()

@@ -70,9 +70,9 @@ class RefMon(app_manager.RyuApp):
             self.logger.info('refmon: invalid config '+str(e))
 
         # start controller
-        if (self.config.mode == 0):
+        if self.config.isMultiSwitchMode():
             self.controller = MultiSwitchController(self.config)
-        elif (self.config.mode == 1):
+        elif self.config.isMultiTableMode():
             self.controller = MultiTableController(self.config)
 
         # start server receiving flowmod requests

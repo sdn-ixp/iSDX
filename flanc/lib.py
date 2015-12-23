@@ -20,6 +20,10 @@ FLOW_MISS_PRIORITY = 0
 NO_COOKIE = 0
 
 class Config(object):
+
+    MULTISWITCH = 0
+    MULTITABLE  = 1
+
     def __init__(self, config_file):
         self.server = None
 
@@ -41,9 +45,9 @@ class Config(object):
         # read from file
         if "Mode" in config:
             if config["Mode"] == "Multi-Switch":
-                self.mode = 0
+                self.mode = self.MULTISWITCH
             elif config["Mode"] == "Multi-Table":
-                self.mode = 1
+                self.mode = self.MULTITABLE
         if "RefMon Settings" in config:
             if "fabric options" in config["RefMon Settings"]:
                 if "tables" in config["RefMon Settings"]["fabric options"]:
@@ -66,14 +70,21 @@ class Config(object):
             raise InvalidConfigError(config)
 
         # check if valid config
-        if self.mode == 0:
+        if self.isMultiSwitchMode():
             if not (self.ofv and self.dpids and self.datapath_ports):
                 raise InvalidConfigError(config)
-        elif self.mode == 1:
+        elif self.isMultiTableMode():
             if not (self.ofv == "1.3" and self.tables and self.datapath_ports):
                 raise InvalidConfigError(config)
         else:
             raise InvalidConfigError(config)
+
+    def isMultiSwitchMode(self):
+        return self.mode == self.MULTISWITCH
+
+    def isMultiTableMode(self):
+        return self.mode == self.MULTITABLE
+
 
 class InvalidConfigError(Exception):
     def __init__(self, flow_mod):

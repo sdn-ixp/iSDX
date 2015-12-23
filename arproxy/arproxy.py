@@ -27,9 +27,6 @@ logger = util.log.getLogger('arp')
 ETH_BROADCAST = 'ff:ff:ff:ff:ff:ff'
 ETH_TYPE_ARP = 0x0806
 
-SUPERSETS = 0
-MDS       = 1
-
 
 class ArpProxy(object):
 
@@ -64,13 +61,6 @@ class ArpProxy(object):
         "Parse the config file to extract eh_sockets and portmac_2_participant"
         with open(config_file, 'r') as f:
             config = json.load(f)
-
-            # grab the vmac mode for determining non-SDN arp replies
-            vmac_mode = config["VMAC"]["Mode"]
-            if vmac_mode == "Superset":
-                self.vmac_mode = SUPERSETS
-            else:
-                self.vmac_mode = MDS
 
             self.vnhs = IPNetwork(config["VNHs"])
 

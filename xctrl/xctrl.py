@@ -29,18 +29,18 @@ class xCtrl(object):
         #self.client = FlowModSender(self.config.refmon["url"]) # REST API
         self.client = RefMonClient(self.config.refmon["IP"], self.config.refmon["Port"], self.config.refmon["key"])
 
-        if self.config.vmac_mode == 0:
-            if self.config.mode == 0:
+        if self.config.isMDSMode():
+            if self.config.isMultiSwitchMode():
                 self.controller = MDSmS(self.client, self.config)
                 self.logger.info('mode MDSmS - OF v1.0')
-            elif self.config.mode == 1:
+            elif self.config.isMultiTableMode():
                 self.controller = MDSmT(self.client, self.config)
                 self.logger.info('mode MDSmT - OF v1.3')
-        elif self.config.vmac_mode == 1:
-            if self.config.mode == 0:
+        elif self.config.isSupersetsMode():
+            if self.config.isMultiSwitchMode():
                 self.controller = GSSmS(self.client, self.config)
                 self.logger.info('mode GSSmS - OF v1.3')
-            elif self.config.mode == 1:
+            elif self.config.isMultiTableMode():
                 self.controller = GSSmT(self.client, self.config)
                 self.logger.info('mode GSSmT - OF v1.3')
 

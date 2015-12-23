@@ -19,14 +19,14 @@ from xctrl.flowmodmsg import FlowModMsgBuilder
 from peer import BGPPeer
 
 
-MULTISWITCH = 0
-MULTITABLE  = 1
-
-SUPERSETS = 0
-MDS       = 1
-
-
 class PConfig(object):
+
+    MULTISWITCH = 0
+    MULTITABLE  = 1
+
+    SUPERSETS = 0
+    MDS       = 1
+
     def __init__(self, config_file, id):
         self.id = str(id)
 
@@ -38,21 +38,20 @@ class PConfig(object):
         self.parse_various()
 
 
-
     def parse_modes(self):
         config = self.config
 
         if config["Mode"] == "Multi-Switch":
-            self.dp_mode = MULTISWITCH
+            self.dp_mode = self.MULTISWITCH
         else:
-            self.dp_mode = MULTITABLE
+            self.dp_mode = self.MULTITABLE
 
         vmac_cfg = config["VMAC"]
 
         if vmac_cfg["Mode"] == "Superset":
-            self.vmac_mode = SUPERSETS
+            self.vmac_mode = self.SUPERSETS
         else:
-            self.vmac_mode = MDS
+            self.vmac_mode = self.MDS
 
         self.vmac_options = vmac_cfg["Options"]
 
@@ -122,13 +121,24 @@ class PConfig(object):
 
         return GenericClient(address, port, key, logger, 'refmon')
 
-
     def get_xrs_client(self, logger):
         config = self.config
 
         conn_info = config["Route Server"]
 
         return GenericClient(conn_info["AH_SOCKET"][0], conn_info["AH_SOCKET"][1], '', logger, 'xrs')
+
+    def isMultiSwitchMode(self):
+        return self.dp_mode == self.MULTISWITCH
+
+    def isMultiTableMode(self):
+        return self.dp_mode == self.MULTITABLE
+
+    def isSupersetsMode(self):
+        return self.vmac_mode == self.SUPERSETS
+
+    def isMDSMode(self):
+        return self.vmac_mode == self.MDS
 
 
 class GenericClient(object):
