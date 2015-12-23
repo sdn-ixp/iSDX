@@ -12,6 +12,7 @@ if np not in sys.path:
     sys.path.append(np)
 import util.log
 
+
 # PRIORITIES
 FLOW_MISS_PRIORITY = 0
 

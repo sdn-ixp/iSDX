@@ -2,6 +2,7 @@
 #  Arpit Gupta (Princeton)
 #  Robert MacDavid (Princeton)
 
+
 import argparse
 #import atexit
 import json
@@ -13,13 +14,19 @@ import os
 from threading import RLock, Thread
 import time
 
+import sys
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
+import util.log
+from xctrl.flowmodmsg import FlowModMsgBuilder
+
 from lib import *
 from peer import BGPPeer
 from ss_lib import *
 from ss_rule_scheme import *
 from supersets import SuperSets
-import util.log
-from xctrl.flowmodmsg import FlowModMsgBuilder
+
 
 TIMING = True
 
@@ -509,7 +516,7 @@ def get_prefixes_from_announcements(route):
     return prefixes
 
 
-def main(argv):
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('dir', help='the directory of the example')
     parser.add_argument('id', type=int,
@@ -552,3 +559,7 @@ def main(argv):
             ctrlr_thread.join(1)
         except KeyboardInterrupt:
             ctrlr.stop()
+
+
+if __name__ == '__main__':
+    main()

@@ -3,6 +3,7 @@
 #  Muhammad Shahbaz (muhammad.shahbaz@gatech.edu)
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+
 import json
 from multiprocessing.connection import Listener
 from threading import Thread
@@ -13,6 +14,7 @@ np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if np not in sys.path:
     sys.path.append(np)
 import util.log
+
 
 ''' Server of Reference Monitor to Receive Flow Mods '''
 class Server(object):

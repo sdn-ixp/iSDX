@@ -4,6 +4,11 @@
 
 from netaddr import *
 
+import os
+import sys
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
 import pctrl.ss_lib as ss_lib
 
 #                

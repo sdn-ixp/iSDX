@@ -2,6 +2,7 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+
 import argparse
 import json
 from multiprocessing import Queue
@@ -16,6 +17,7 @@ np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if np not in sys.path:
     sys.path.append(np)
 import util.log
+
 
 ''' LogClient for Reference Monitor '''
 class LogClient(object):

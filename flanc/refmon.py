@@ -1,6 +1,7 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+
 import json
 from multiprocessing import Queue
 import os
@@ -13,16 +14,17 @@ from ryu.controller import ofp_event
 from ryu.controller.handler import MAIN_DISPATCHER, DEAD_DISPATCHER, set_ev_cls
 from ryu.ofproto import ofproto_v1_0, ofproto_v1_3
 
-from lib import MultiSwitchController, MultiTableController, Config, InvalidConfigError
-from ofp10 import FlowMod as OFP10FlowMod
-from ofp13 import FlowMod as OFP13FlowMod
-from server import Server
-
 import sys
 np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if np not in sys.path:
     sys.path.append(np)
 import util.log
+
+from lib import MultiSwitchController, MultiTableController, Config, InvalidConfigError
+from ofp10 import FlowMod as OFP10FlowMod
+from ofp13 import FlowMod as OFP13FlowMod
+from server import Server
+
 
 LOG = True
 

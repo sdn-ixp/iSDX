@@ -2,8 +2,16 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-from flowmodmsg import FlowModMsgBuilder
+
+import os
+import sys
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
 import util.log
+
+from flowmodmsg import FlowModMsgBuilder
+
 
 # Priorities
 BGP_PRIORITY = 4

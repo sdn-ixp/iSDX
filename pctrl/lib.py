@@ -2,13 +2,20 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+
 import errno
 import json
 from multiprocessing.connection import Client
 from netaddr import IPNetwork
 from socket import error as SocketError
 
+import os
+import sys
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
 from xctrl.flowmodmsg import FlowModMsgBuilder
+
 from peer import BGPPeer
 
 

@@ -4,12 +4,19 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 #  Arpit Gupta (Princeton)
 
+
 from threading import RLock
 import time
 
+import os
+import sys
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
+import util.log
+
 from decision_process import decision_process, best_path_selection
 from ribm import rib, RibTuple
-import util.log
 
 
 class BGPPeer(object):

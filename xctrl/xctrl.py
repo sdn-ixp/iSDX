@@ -2,15 +2,22 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+
 import argparse
 import os
 from threading import Thread
+
+import sys
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
+import util.log
 
 from client import RefMonClient # Socket
 from gss import GSSmS, GSSmT
 from lib import Config
 from mds import MDSmS, MDSmT
-import util.log
+
 
 class xCtrl(object):
     def __init__(self, config_file):
@@ -44,7 +51,7 @@ class xCtrl(object):
     def stop(self):
         self.logger.info('stop')
 
-def main(argv):
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('config', help='path of config file')
     args = parser.parse_args() 
@@ -64,3 +71,7 @@ def main(argv):
             xctrl_thread.join(1)
         except KeyboardInterrupt:
             xctrl.stop()
+
+
+if __name__ == '__main__':
+    main()

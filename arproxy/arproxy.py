@@ -3,6 +3,7 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 #  Arpit Gupta (Princeton)
 
+
 import argparse
 import json
 from multiprocessing.connection import Listener, Client
@@ -12,8 +13,14 @@ import socket
 import struct
 from threading import Thread
 
+import sys
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
 import util.log
+
 from utils import parse_packet, craft_arp_packet, craft_eth_frame, craft_garp_response
+
 
 logger = util.log.getLogger('arp')
 
@@ -208,7 +215,7 @@ class ArpProxy(object):
         self.listener_garp.close()
 
 
-def main(argv):
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('dir', help='the directory of the example')
     args = parser.parse_args()
@@ -231,3 +238,7 @@ def main(argv):
             ap_thread.join(1)
         except KeyboardInterrupt:
             sdx_ap.stop()
+
+
+if __name__ == '__main__':
+    main()

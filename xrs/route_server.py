@@ -4,6 +4,7 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 #  Arpit Gupta (Princeton)
 
+
 import argparse
 import json
 from multiprocessing.connection import Listener, Client
@@ -11,12 +12,17 @@ import os
 import Queue
 from threading import Thread
 
-from core import XRSPeer
-from server import server as Server
+import sys
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
 import util.log
 
-logger = util.log.getLogger('XRS')
+from core import XRSPeer
+from server import server as Server
 
+
+logger = util.log.getLogger('XRS')
 
 class route_server(object):
 
@@ -183,7 +189,7 @@ class route_server(object):
         logger.info("Stopping.")
         self.run = False
 
-def main(argv):
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('dir', help='the directory of the example')
     args = parser.parse_args()
@@ -203,3 +209,7 @@ def main(argv):
             rs_thread.join(1)
         except KeyboardInterrupt:
             sdx_rs.stop()
+
+
+if __name__ == '__main__':
+    main()
