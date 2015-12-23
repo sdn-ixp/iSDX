@@ -8,8 +8,14 @@ import os
 import sys
 from threading import Thread
 
-home_path = os.environ['HOME']
-logfile = os.path.join(home_path, 'iSDX/xrs/client.log')
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
+import util.log
+
+
+sendLogger = util.log.getLogger('XRS-send')
+recvLogger = util.log.getLogger('XRS-recv')
 
 '''Write output to stdout'''
 def _write(stdout,data):
@@ -17,7 +23,7 @@ def _write(stdout,data):
     stdout.flush()
 
 ''' Sender function '''
-def _sender(conn,stdin,log):
+def _sender(conn,stdin):
     # Warning: when the parent dies we are seeing continual
     # newlines, so we only access so many before stopping
     counter = 0
@@ -35,14 +41,13 @@ def _sender(conn,stdin,log):
 
             conn.send(line)
 
-            log.write(line + '\n')
-            log.flush()
+            sendLogger.debug(line)
 
         except:
             pass
 
 ''' Receiver function '''
-def _receiver(conn,stdout,log):
+def _receiver(conn,stdout):
 
     while True:
         try:
@@ -54,8 +59,7 @@ def _receiver(conn,stdout,log):
             _write(stdout, line)
             ''' example: announce route 1.2.3.4 next-hop 5.6.7.8 as-path [ 100 200 ] '''
 
-            log.write(line + '\n')
-            log.flush()
+            recvLogger.debug(line)
 
         except:
             pass
@@ -63,18 +67,13 @@ def _receiver(conn,stdout,log):
 ''' main '''
 if __name__ == '__main__':
 
-    log = open(logfile, "w")
-    log.write('Open Connection \n')
-
     conn = Client(('localhost', 6000), authkey='xrs')
 
-    sender = Thread(target=_sender, args=(conn,sys.stdin,log))
+    sender = Thread(target=_sender, args=(conn,sys.stdin))
     sender.start()
 
-    receiver = Thread(target=_receiver, args=(conn,sys.stdout,log))
+    receiver = Thread(target=_receiver, args=(conn,sys.stdout))
     receiver.start()
 
     sender.join()
     receiver.join()
-
-    log.close()
