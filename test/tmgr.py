@@ -157,7 +157,7 @@ def connect (host, why):
             cmdifc = '/tmp/' + host
             cmdport = 0
     
-    print 'MM:' + host + ' INFO: ' + why + ': Connecting to ' + host + ' at ' + cmdifc + ':' + str(cmdport)
+    #print 'MM:' + host + ' INFO: ' + why + ': Connecting to ' + host + ' at ' + cmdifc + ':' + str(cmdport)
 
     try:
         if cmdifc.find('/') >= 0:

@@ -8,10 +8,10 @@ if [ "$#" -ne 1 ] ; then
 fi
 
 if [ -e $BASE/examples/$1 ] ; then
-	TEST=$1
+        TEST=$1
 else
-	echo "Usage: test_name $1 is not known" >&2
-	exit 1
+        echo "Usage: test_name $1 is not known" >&2
+        exit 1
 fi
 
 echo -------------------------------
@@ -29,11 +29,11 @@ echo -------------------------------
   sleep 3
   echo starting arp proxy
   cd $BASE/arproxy/
-  sudo python arproxy.py $TEST >/dev/null 2>&1 &
+  python arproxy.py $TEST >/dev/null 2>&1 &
   sleep 3
   echo starting route server
   cd $BASE/xrs/
-  sudo python route_server.py $TEST >/dev/null 2>&1 &
+  python route_server.py $TEST >/dev/null 2>&1 &
   sleep 3
   echo starting participants
   cd $BASE/pctrl/
@@ -44,16 +44,15 @@ echo -------------------------------
   sleep 5
   echo starting $TEST
   cd $BASE/test
-  sudo python tmgr.py $BASE/examples/$TEST/config/test.json d l 'r x0 a1 b1 c1 c2' t
+  python tmgr.py $BASE/examples/$TEST/config/test.json l 'r x0 a1 b1 c1 c2' t
   
 ) &
 
 echo starting mininext
 cd $BASE/examples/$TEST/mininext
-sudo ./sdx_mininext.py
+(sleep 45; echo quit) | ./sdx_mininext.py
 echo exiting mininext
 echo cleaning
 cd $BASE/pctrl/
 sh clean.sh
 echo done
-
