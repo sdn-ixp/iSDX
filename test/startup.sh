@@ -44,7 +44,7 @@ echo -------------------------------
   sleep 5
   echo starting $TEST
   cd $BASE/test
-  python tmgr.py $BASE/examples/$TEST/config/test.json l 'r x0 a1 b1 c1 c2' t
+  python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0 a1 b1 c1 c2' t
   
 ) &
 

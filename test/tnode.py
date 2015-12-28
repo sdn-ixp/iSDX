@@ -83,7 +83,7 @@ def create_command_listener (baddr, port):
     s.listen(5)
     output('XX', 'OK: Command listener established for ' + baddr + ' port ' + str(port))
     while True:
-        conn, addr = s.accept()
+        conn, _ = s.accept()
         #print 'New cmd connection on ' + baddr + ':' + str(port) + ' from ' + addr[0] + ':' + str(addr[1])
         threading.Thread(target=cmd_thread, args=(conn, )).start()
 
@@ -224,7 +224,7 @@ def cmd_thread(conn):
             s.bind((baddr, 0))
             s.connect((daddr, int(dport)))
             s.sendall(rand) #must be 10 characters
-            for i in range(2000):
+            for _ in range(2000):
                 s.sendall(buf)
             s.shutdown(1)
             #time.sleep(1)  # seems to be needed on windows or we get a violent server exception
@@ -239,18 +239,18 @@ def cmd_thread(conn):
         return;
     
     if cmd == 'result' and n == 2:
-        id = tokens[1]
+        rid = tokens[1]
         lock.acquire()
-        c = completed.get(id)
-        p = pending.get(id)
+        c = completed.get(rid)
+        p = pending.get(rid)
         if c is None and p is None:
             lock.release()
-            msg = host + ':XX ERROR: RESULT: ' + id + ' is unknown\n'
+            msg = host + ':XX ERROR: RESULT: ' + rid + ' is unknown\n'
         elif p is not None:
             lock.release()
             msg = p
         else:
-            completed.pop(id)
+            completed.pop(rid)
             lock.release()
             msg = c
         conn.sendall(msg)

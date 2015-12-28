@@ -76,11 +76,11 @@ def main (argv):
         'e': (run, None, None),
         'config': (show, None, 'show json configuration'),
         'c': (show, None, None),
-        'help': (help, None, 'print this message'),
-        'h': (help, None, None),
-        '?': (help, None, None),
-        'quit': (quit, None, 'exit this manager - leave nodes intact'),
-        'q': (quit, None, None)
+        'help': (usage, None, 'print this message'),
+        'h': (usage, None, None),
+        '?': (usage, None, None),
+        'quit': (terminate, None, 'exit this manager - leave nodes intact'),
+        'q': (terminate, None, None)
     }
     
     if len(argv) == 2:
@@ -100,10 +100,10 @@ def main (argv):
     print 'MM:00 INFO: BYE' 
 
 
-def parse (input):
+def parse (line):
     global cmdfuncs
     
-    tokens = input.split()
+    tokens = line.split()
     n = len(tokens)
     if n == 0:
         return
@@ -117,7 +117,7 @@ def parse (input):
     
     foo = cmdfuncs.get(cmd)
     if foo != None:
-        func, jset, msg = foo
+        func, jset, _ = foo
         if jset is None:
             func(tokens)
             return
@@ -307,13 +307,13 @@ def test (tn):
         print 'MM:00 ERROR: TEST ' + tn + ' TEST FAILED aborted'
         return
     
-    for i in range(5):
+    for _ in range(5):
         out = generic(xdst, 'RESULT', 'result ' + rand + '\n')   
-        all = out.splitlines() # each line of result
-        if len(all) < 1:
+        lines = out.splitlines() # each line of result
+        if len(lines) < 1:
             print 'MM:00 ERROR: TEST FAILED No result from ' + xdst
             return
-        result = all[len(all)-1]
+        result = lines[len(lines)-1]
         tokens = result.split()
         # keep legal messages with 7 tokens
         # b1:i0 OK: XFER 7186879947 127.0.0.1:55702->127.0.0.1:2220 12.9620259424 MBpS
@@ -392,12 +392,12 @@ def show (args):
         print json.dumps(config, indent=4, sort_keys=True)
  
         
-def quit (args):
+def terminate (args):
     print 'MM:00 EXITING'
     os._exit(0)
 
         
-def help (args):
+def usage (args):
     for h in sorted(cmdfuncs):
         msg = cmdfuncs.get(h)[2]
         if msg is not None:
