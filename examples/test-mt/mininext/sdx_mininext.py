@@ -93,15 +93,19 @@ def addInterfacesForSDXNetwork( net ):
             host.cmd('sudo ifconfig lo:1 100.0.0.1 netmask 255.255.255.0 up')
             host.cmd('sudo ifconfig lo:2 100.0.0.2 netmask 255.255.255.0 up')
             host.cmd('sudo ifconfig lo:110 110.0.0.1 netmask 255.255.255.0 up')
+            host.cmd('sudo python ../../../test/tnode.py a1 &')
         if host.name=='b1':
             host.cmd('sudo ifconfig lo:140 140.0.0.1 netmask 255.255.255.0 up')
             host.cmd('sudo ifconfig lo:150 150.0.0.1 netmask 255.255.255.0 up')
+            host.cmd('sudo python ../../../test/tnode.py b1 &')
         if host.name=='c1':
             host.cmd('sudo ifconfig lo:140 140.0.0.1 netmask 255.255.255.0 up')
             host.cmd('sudo ifconfig lo:150 150.0.0.1 netmask 255.255.255.0 up')
+            host.cmd('sudo python ../../../test/tnode.py c1 &')
         if host.name=='c2':
             host.cmd('sudo ifconfig lo:140 140.0.0.1 netmask 255.255.255.0 up')
             host.cmd('sudo ifconfig lo:150 150.0.0.1 netmask 255.255.255.0 up')
+            host.cmd('sudo python ../../../test/tnode.py c2 &')
         if host.name == "exabgp":
             host.cmd( 'route add -net 172.0.0.0/16 dev exabgp-eth0')
 
