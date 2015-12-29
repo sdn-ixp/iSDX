@@ -8,15 +8,14 @@ ETH_TYPE_ARP = 0x0806
 eth_length = 14
 arp_length = 28
 
-def parse_packet(raw_packet):
-    packet = raw_packet[0]
+def parse_packet(packet):
     eth_frame = parse_eth_frame(packet[0:eth_length])
     arp_packet = parse_arp_packet(packet[eth_length:(eth_length+arp_length)])
 
-    return packet, eth_frame, arp_packet
+    return eth_frame, arp_packet
 
 def parse_eth_frame(frame):
-    eth_detailed = struct.unpack("!6s6s2s", frame)
+    eth_detailed = struct.unpack("!6s6sH", frame)
 
     eth_frame = {"dst_mac": ':'.join('%02x' % ord(b) for b in eth_detailed[0]),
                  "src_mac": ':'.join('%02x' % ord(b) for b in eth_detailed[1]),

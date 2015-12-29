@@ -76,10 +76,10 @@ class ArpProxy(object):
 
                 self.participants[participant_id] = {}
                 # Create Persistent Client Object
-                #self.participants[participant_id]["eh_socket"] = Client(tuple([participant["EH_SOCKET"][0], int(participant["EH_SOCKET"][1])]), authkey = None)
-                self.participants[participant_id]["eh_socket"] = tuple([participant["EH_SOCKET"][0], int(participant["EH_SOCKET"][1])])
-                for i in range(0, len(participant["Ports"])):
-                    self.portmac_2_participant[participant["Ports"][i]['MAC']] = participant_id
+                addr, port = participant["EH_SOCKET"]
+                self.participants[participant_id]["eh_socket"] = (addr, int(port))
+                for port in participant["Ports"]:
+                    self.portmac_2_participant[port['MAC']] = participant_id
 
 
     def set_arp_listener(self):
@@ -100,8 +100,8 @@ class ArpProxy(object):
         while self.run:
             # receive arp requests
             try:
-                raw_packet = self.raw_socket.recvfrom(65565)
-                packet, eth_frame, arp_packet = parse_packet(raw_packet)
+                packet, addr = self.raw_socket.recvfrom(65565)
+                eth_frame, arp_packet = parse_packet(packet)
 
                 arp_type = struct.unpack("!h", arp_packet["oper"])[0]
                 logger.debug("Received ARP-" + ("REQUEST" if (arp_type == 1) else "REPLY") +" SRC: "+eth_frame["src_mac"]+" / "+arp_packet["src_ip"]+" "+"DST: "+eth_frame["dst_mac"]+" / "+arp_packet["dst_ip"])

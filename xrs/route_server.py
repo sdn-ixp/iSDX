@@ -106,38 +106,40 @@ class route_server(object):
         for participant_name in config["Participants"]:
             participant = config["Participants"][participant_name]
 
+            iname = int(participant_name)
+
             # adding asn and mappings
             asn = participant["ASN"]
-            self.asn_2_participant[participant["ASN"]] = int(participant_name)
-            self.participant_2_asn[int(participant_name)] = participant["ASN"]
+            self.asn_2_participant[participant["ASN"]] = iname
+            self.participant_2_asn[iname] = participant["ASN"]
 
-            self.participant_2_port[int(participant_name)] = []
-            self.participant_2_portip[int(participant_name)] = []
-            self.participant_2_portmac[int(participant_name)] = []
+            self.participant_2_port[iname] = []
+            self.participant_2_portip[iname] = []
+            self.participant_2_portmac[iname] = []
 
-            for i in range(0, len(participant["Ports"])):
-                self.port_2_participant[participant["Ports"][i]['Id']] = int(participant_name)
-                self.portip_2_participant[participant["Ports"][i]['IP']] = int(participant_name)
-                self.portmac_2_participant[participant["Ports"][i]['MAC']] = int(participant_name)
-                self.participant_2_port[int(participant_name)].append(participant["Ports"][i]['Id'])
-                self.participant_2_portip[int(participant_name)].append(participant["Ports"][i]['IP'])
-                self.participant_2_portmac[int(participant_name)].append(participant["Ports"][i]['MAC'])
+            for port in participant["Ports"]:
+                self.port_2_participant[port['Id']] = iname
+                self.portip_2_participant[port['IP']] = iname
+                self.portmac_2_participant[port['MAC']] = iname
+                self.participant_2_port[iname].append(port['Id'])
+                self.participant_2_portip[iname].append(port['IP'])
+                self.participant_2_portmac[iname].append(port['MAC'])
 
             # adding ports and mappings
-            ports = [{"ID": participant["Ports"][i]['Id'],
-                         "MAC": participant["Ports"][i]['MAC'],
-                         "IP": participant["Ports"][i]['IP']}
-                         for i in range(0, len(participant["Ports"]))]
+            ports = [{"ID": port['Id'],
+                         "MAC": port['MAC'],
+                         "IP": port['IP']}
+                         for port in participant["Ports"]]
 
             peers_out = [peer for peer in participant["Peers"]]
             # TODO: Make sure this is not an insane assumption
             peers_in = peers_out
 
-            temp = participant["EH_SOCKET"]
-            eh_socket = (str(temp[0]), int(temp[1]))
+            addr, port = participant["EH_SOCKET"]
+            eh_socket = (str(addr), int(port))
 
             # create peer and add it to the route server environment
-            self.participants[int(participant_name)] = XRSPeer(asn, ports, peers_in, peers_out, eh_socket)
+            self.participants[iname] = XRSPeer(asn, ports, peers_in, peers_out, eh_socket)
 
         logger.debug("Done parsing config")
 
@@ -177,10 +179,8 @@ class route_server(object):
         "Send this BGP route to participant id's controller"
         logger.debug("Sending a route update to participant "+str(id))
         conn = Client(tuple(self.participants[id].eh_socket), authkey = None)
-        data = {}
-        data['bgp'] = route
-        conn.send(json.dumps(data))
-        recv = conn.recv()
+        conn.send(json.dumps({'bgp': route}))
+        conn.recv()
         conn.close()
 
 
