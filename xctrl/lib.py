@@ -2,6 +2,7 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
+from collections import namedtuple
 import json
 from netaddr import IPNetwork
 
@@ -14,7 +15,7 @@ class Config(object):
     SUPERSETS = 0
     MDS       = 1
 
-    def __init__(self, config_file):    
+    def __init__(self, config_file):
         self.mode = None
 
         self.vmac_mode = None
@@ -34,7 +35,7 @@ class Config(object):
 
         # loading config file
         config = json.load(open(config_file, 'r'))
-        
+
         # parse config
         self.parse_config(config)
 
@@ -70,17 +71,21 @@ class Config(object):
         if "Participants" in config:
             for participant_name, participant in config["Participants"].iteritems():
                 participant_name = int(participant_name)
+
                 if ("Inbound Rules" in participant):
                     inbound_rules = participant["Inbound Rules"]
+                else:
+                    inbound_rules = None
+
                 if ("Outbound Rules" in participant):
                     outbound_rules = participant["Outbound Rules"]
-            
+                else:
+                    outbound_rules = None
+
                 if ("Ports" in participant):
-                    ports = [Port(participant["Ports"][i]['Id'],
-                              participant["Ports"][i]['MAC'],
-                              participant["Ports"][i]['IP'])
-                              for i in range(0, len(participant["Ports"]))]
-                      
+                    ports = [Port(port['Id'], port['MAC'], port['IP'])
+                              for port in participant["Ports"]]
+
                 self.peers[participant_name] = Participant(participant_name, ports, inbound_rules, outbound_rules)
 
     def isMultiSwitchMode(self):
@@ -96,19 +101,6 @@ class Config(object):
         return self.vmac_mode == self.MDS
 
 
-class Peer(object):
-     def __init__(self, name, ports):
-         self.name = name
-         self.ports = ports 
-
-class Port(object):
-     def __init__(self, id, mac, ip):
-         self.id = id
-         self.mac = mac
-         self.ip = ip
-
-class Participant(Peer):
-     def __init__(self, name, ports, inbound_rules, outbound_rules):
-         super(Participant, self).__init__(name, ports)
-         self.inbound_rules = inbound_rules
-         self.outbound_rules = outbound_rules
+Peer = namedtuple('Peer', 'name ports')
+Port = namedtuple('Port', 'id mac ip')
+Participant = namedtuple('Participant', 'name ports inbound_rules outbound_rules')

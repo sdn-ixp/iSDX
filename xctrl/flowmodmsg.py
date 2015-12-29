@@ -2,7 +2,6 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-import json
 
 class FlowModMsgBuilder(object):
     def __init__(self, participant, key):
@@ -10,11 +9,11 @@ class FlowModMsgBuilder(object):
         self.key = key
         self.flow_mods = []
 
-    def add_flow_mod(self, mod_type, rule_type, priority, match, action, cookie = None):        
+    def add_flow_mod(self, mod_type, rule_type, priority, match, action, cookie = None):
         if cookie is None:
             cookie = (len(self.flow_mods)+1, 65535)
 
-        fm = { 
+        fm = {
                "cookie": cookie,
                "mod_type": mod_type,
                "rule_type": rule_type,
@@ -64,11 +63,11 @@ class FlowModMsgBuilder(object):
 #                         "eth_dst" : "ff:ff:ff:ff:ff:ff",
 #                         "eth_src" : "80:23:ff:98:10:01",
 #                         "ipv4_src" : "192.168.1.1",
-#                         "ipv4_dst" : "192.168.1.2", 
-#                         "tcp_src" : 80, 
+#                         "ipv4_dst" : "192.168.1.2",
+#                         "tcp_src" : 80,
 #                         "tcp_dst" : 179,
 #                         "udp_src" : 23,
-#                         "udp_dst" : 22, 
+#                         "udp_dst" : 22,
 #                        },
 #              "action" : {
 #                         "fwd": ["inbound"/"outbound"/"main-in"/main-out"],
@@ -84,4 +83,3 @@ class FlowModMsgBuilder(object):
 #            }
 #            ...]
 #    }
-

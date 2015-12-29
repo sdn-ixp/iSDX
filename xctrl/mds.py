@@ -52,10 +52,11 @@ OFPP_LOCAL = 0xfffffffe         # Local openflow "port".
 OFPP_ANY = 0xffffffff               # Not associated with a physical port.
 
 class MDS(object):
-    def __init__(self, sender, config):
+    def __init__(self, logger, sender, config):
+        self.logger = logger
         self.sender = sender
         self.config = config
-        self.fm_builder = None
+        self.fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
 
     def handle_BGP(self, rule_type):
         ### BGP traffic to route server
@@ -119,7 +120,7 @@ class MDS(object):
                         mac = port.mac
                     match = {"in_port": port.id}
                     action = {"set_eth_src": mac, "fwd": ["outbound"]}
-                    self.fm_builder.add_flow_mod("insert", rule_type, OUTBOUND_PRIORITY, match, action) 
+                    self.fm_builder.add_flow_mod("insert", rule_type, OUTBOUND_PRIORITY, match, action)
 
     def handle_participant_with_inbound(self, rule_type):
         for participant in self.config.peers.values():
@@ -155,19 +156,20 @@ class MDS(object):
         action = {"fwd": [dst]}
         self.fm_builder.add_flow_mod("insert", rule_type, DEFAULT_PRIORITY, match, action)
 
-class MDSmS(MDS):
-    def __init__(self, sender, config):
-        super(MDSmS, self).__init__(sender, config)
-        self.logger = util.log.getLogger('MDSmS')
-        self.fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
- 
     def start(self):
         self.logger.info('start')
         self.init_fabric()
+        self.sender.send(self.fm_builder.get_msg())
+        self.logger.info('sent flow mods to reference monitor')
+
+
+class MDSmS(MDS):
+    def __init__(self, sender, config):
+        super(MDSmS, self).__init__(util.log.getLogger('MDSmS'), sender, config)
 
     def init_fabric(self):
         self.logger.info('init fabric')
-        
+
         # MAIN SWITCH
         ## handle BGP traffic
         self.logger.info('create flow mods to handle BGP traffic')
@@ -199,17 +201,11 @@ class MDSmS(MDS):
 
 class MDSmT(MDS):
     def __init__(self, sender, config):
-        super(MDSmT, self).__init__(sender, config)
-        self.logger = util.log.getLogger('MDSmT')
-        self.fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
-
-    def start(self):
-        self.logger.info('start')
-        self.init_fabric()
+        super(MDSmT, self).__init__(util.log.getLogger('MDSmT'), sender, config)
 
     def init_fabric(self):
         self.logger.info('init fabric')
-        
+
         # MAIN-IN TABLE
         ## handle BGP traffic
         self.logger.info('create flow mods to handle BGP traffic')
@@ -238,7 +234,3 @@ class MDSmT(MDS):
         ### default forwarding
         self.default_forwarding("main-out")
         self.default_forwarding_inbound("main-out", False)
-
-        self.sender.send(self.fm_builder.get_msg())
-
-        self.logger.info('sent flow mods to reference monitor')

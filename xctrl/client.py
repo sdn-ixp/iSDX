@@ -3,11 +3,7 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 import json
-from multiprocessing import Queue
 from multiprocessing.connection import Client
-from threading import Thread
-
-LOG = False
 
 class RefMonClient(object):
     def __init__(self, address, port, key):

@@ -57,11 +57,12 @@ OFPP_LOCAL = 0xfffffffe         # Local openflow "port".
 OFPP_ANY = 0xffffffff               # Not associated with a physical port.
 
 class GSS(object):
-    def __init__(self, sender, config):
+    def __init__(self, logger, sender, config):
+        self.logger = logger
         self.sender = sender
         self.config = config
-        self.vmac_builder = VMACBuilder(self.config.vmac_options)
-        self.fm_builder = None
+        self.fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
+        self.vmac_builder = VMACBuilder(logger, self.config.vmac_options)
 
     def handle_BGP(self, rule_type):
         ### BGP traffic to route server
@@ -154,9 +155,8 @@ class GSS(object):
                     if mac is None:
                         mac = port.mac
                     match = {"in_port": port.id}
-                    action = {"set_eth_src": mac,
-                              "fwd": ["outbound"]}
-                    self.fm_builder.add_flow_mod("insert", rule_type, OUTBOUND_PRIORITY, match, action) 
+                    action = {"set_eth_src": mac, "fwd": ["outbound"]}
+                    self.fm_builder.add_flow_mod("insert", rule_type, OUTBOUND_PRIORITY, match, action)
 
     def handle_participant_with_inbound(self, rule_type, mask_inbound_bit):
         for participant in self.config.peers.values():
@@ -191,7 +191,7 @@ class GSS(object):
                 port = participant.ports[0]
                 vmac_match = self.vmac_builder.next_hop_match(participant.name, False)
                 vmac_match_mask = self.vmac_builder.next_hop_mask(False)
-                vmac_action = self.vmac_builder.part_port_match(participant.name, 0, False) 
+                vmac_action = self.vmac_builder.part_port_match(participant.name, 0, False)
                 match = {"eth_dst": (vmac_match, vmac_match_mask)}
                 action = {"set_eth_dst": vmac_action, "fwd": [fwd]}
                 self.fm_builder.add_flow_mod("insert", "inbound", INBOUND_PRIORITY, match, action)
@@ -210,19 +210,20 @@ class GSS(object):
     def delete_flow_rule(self, rule_type, cookie, cookie_mask):
         self.fm_builder.delete_flow_mod("remove", rule_type, cookie, cookie_mask)
 
-class GSSmS(GSS):
-    def __init__(self, sender, config):
-        super(GSSmS, self).__init__(sender, config)
-        self.logger = util.log.getLogger('GSSmS')
-        self.fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
- 
     def start(self):
         self.logger.info('start')
         self.init_fabric()
+        self.sender.send(self.fm_builder.get_msg())
+        self.logger.info('sent flow mods to reference monitor')
+
+
+class GSSmS(GSS):
+    def __init__(self, sender, config):
+        super(GSSmS, self).__init__(util.log.getLogger('GSSmS'), sender, config)
 
     def init_fabric(self):
         self.logger.info('init fabric')
-        
+
         # MAIN SWITCH
         ## handle BGP traffic
         self.logger.info('create flow mods to handle BGP traffic')
@@ -257,23 +258,14 @@ class GSSmS(GSS):
         ## send all other packets to main
         self.match_any_fwd("inbound", "main-in")
 
-        self.sender.send(self.fm_builder.get_msg())
-
-        self.logger.info('sent flow mods to reference monitor')
 
 class GSSmT(GSS):
     def __init__(self, sender, config):
-        super(GSSmT, self).__init__(sender, config)
-        self.logger = util.log.getLogger('GSSmT')
-        self.fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
-
-    def start(self):
-        self.logger.info('start')
-        self.init_fabric()
+        super(GSSmT, self).__init__(util.log.getLogger('GSSmT'), sender, config)
 
     def init_fabric(self):
         self.logger.info('init fabric')
-        
+
         # MAIN-IN TABLE
         ## handle BGP traffic
         self.logger.info('create flow mods to handle BGP traffic')
@@ -309,7 +301,3 @@ class GSSmT(GSS):
         self.handle_participant_with_inbound("main-out", False)
         ### default forwarding
         self.default_forwarding("main-out")
-
-        self.sender.send(self.fm_builder.get_msg())
-
-        self.logger.info('sent flow mods to reference monitor')
