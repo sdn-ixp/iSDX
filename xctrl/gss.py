@@ -62,7 +62,7 @@ class GSS(object):
         self.sender = sender
         self.config = config
         self.fm_builder = FlowModMsgBuilder(0, self.config.flanc_auth["key"])
-        self.vmac_builder = VMACBuilder(logger, self.config.vmac_options)
+        self.vmac_builder = VMACBuilder(self.config.vmac_options)
 
     def handle_BGP(self, rule_type):
         ### BGP traffic to route server
