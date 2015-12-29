@@ -2,9 +2,7 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 
-from ss_lib import *
-
-LOG = True
+from ss_lib import vmac_next_hop_mask, vmac_participant_match, vmac_participant_mask, vmac_next_hop_match, vmac_part_port_match
 
 # PRIORITIES (Values can be in [0,65535], 0 is miss)
 FLOW_MISS_PRIORITY = 0

@@ -4,7 +4,6 @@
 
 
 import math
-from netaddr import *
 
 import os
 import sys

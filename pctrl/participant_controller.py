@@ -7,7 +7,6 @@ import argparse
 #import atexit
 import json
 from multiprocessing.connection import Listener
-from netaddr import *
 import os
 #from signal import signal, SIGTERM
 #from sys import exit
@@ -21,10 +20,10 @@ if np not in sys.path:
 import util.log
 from xctrl.flowmodmsg import FlowModMsgBuilder
 
-from lib import *
+from lib import PConfig
 from peer import BGPPeer
-from ss_lib import *
-from ss_rule_scheme import *
+from ss_lib import vmac_part_port_match
+from ss_rule_scheme import update_outbound_rules, init_inbound_rules, init_outbound_rules, msg_clear_all_outbound, ss_process_policy_change
 from supersets import SuperSets
 
 

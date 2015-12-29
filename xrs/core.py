@@ -2,9 +2,8 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 #  Arpit Gupta (Princeton)
 
-## RouteServer-specific imports
-import json
-from netaddr import *
+
+from collections import namedtuple
 
 ###
 ### I(X)P (R)oute (S)erver (XRS) Class
@@ -30,10 +29,4 @@ class XRS(object):
 ### I(X)P (R)oute (S)erver (XRS) Peer Class
 ###
 
-class XRSPeer(object):
-    def __init__(self, asn, ports, peers_in, peers_out, eh_socket):
-        self.asn = asn
-        self.ports = ports
-        self.peers_in = peers_in
-        self.peers_out = peers_out
-        self.eh_socket = eh_socket
+XRSPeer = namedtuple('XRSPeer', 'asn ports peers_in peers_out eh_socket')
