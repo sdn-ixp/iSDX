@@ -93,7 +93,7 @@ The tmgr test in the startup shell is:
 python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0' t
 ```
 Where $BASE is ~/iSDX and $TEST is the test name (directory in examples).
-This instructs tmgr to start all listeners (l), run command x0 (route -n) on all hosts, and run all tests on all hosts.
+This instructs tmgr to start all listeners, run command x0 (route -n) on all hosts, and run all tests.
 
 The output from a single test will contain:
 ```
@@ -145,8 +145,9 @@ MM:c2 OK: TEST t2 3580719343 TEST PASSED 266.701893691 MBpS
 MM:00 INFO: BYE
 ```
 
-If you need to debug a test, the simple way is to edit the startup.sh script and change the mininext command line from:
-```(sleep 45; echo quit) | ./sdx_mininext.py
+If you need to debug a test, the simplest way is to edit the startup.sh script and change the mininext command line from:
+```
+(sleep 45; echo quit) | ./sdx_mininext.py
 ```
 to just:
 ```
