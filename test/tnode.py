@@ -15,6 +15,7 @@ import platform
 import os
 import string
 import subprocess
+import copy
 
 buf = "\x00" * 1024     # buffer for traffic generation
 host = ""               # me
@@ -262,6 +263,18 @@ def cmd_thread(conn):
         conn.sendall(host + ':XX OK: ' + 'RESET new generation = ' + str(generation) + '\n')     
         conn.close()
         return;
+    
+    if cmd == 'result' and n == 1:
+        lock.acquire()
+        c = copy.copy(completed)
+        p = copy.copy(pending)
+        lock.release()
+        for i in c:
+            conn.sendall(c[i])
+        for i in p:
+            conn.sendall(p[i])
+        conn.close()
+        return
     
     conn.sendall(host + ':XX ERROR: Bad command: ' + data)
     conn.close()
