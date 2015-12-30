@@ -42,7 +42,7 @@ class QuaggaTopo( Topo ):
         quaggaSvc = QuaggaService(autoStop=False)
 
         "Path configurations for mounts"
-        quaggaBaseConfigPath =  configdir
+        quaggaBaseConfigPath = configdir
 
         "List of Quagga host configs"
         quaggaHosts = []
@@ -121,7 +121,7 @@ def startNetwork():
     topo = QuaggaTopo()
     global net
     net = Mininext(topo=topo, 
-                controller=lambda name: RemoteController( name, ip='127.0.0.1' ))
+            controller=lambda name: RemoteController( name, ip='127.0.0.1' ))
 
     info( '** Starting the network\n' )
     net.start()

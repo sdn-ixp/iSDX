@@ -35,14 +35,14 @@ class QuaggaTopo( Topo ):
         "Initialize topology"
         Topo.__init__( self )
 
-        "Directory where this file / script is located"
-        scriptdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) # script directory
+        # location of config dir
+        configdir = os.path.abspath(sys.argv[1])
 
         "Initialize a service helper for Quagga with default options"
         quaggaSvc = QuaggaService(autoStop=False)
 
         "Path configurations for mounts"
-        quaggaBaseConfigPath=scriptdir + '/configs/'
+        quaggaBaseConfigPath = configdir
 
         "List of Quagga host configs"
         quaggaHosts = []
@@ -70,7 +70,7 @@ class QuaggaTopo( Topo ):
         for host in quaggaHosts:
             "Set Quagga service configuration for this node"
             quaggaSvcConfig = \
-            { 'quaggaConfigPath' : scriptdir + '/configs/' + host.name }
+            { 'quaggaConfigPath' : os.path.join(configdir, host.name) }
 
             quaggaContainer = self.addHost( name=host.name,
                                             ip=host.ip,
@@ -85,6 +85,8 @@ class QuaggaTopo( Topo ):
             self.addLink( quaggaContainer, main_switch , port2=host.port)
 
 def addInterfacesForSDXNetwork( net ):
+    # location of tnode relative to location of this script file
+    scriptdir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../test/tnode.py'))
     hosts=net.hosts
     print "Configuring participating ASs\n\n"
     for host in hosts:
@@ -93,19 +95,19 @@ def addInterfacesForSDXNetwork( net ):
             host.cmd('sudo ifconfig lo:1 100.0.0.1 netmask 255.255.255.0 up')
             host.cmd('sudo ifconfig lo:2 100.0.0.2 netmask 255.255.255.0 up')
             host.cmd('sudo ifconfig lo:110 110.0.0.1 netmask 255.255.255.0 up')
-            host.cmd('sudo python ../../../test/tnode.py a1 &')
+            host.cmd('sudo python '+scriptdir+' '+host.name+' &')
         if host.name=='b1':
             host.cmd('sudo ifconfig lo:140 140.0.0.1 netmask 255.255.255.0 up')
             host.cmd('sudo ifconfig lo:150 150.0.0.1 netmask 255.255.255.0 up')
-            host.cmd('sudo python ../../../test/tnode.py b1 &')
+            host.cmd('sudo python '+scriptdir+' '+host.name+' &')
         if host.name=='c1':
             host.cmd('sudo ifconfig lo:140 140.0.0.1 netmask 255.255.255.0 up')
             host.cmd('sudo ifconfig lo:150 150.0.0.1 netmask 255.255.255.0 up')
-            host.cmd('sudo python ../../../test/tnode.py c1 &')
+            host.cmd('sudo python '+scriptdir+' '+host.name+' &')
         if host.name=='c2':
             host.cmd('sudo ifconfig lo:140 140.0.0.1 netmask 255.255.255.0 up')
             host.cmd('sudo ifconfig lo:150 150.0.0.1 netmask 255.255.255.0 up')
-            host.cmd('sudo python ../../../test/tnode.py c2 &')
+            host.cmd('sudo python '+scriptdir+' '+host.name+' &')
         if host.name == "exabgp":
             host.cmd( 'route add -net 172.0.0.0/16 dev exabgp-eth0')
 
@@ -114,8 +116,8 @@ def startNetwork():
     topo = QuaggaTopo()
     global net
     net = Mininext(topo=topo, 
-		controller=lambda name: RemoteController( name, ip='127.0.0.1' ))
-    
+            controller=lambda name: RemoteController( name, ip='127.0.0.1' ))
+
     info( '** Starting the network\n' )
     net.start()
         
