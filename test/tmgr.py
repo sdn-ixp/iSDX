@@ -58,7 +58,7 @@ def main (argv):
         exit()
         
     commands = config.get('commands', {})
-        
+       
     cmdfuncs = {
         'reset': (reset, hosts, 'reset (close) listeners - takes a few seconds to take effect'),
         'z': (reset, hosts, None),
@@ -80,7 +80,9 @@ def main (argv):
         'h': (usage, None, None),
         '?': (usage, None, None),
         'quit': (terminate, None, 'exit this manager - leave nodes intact'),
-        'q': (terminate, None, None)
+        'q': (terminate, None, None),
+        'pending': (pending, hosts, 'query for any pending or completed test results'),
+        'p': (pending, hosts, None)
     }
     
     if len(argv) == 2:
@@ -338,6 +340,11 @@ def test (tn):
     print 'MM:' + xdst + ' ERROR: TEST ' + tn + ' ' + rand + ' TEST FAILED: PENDING TOO LONG'
 
 
+# retrieve any pending or completed test results (does not consume result)
+
+def pending (host):
+    generic(host, 'RESULT', 'result\n')
+    
 
 def listener (host):
     interfaces = config["hosts"][host]['interfaces']

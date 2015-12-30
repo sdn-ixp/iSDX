@@ -24,7 +24,9 @@ A tnode executes a limited number of commands:
 - retrieve the result of a previously generated transmission based on its ID
 - execute a local command (e.g., route -n)
 
-A tmgr uses a JSON specification to describe listeners, tests and programs:
+A tmgr uses a JSON specification to describe listeners, tests and programs.
+Note that the tnodes on hosts B, C1 and C2 all open the same set of ports.
+In this way, misdirected traffic will still find a home and can be interrogated with tmgr
 
 ```
 {
@@ -82,12 +84,18 @@ A test script will automate the entire process of establishing the mininext conf
 A simple regression test would look like:
 ```
 cd ~/iSDX/test
-for i in 1 2 3 4 5 6 7 8 9 10
-do
-	sudo sh startup.sh test-mt
-done
+sudo sh startup.sh 2 test-mt test-ms
 ```
-The expected output looks like:
+This will run tests test-mt and test-ms in the examples directory twice.
+Log output will be placed in the test directory.
+The tmgr test in the startup shell is:
+```
+python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0' t
+```
+Where $BASE is ~/iSDX and $TEST is the test name (directory in examples).
+This instructs tmgr to start all listeners, run command x0 (route -n) on all hosts, and run all tests.
+
+The output from a single test will contain:
 ```
 b1:i0 OK: listener established for 140.0.0.1:80
 b1:i1 OK: listener established for 140.0.0.1:4321
@@ -136,3 +144,16 @@ c2:i2 OK: XFER 3580719343 100.0.0.1:57181->140.0.0.1:4322 266.701893691 MBpS
 MM:c2 OK: TEST t2 3580719343 TEST PASSED 266.701893691 MBpS
 MM:00 INFO: BYE
 ```
+
+If you need to debug a test, the simplest way is to edit the startup.sh script and change the mininext command line from:
+```
+(sleep 45; echo quit) | ./sdx_mininext.py
+```
+to just:
+```
+./sdx_mininext.py
+```
+This will leave the network intact and not start the cleanup script until you exit mininext with 'quit' or control-D.
+You can then run tmgr interactively in another window, or use mininext commands to check routes.
+A useful tmgr command is 'pending' which will query all tnodes for any results that have not been claimed, which would likely be due to misdirected traffic.
+
