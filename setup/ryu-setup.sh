@@ -4,7 +4,7 @@ cd ~
 
 #  Dependencies for ryu
 sudo apt-get install -y python-routes python-dev
-sudo pip install oslo.config --upgrade
+sudo pip install oslo.config==3.0.0
 sudo pip install msgpack-python
 sudo pip install eventlet
 
