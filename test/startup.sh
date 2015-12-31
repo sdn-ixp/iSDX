@@ -30,38 +30,7 @@ do
 		
 		# the cleanup script will kill this each test, so we have to restart it on same file
 		python $BASE/logServer.py $LOG_FILE >/dev/null 2>&1 &
-		
-		(
-		  echo delaying for mininet
-		  sleep 15
-		  echo starting ryu
-		  ryu-manager $BASE/flanc/refmon.py --refmon-config $BASE/examples/$TEST/config/sdx_global.cfg >/dev/null 2>&1 &
-		  echo starting xctrl
-		  cd $BASE/xctrl/
-		  ./xctrl.py $BASE/examples/$TEST/config/sdx_global.cfg &
-		  sleep 3
-		  echo starting arp proxy
-		  cd $BASE/arproxy/
-		  python arproxy.py $TEST &
-		  sleep 3
-		  echo starting route server
-		  cd $BASE/xrs/
-		  python route_server.py $TEST &
-		  sleep 3
-		  echo starting participants
-		  cd $BASE/pctrl/
-		  sh run_pctrlr.sh $TEST &
-		  sleep 3
-		  echo starting exabgp
-		  exabgp $BASE/examples/$TEST/config/bgp.conf >/dev/null 2>&1 &
-		  sleep 5
-		  echo starting $TEST
-		  cd $BASE/test
-		  python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0 a1 b1 c1 c2' t
-		  echo WAITING FOR MININEXT TO TERMINATE
-		  
-		) &
-		
+
 		echo starting mininext
 		
 		MINICONFIGDIR=~/mini_rundir
@@ -69,13 +38,60 @@ do
 		mkdir -p $MINICONFIGDIR
 		cd $BASE/examples/$TEST/mininext
 		find configs | cpio -pdm $MINICONFIGDIR
+
+		M0=/tmp/sdxm0.$$
+		mkfifo $M0
+		cat <$M0 | ./sdx_mininext.py $MINICONFIGDIR/configs &
+		M_PID=$!
 		
-		
-		(sleep 45; echo quit) | ./sdx_mininext.py $MINICONFIGDIR/configs
-		echo exiting mininext
-		echo cleaning
+		echo delaying for mininet
+		sleep 15
+		echo starting ryu
+		ryu-manager $BASE/flanc/refmon.py --refmon-config $BASE/examples/$TEST/config/sdx_global.cfg >/dev/null 2>&1 &
+		sleep 2
+
+		echo starting xctrl
+		cd $BASE/xctrl/
+		./xctrl.py $BASE/examples/$TEST/config/sdx_global.cfg
+
+		echo starting arp proxy
+		cd $BASE/arproxy/
+		python arproxy.py $TEST &
+		sleep 3
+
+		echo starting route server
+		cd $BASE/xrs/
+		python route_server.py $TEST &
+		sleep 3
+
+		echo starting participants
 		cd $BASE/pctrl/
-		sh clean.sh
+		sh run_pctrlr.sh $TEST &
+		sleep 3
+
+		echo starting exabgp
+		exabgp $BASE/examples/$TEST/config/bgp.conf >/dev/null 2>&1 &
+		sleep 5
+
+		echo starting $TEST
+		cd $BASE/test
+		python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0 a1 b1 c1 c2' t
+
+		echo cleaning up processes and files
+		sudo killall python
+		sudo killall exabgp
+		sudo fuser -k 6633/tcp
+		python ~/iSDX/pctrl/clean_mongo.py
+		sudo rm -f ~/iSDX/xrs/ribs/*.db
+
+		echo telling mininext to shutdown
+		echo quit >$M0
+		echo waiting for mininext to exit
+		wait $M_PID
+		rm -f $M0
+
+		echo cleaning up mininext
+		sudo mn -c
 		echo test done
 	
 	done
