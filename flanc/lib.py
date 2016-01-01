@@ -20,7 +20,7 @@ class Config(object):
         self.server = None
 
         self.mode = None
-        self.ofdpa = False
+        self.ofdpa = set()
         self.ofv = None
         self.tables = None
         self.dpids = None
@@ -39,9 +39,6 @@ class Config(object):
         if "Mode" in config:
             if config["Mode"] == "Multi-Switch":
                 self.mode = 0
-            elif config["Mode"] == "Multi-Switch-OFDPA":
-                self.mode = 0
-                self.ofdpa = True
             elif config["Mode"] == "Multi-Table":
                 self.mode = 1
         if "RefMon Settings" in config:
@@ -56,6 +53,8 @@ class Config(object):
                     self.dp_alias = config["RefMon Settings"]["fabric options"]["dp alias"]
                 if "OF version" in config["RefMon Settings"]["fabric options"]:
                     self.ofv = config["RefMon Settings"]["fabric options"]["OF version"]
+                if "ofdpa" in config["RefMon Settings"]["fabric options"]:
+                    self.ofdpa = set(config["RefMon Settings"]["fabric options"]["ofdpa"])
 
             if "fabric connections" in config["RefMon Settings"]:
                 self.datapath_ports = config["RefMon Settings"]["fabric connections"]
@@ -174,7 +173,7 @@ class MultiSwitchController(object):
 
         self.logger.info('ms_ctrlr: switch connect: ' + dp_name)
 
-        if self.is_ready():
+        if self.is_ready() and not dp_name in self.config.ofdpa:
             self.init_fabric()
 
             while not self.fm_queue.empty():
@@ -190,9 +189,6 @@ class MultiSwitchController(object):
         # install table-miss flow entry
         self.logger.info('ms_ctrlr: init fabric')
         
-        if self.config.ofdpa:
-            return
-
         match = self.config.parser.OFPMatch()
 
         if self.config.ofv  == "1.3":
@@ -227,6 +223,7 @@ class MultiSwitchController(object):
         pass
 
     def is_ready(self):
-        if len(self.config.datapaths) == len(self.config.dpids):
+#        if len(self.config.datapaths) == len(self.config.dpids):
+        if len(self.config.datapaths) == 3: # TEMPORARY while testing
             return True
         return False
