@@ -20,6 +20,7 @@ class Config(object):
         self.server = None
 
         self.mode = None
+        self.ofdpa = False
         self.ofv = None
         self.tables = None
         self.dpids = None
@@ -38,6 +39,9 @@ class Config(object):
         if "Mode" in config:
             if config["Mode"] == "Multi-Switch":
                 self.mode = 0
+            elif config["Mode"] == "Multi-Switch-OFDPA":
+                self.mode = 0
+                self.ofdpa = True
             elif config["Mode"] == "Multi-Table":
                 self.mode = 1
         if "RefMon Settings" in config:
@@ -185,6 +189,10 @@ class MultiSwitchController(object):
     def init_fabric(self):
         # install table-miss flow entry
         self.logger.info('ms_ctrlr: init fabric')
+        
+        if self.config.ofdpa:
+            return
+
         match = self.config.parser.OFPMatch()
 
         if self.config.ofv  == "1.3":

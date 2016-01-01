@@ -4,6 +4,8 @@
 from ryu.ofproto import ether
 from ryu.ofproto import inet
 
+from ofdpa20 import OFDPA20
+
 class FlowMod():
     def __init__(self, config, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
@@ -22,6 +24,9 @@ class FlowMod():
         self.cookie = {}
         self.matches = {}
         self.actions = []
+
+        if self.config.ofdpa:
+            self.ofdpa = OFDPA20(config, origin);
 
         self.validate_flow_mod(flow_mod)
 
@@ -187,11 +192,14 @@ class FlowMod():
                 table_id = self.config.tables[self.rule_type]
                 datapath = self.config.datapaths["main"]
         else:
-            table_id = 0
+            table_id = self.ofdpa.get_table_id() if self.config.ofdpa else 0
             datapath = self.config.datapaths[self.rule_type]
 
         if self.mod_type == "insert":
-            instructions = self.make_instructions()
+            if self.config.ofdpa:
+                instructions, group_mods = self.ofdpa.make_instructions_and_group_mods(self)
+            else:
+                instructions = self.make_instructions()
             return self.parser.OFPFlowMod(datapath=datapath, 
                                           cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], 
                                           table_id=table_id, 
