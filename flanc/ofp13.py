@@ -196,10 +196,7 @@ class FlowMod():
             datapath = self.config.datapaths[self.rule_type]
 
         if self.mod_type == "insert":
-            if self.config.ofdpa:
-                instructions, group_mods = self.ofdpa.make_instructions_and_group_mods(self)
-            else:
-                instructions = self.make_instructions()
+            instructions = self.make_instructions()
             return self.parser.OFPFlowMod(datapath=datapath, 
                                           cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], 
                                           table_id=table_id, 
@@ -219,3 +216,6 @@ class FlowMod():
         if self.config.tables and self.rule_type != "arp":
             return "main"
         return self.rule_type
+
+    def get_dependent_group_mods(self, config):
+        return []
