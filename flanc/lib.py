@@ -223,10 +223,11 @@ class MultiSwitchController(object):
             dp = self.config.datapaths[fm.get_dst_dp()]
             if self.config.ofdpa:
                 # any dependent group mods must be installed first
-                group_mods = fm.get_dependent_group_mods(self.config)
+                flow_mod, group_mods = fm.get_flow_and_group_mods(self.config)
                 for gm in group_mods:
                     dp.send_msg(gm)
-            flow_mod = fm.get_flow_mod(self.config)
+            else:
+                flow_mod = fm.get_flow_mod(self.config)
             dp.send_msg(flow_mod)
 
     def packet_in(self, ev):
