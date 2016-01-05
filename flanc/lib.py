@@ -227,9 +227,9 @@ class MultiSwitchController(object):
                 ofdpa = OFDPA20(self.config)
                 flow_mod, group_mods = fm.get_flow_and_group_mods(self.config)
                 for gm in group_mods:
-                    if not ofdpa.is_group_mod_installed_in_switch(gm):
+                    if not ofdpa.is_group_mod_installed_in_switch(dp, gm):
                         dp.send_msg(gm)
-                        ofdpa.mark_group_mod_as_installed(gm)
+                        ofdpa.mark_group_mod_as_installed(dp, gm)
             else:
                 flow_mod = fm.get_flow_mod(self.config)
             dp.send_msg(flow_mod)
