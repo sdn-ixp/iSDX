@@ -9,6 +9,8 @@ from Queue import Queue
 from ryu.ofproto import ether
 from ryu.ofproto import inet
 
+from ofdpa20 import OFDPA20
+
 # PRIORITIES
 FLOW_MISS_PRIORITY = 0
 
@@ -222,10 +224,12 @@ class MultiSwitchController(object):
         else:
             dp = self.config.datapaths[fm.get_dst_dp()]
             if self.config.ofdpa:
-                # any dependent group mods must be installed first
+                ofdpa = OFDPA20(self.config)
                 flow_mod, group_mods = fm.get_flow_and_group_mods(self.config)
                 for gm in group_mods:
-                    dp.send_msg(gm)
+                    if not ofdpa.is_group_mod_installed_in_switch(gm):
+                        dp.send_msg(gm)
+                        ofdpa.mark_group_mod_as_installed(gm)
             else:
                 flow_mod = fm.get_flow_mod(self.config)
             dp.send_msg(flow_mod)

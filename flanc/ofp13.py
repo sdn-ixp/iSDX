@@ -26,7 +26,7 @@ class FlowMod():
         self.actions = []
 
         if self.config.ofdpa:
-            self.ofdpa = OFDPA20(config, origin);
+            self.ofdpa = OFDPA20(config);
 
         self.validate_flow_mod(flow_mod)
 

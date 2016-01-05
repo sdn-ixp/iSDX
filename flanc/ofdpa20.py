@@ -6,11 +6,14 @@ import logging
 class OFDPA20():
     __shared_state = {}
 
-    def __init__(self, config, origin):
+    def __init__(self, config):
         self.__dict__ = self.__shared_state # makes this a singleton
+        
+        if hasattr(self,'config'):
+            # shared instance already initialized
+            return
 
         self.config = config
-        self.origin = origin
 
         self.logger = logging.getLogger('OFDPA20')
 
@@ -71,10 +74,12 @@ class OFDPA20():
             self.logger.error("Unreachable code (I thought)!")
 
         instructions = [fm.parser.OFPInstructionActions(self.config.ofproto.OFPIT_APPLY_ACTIONS, group_actions)]
-        print "FDP gids: " + str(list(self.gid_to_group_mod))
         return (instructions, group_mods)
 
     def make_group_mod(self, fm, datapath, gid, actions):
+        if gid in self.gid_to_group_mod:
+            # only ever create one GroupMod object for a gid
+            return self.gid_to_group_mod[gid]
         buckets = [fm.parser.OFPBucket(actions=actions)]
         group_mod = fm.parser.OFPGroupMod(datapath=datapath,
                                        command=self.config.ofproto.OFPGC_ADD,
@@ -122,3 +127,11 @@ class OFDPA20():
             self.l2_rewrite_to_gid[rewrite_key] = (1 << 28) | (self.l2_rewrite_uniq & 0xffff)
             self.l2_rewrite_uniq += 1
         return self.l2_rewrite_to_gid[rewrite_key]
+
+
+    def is_group_mod_installed_in_switch(self, group_mod):
+        return group_mod in self.installed_group_mods
+
+    def mark_group_mod_as_installed(self, group_mod):
+        self.logger.info('Group mod installed ' + str(group_mod))
+        self.installed_group_mods.add(group_mod)
