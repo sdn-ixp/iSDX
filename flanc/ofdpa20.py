@@ -15,9 +15,9 @@ class OFDPA20():
         self.origin = origin
 
         self.known_l2_ifcs = set()       # set of port #'s
-        self.known_l2_overwrites = {}    # mapping from src/dst overwrite string to unique ID
-        self.l2_overwrite_uniq = 0
-        self.known_l2_multicast = set()  # mapping from mcast tuple of port #'s to unique ID
+        self.known_l2_rewrites = {}    # mapping from src/dst rewrite string to unique ID
+        self.l2_rewrite_uniq = 0
+        self.known_l2_multicast = {}  # mapping from mcast tuple of port #'s to unique ID
         self.l2_multicast_uniq = 0
 
         self.vlan = 1                    # untagged inputs go on vlan 1
@@ -56,11 +56,14 @@ class OFDPA20():
 
         if eth_src or eth_dst:
             if len(fwd_ports) > 1:
-                self.logger.error('Multicast not supported in combination with MAC overwrite - ignoring all but first port')
-            group_mods.append(self.make_l2_overwrite_group_mod(fm, fwd_ports[0], datapath, eth_src,eth_dst))
-            group_actions = [fm.parser.OFPActionGroup(group_id=self.l2_overwrite_group_id(eth_src,eth_dst))]
+                self.logger.error('Multicast not supported in combination with MAC rewrite - ignoring all but first port')
+            group_mods.append(self.make_l2_rewrite_group_mod(fm, fwd_ports[0], datapath, eth_src,eth_dst))
+            group_actions = [fm.parser.OFPActionGroup(group_id=self.l2_rewrite_group_id(eth_src,eth_dst))]
         elif len(fwd_ports) == 1:
             group_actions = [fm.parser.OFPActionGroup(group_id=self.l2_interface_group_id(fwd_ports[0]))]
+        elif len(fwd_ports) > 1:
+            group_mods.append(self.make_l2_multicast_group_mod(fm, fwd_ports, datapath))
+            group_actions = [fm.parser.OFPActionGroup(group_id=self.l2_multicast_group_id(fwd_ports))]
         else:
             self.logger.error("Unreachable code (I thought)!")
 
@@ -80,7 +83,25 @@ class OFDPA20():
     def l2_interface_group_id(self, port):
         return (self.vlan << 16) + (port & 0xffff)
 
-    def make_l2_overwrite_group_mod(self, fm, port, datapath, eth_src, eth_dst):
+    def make_l2_multicast_group_mod(self, fm, ports, datapath):
+        actions = []
+        for port in ports:
+            actions.append(fm.parser.OFPActionGroup(group_id=self.l2_interface_group_id(port)))
+        buckets = [fm.parser.OFPBucket(actions=actions)]
+        return fm.parser.OFPGroupMod(datapath=datapath,
+                                       command=self.config.ofproto.OFPGC_ADD,
+                                       type_=self.config.ofproto.OFPGT_INDIRECT,
+                                       group_id=self.l2_multicast_group_id(ports),
+                                       buckets=buckets)
+
+    def l2_multicast_group_id(self, ports):
+        mcast_key = tuple(sorted(ports))
+        if not mcast_key in self.known_l2_multicast:
+            self.known_l2_multicast[mcast_key] = 0x30000000 | (self.vlan << 16) | (self.l2_multicast_uniq & 0xffff)
+            self.l2_multicast_uniq += 1
+        return self.known_l2_multicast[mcast_key]
+
+    def make_l2_rewrite_group_mod(self, fm, port, datapath, eth_src, eth_dst):
         actions = [fm.parser.OFPActionGroup(group_id=self.l2_interface_group_id(port))]
         if eth_src:
             actions.append(fm.parser.OFPActionSetField(eth_src=eth_src))
@@ -90,12 +111,12 @@ class OFDPA20():
         return fm.parser.OFPGroupMod(datapath=datapath,
                                        command=self.config.ofproto.OFPGC_ADD,
                                        type_=self.config.ofproto.OFPGT_INDIRECT,
-                                       group_id=self.l2_overwrite_group_id(eth_src, eth_dst),
+                                       group_id=self.l2_rewrite_group_id(eth_src, eth_dst),
                                        buckets=buckets)
 
-    def l2_overwrite_group_id(self, eth_src, eth_dst):
-        overwrite_key = ('' if not eth_src else "eth_src: " + eth_src) + ('' if not eth_dst else " eth_dst: " + eth_dst)
-        if not overwrite_key in self.known_l2_overwrites:
-            self.known_l2_overwrites[overwrite_key] = (1 << 28) | (self.l2_overwrite_uniq & 0xfffffff)
-            self.l2_overwrite_uniq += 1
-        return self.known_l2_overwrites[overwrite_key]
+    def l2_rewrite_group_id(self, eth_src, eth_dst):
+        rewrite_key = ('' if not eth_src else "eth_src: " + eth_src) + ('' if not eth_dst else " eth_dst: " + eth_dst)
+        if not rewrite_key in self.known_l2_rewrites:
+            self.known_l2_rewrites[rewrite_key] = (1 << 28) | (self.l2_rewrite_uniq & 0xffff)
+            self.l2_rewrite_uniq += 1
+        return self.known_l2_rewrites[rewrite_key]
