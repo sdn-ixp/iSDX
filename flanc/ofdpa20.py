@@ -23,11 +23,9 @@ class OFDPA20():
         self.vlan = 1                    # untagged inputs go on vlan 1
 
     def get_table_id(self):
-        print "FDP get_table"
         return 60
 
     def make_instructions_and_group_mods(self, fm, datapath):
-        print "FDP make_iagm"
         fwd_ports = []
         eth_src = None
         eth_dst = None
@@ -46,10 +44,12 @@ class OFDPA20():
                 eth_src = value
             elif action == "set_eth_dst":
                 eth_dst = value
+            else:
+                self.logger.error('Unhandled action: ' + action)
 
         if fwd_ports:
             for port in fwd_ports:
-                print "FDP making l2 ifc group"
+                self.logger.debug("making l2 ifc group")
                 group_mods.append(self.make_l2_interface_group_mod(fm, port, datapath))
         else:
             self.logger.warning('No forward action, so match will result in drop')
@@ -62,7 +62,7 @@ class OFDPA20():
         elif len(fwd_ports) == 1:
             group_actions = [fm.parser.OFPActionGroup(group_id=self.l2_interface_group_id(fwd_ports[0]))]
         else:
-            print "FDP HUH?"
+            self.logger.error("Unreachable code (I thought)!")
 
         instructions = [fm.parser.OFPInstructionActions(self.config.ofproto.OFPIT_APPLY_ACTIONS, group_actions)]
         return (instructions, group_mods)
@@ -82,8 +82,10 @@ class OFDPA20():
 
     def make_l2_overwrite_group_mod(self, fm, port, datapath, eth_src, eth_dst):
         actions = [fm.parser.OFPActionGroup(group_id=self.l2_interface_group_id(port))]
-        actions.append(fm.parser.OFPActionSetField("eth_src=" + eth_src)) if eth_src
-        actions.append(fm.parser.OFPActionSetField("eth_dst=" + eth_dst)) if eth_dst
+        if eth_src:
+            actions.append(fm.parser.OFPActionSetField(eth_src=eth_src))
+        if eth_dst:
+            actions.append(fm.parser.OFPActionSetField(eth_dst=eth_dst))
         buckets = [fm.parser.OFPBucket(actions=actions)]
         return fm.parser.OFPGroupMod(datapath=datapath,
                                        command=self.config.ofproto.OFPGC_ADD,
@@ -92,7 +94,8 @@ class OFDPA20():
                                        buckets=buckets)
 
     def l2_overwrite_group_id(self, eth_src, eth_dst):
-        overwrite_key = ('' if eth_src else "eth_src: " + eth_src) + ('' if eth_dst else " eth_dst: " + eth_dst)
+        overwrite_key = ('' if not eth_src else "eth_src: " + eth_src) + ('' if not eth_dst else " eth_dst: " + eth_dst)
         if not overwrite_key in self.known_l2_overwrites:
-            self.known_l2_overwrites[overwrite_key] = (1 << 28) | (self.l2_overwrite_uniq++ & 0xfffffff)
+            self.known_l2_overwrites[overwrite_key] = (1 << 28) | (self.l2_overwrite_uniq & 0xfffffff)
+            self.l2_overwrite_uniq += 1
         return self.known_l2_overwrites[overwrite_key]
