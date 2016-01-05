@@ -45,7 +45,7 @@ class OFDPA20():
                     else:
                         if port in self.config.dp_alias:
                             port = self.config.dp_alias[port]
-                        fwd_ports.append(self.config.datapath_ports[self.rule_type][port])
+                        fwd_ports.append(self.config.datapath_ports[fm.rule_type][port])
             elif action == "set_eth_src":
                 eth_src = value
             elif action == "set_eth_dst":
