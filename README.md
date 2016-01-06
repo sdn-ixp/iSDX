@@ -29,11 +29,6 @@ $ git clone https://github.com/sdn-ixp/iSDX.git
 $ cd iSDX
 ```
 
-* Change to this branch
-```bash 
-$ git checkout manual_merge
-```
-
 * Now run the vagrant up command. This will read the Vagrantfile from the current directory and provision the VM accordingly:
 ```bash
 $ vagrant up
@@ -46,4 +41,4 @@ The provisioning scripts will install all the required software (and their depen
 * [Exabgp](https://github.com/Exa-Networks/exabgp)
 
 ## Usage
-Run the different setups provided in the examples directory. Check out the [`test-ms`](https://github.com/sdn-ixp/iSDX/tree/manual_merge/examples/test-ms) example for a simple case with three IXP participants.
+Run the different setups provided in the examples directory. Check out the [`test-ms`](https://github.com/sdn-ixp/iSDX/tree/master/examples/test-ms) example for a simple case with three IXP participants.
