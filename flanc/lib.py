@@ -1,8 +1,9 @@
 #  Author:
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
-
 import json
+import logging
+
 from Queue import Queue
 
 import os
@@ -12,6 +13,8 @@ if np not in sys.path:
     sys.path.append(np)
 import util.log
 
+
+from ofdpa20 import OFDPA20
 
 # PRIORITIES
 FLOW_MISS_PRIORITY = 0
@@ -28,6 +31,7 @@ class Config(object):
         self.server = None
 
         self.mode = None
+        self.ofdpa = set()
         self.ofv = None
         self.tables = None
         self.dpids = None
@@ -60,6 +64,8 @@ class Config(object):
                     self.dp_alias = config["RefMon Settings"]["fabric options"]["dp alias"]
                 if "OF version" in config["RefMon Settings"]["fabric options"]:
                     self.ofv = config["RefMon Settings"]["fabric options"]["OF version"]
+                if "ofdpa" in config["RefMon Settings"]["fabric options"]:
+                    self.ofdpa = set(config["RefMon Settings"]["fabric options"]["ofdpa"])
 
             if "fabric connections" in config["RefMon Settings"]:
                 self.datapath_ports = config["RefMon Settings"]["fabric connections"]
@@ -152,9 +158,13 @@ class MultiTableController(object):
         if not self.is_ready():
             self.fm_queue.put(fm)
         else:
-            mod = fm.get_flow_mod(self.config)
-            self.config.datapaths[fm.get_dst_dp()].send_msg(mod)
-
+            dp = self.config.datapaths[fm.get_dst_dp()]
+            flow_mod, group_mods = fm.get_flow_mod(self.config)
+            # any dependent group mods must be installed first
+            for gm in group_mods:
+                dp.send_msg(gm)
+            dp.send_msg(flow_mod)
+           
     def packet_in(self, ev):
         self.logger.info("mt_ctrlr: packet in")
 
@@ -194,7 +204,7 @@ class MultiSwitchController(object):
 
         self.logger.info('ms_ctrlr: switch connect: ' + dp_name)
 
-        if self.is_ready():
+        if self.is_ready() and not dp_name in self.config.ofdpa:
             self.init_fabric()
 
             while not self.fm_queue.empty():
@@ -236,14 +246,23 @@ class MultiSwitchController(object):
         if not self.is_ready():
             self.fm_queue.put(fm)
         else:
-            mod = fm.get_flow_mod(self.config)
-            self.config.datapaths[fm.get_dst_dp()].send_msg(mod)
+            dp = self.config.datapaths[fm.get_dst_dp()]
+            if self.config.ofdpa:
+                ofdpa = OFDPA20(self.config)
+                flow_mod, group_mods = fm.get_flow_and_group_mods(self.config)
+                for gm in group_mods:
+                    if not ofdpa.is_group_mod_installed_in_switch(dp, gm):
+                        dp.send_msg(gm)
+                        ofdpa.mark_group_mod_as_installed(dp, gm)
+            else:
+                flow_mod = fm.get_flow_mod(self.config)
+            dp.send_msg(flow_mod)
 
     def packet_in(self, ev):
         pass
 
     def is_ready(self):
-        if len(self.config.datapaths) == len(self.config.dpids):
+        if len(self.config.datapaths) == len(self.config.dpids) or self.config.always_ready:
             return True
         return False
 

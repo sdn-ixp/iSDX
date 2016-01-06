@@ -69,6 +69,9 @@ class RefMon(app_manager.RyuApp):
         except InvalidConfigError as e:
             self.logger.info('refmon: invalid config '+str(e))
 
+
+        self.config.always_ready = CONF['refmon']['always_ready']
+
         # start controller
         if self.config.isMultiSwitchMode():
             self.controller = MultiSwitchController(self.config)

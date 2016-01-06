@@ -4,6 +4,8 @@
 from ryu.ofproto import ether
 from ryu.ofproto import inet
 
+from ofdpa20 import OFDPA20
+
 class FlowMod(object):
     def __init__(self, config, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
@@ -22,6 +24,9 @@ class FlowMod(object):
         self.cookie = {}
         self.matches = {}
         self.actions = []
+
+        if self.config.ofdpa:
+            self.ofdpa = OFDPA20(config);
 
         self.validate_flow_mod(flow_mod)
 
@@ -174,8 +179,13 @@ class FlowMod(object):
         return validated_actions
 
     def get_flow_mod(self, config):
+        flow_mod, _ = self.get_flow_and_group_mods(config)
+        return flow_mod
+
+    def get_flow_and_group_mods(self, config):
         self.config = config
         self.parser = config.parser
+        group_mods = []
 
         match = self.parser.OFPMatch(**self.matches)
 
@@ -187,25 +197,29 @@ class FlowMod(object):
                 table_id = self.config.tables[self.rule_type]
                 datapath = self.config.datapaths["main"]
         else:
-            table_id = 0
+            table_id = self.ofdpa.get_table_id() if self.config.ofdpa else 0
             datapath = self.config.datapaths[self.rule_type]
 
         if self.mod_type == "insert":
-            instructions = self.make_instructions()
-            return self.parser.OFPFlowMod(datapath=datapath, 
+            if self.config.ofdpa:
+                instructions, group_mods = self.ofdpa.make_instructions_and_group_mods(self, datapath)
+            else:
+                instructions = self.make_instructions()
+            flow_mod = self.parser.OFPFlowMod(datapath=datapath, 
                                           cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], 
                                           table_id=table_id, 
                                           command=self.config.ofproto.OFPFC_ADD,
                                           priority=self.priority, 
                                           match=match, instructions=instructions)
         else:
-            return self.parser.OFPFlowMod(datapath=datapath, 
+            flow_mod = self.parser.OFPFlowMod(datapath=datapath, 
                                           cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], 
                                           table_id=table_id, 
                                           command=self.config.ofproto.OFPFC_DELETE, 
                                           out_group=self.config.ofproto.OFPG_ANY, 
                                           out_port=self.config.ofproto.OFPP_ANY, 
                                           match=match)
+        return flow_mod, group_mods
 
     def get_dst_dp(self):
         if self.config.tables and self.rule_type != "arp":
