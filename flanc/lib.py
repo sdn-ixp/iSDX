@@ -158,13 +158,9 @@ class MultiTableController(object):
         if not self.is_ready():
             self.fm_queue.put(fm)
         else:
-            dp = self.config.datapaths[fm.get_dst_dp()]
-            flow_mod, group_mods = fm.get_flow_mod(self.config)
-            # any dependent group mods must be installed first
-            for gm in group_mods:
-                dp.send_msg(gm)
-            dp.send_msg(flow_mod)
-           
+            mod = fm.get_flow_mod(self.config)
+            self.config.datapaths[fm.get_dst_dp()].send_msg(mod)
+
     def packet_in(self, ev):
         self.logger.info("mt_ctrlr: packet in")
 
