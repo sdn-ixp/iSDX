@@ -238,7 +238,6 @@ class MultiSwitchController(object):
         pass
 
     def is_ready(self):
-#        if len(self.config.datapaths) == len(self.config.dpids):
-        if len(self.config.datapaths) == 3: # TEMPORARY while testing
+        if len(self.config.datapaths) == len(self.config.dpids) or self.config.always_ready:
             return True
         return False

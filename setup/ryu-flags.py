@@ -89,4 +89,6 @@ CONF.register_cli_opts([
                help='path of config file'),
     cfg.StrOpt('flowmodlog', default=None,
                help='path of flowmod log file'),
+    cfg.BoolOpt('always_ready', default=False,
+               help='assume all switches are up and registered with Ryu'),
 ], group='refmon')
