@@ -179,7 +179,7 @@ class FlowMod():
         return validated_actions
 
     def get_flow_mod(self, config):
-        flow_mod, _ = get_flow_and_group_mods(self, config)
+        flow_mod, _ = self.get_flow_and_group_mods(config)
         return flow_mod
 
     def get_flow_and_group_mods(self, config):
