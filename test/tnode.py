@@ -246,7 +246,7 @@ def cmd_thread(conn):
         p = pending.get(rid)
         if c is None and p is None:
             lock.release()
-            msg = host + ':XX ERROR: RESULT: ' + rid + ' is unknown\n'
+            msg = host + ':XX ERROR: RESULT ' + rid + ' does not exist\n'
         elif p is not None:
             lock.release()
             msg = p

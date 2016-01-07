@@ -1,5 +1,8 @@
 BASE=~/iSDX
-LOG_FILE=SDXRegression.log
+LOG_FILE=SDXRegression.log.$$
+
+# set to anything but 0 to run mininext in interactive mode - type control d continue
+INTERACTIVE=0
 
 if [ "$#" -lt 2 ] ; then
   echo "Usage: $0 number_of_loops test_name test_name ..." >&2
@@ -19,18 +22,25 @@ done
 
 rm -f $LOG_FILE
 
-while [ $LOOPCOUNT -gt 0 ]
+count=1
+while [ $count -le $LOOPCOUNT ]
 do
 	for TEST in $@
 	do
 
 		echo -------------------------------
-		echo running test: $TEST
+		echo running test: $TEST:$count
+		if [ $INTERACTIVE != '0' ]
+		then
+			echo "****** RUNNING MININEXT IN INTERACTVE MODE - type control-D at end of test to continue **********"
+		fi
 		echo -------------------------------
 		
 		# the cleanup script will kill this each test, so we have to restart it on same file
 		python $BASE/logServer.py $LOG_FILE >/dev/null 2>&1 &
-
+		sleep 1
+		python $BASE/logmsg.py "running test: $TEST:$count"
+		
 		echo starting mininext
 		
 		MINICONFIGDIR=~/mini_rundir
@@ -43,7 +53,7 @@ do
 		mkfifo $M0
 		cat <$M0 | ./sdx_mininext.py $MINICONFIGDIR/configs &
 		M_PID=$!
-		
+	
 		echo delaying for mininet
 		sleep 15
 		echo starting ryu
@@ -75,7 +85,24 @@ do
 
 		echo starting $TEST
 		cd $BASE/test
-		python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0 a1 b1 c1 c2' t
+		if [ $TEST = 'test-ms' ]
+		then
+			python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0 a1 b1 c1 c2' 'e x1 x2 x3 x4 x5' 'r x1 a1 b1 c1 c2' t
+		elif [$TEST = 'test-mt' ]
+		then
+			python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0 a1 b1 c1 c2' 'e x1 x2' 'r x1 a1 b1 c1 c2' t
+		fi
+		
+		if [ $INTERACTIVE != '0' ]
+		then
+			echo; echo "************************"
+			echo enter mininext commands followed by control-d to exit
+			echo; echo "************************"
+			while read in
+			do
+				echo $in 
+			done >$M0
+		fi
 
 		echo cleaning up processes and files
 		sudo killall python
@@ -84,8 +111,11 @@ do
 		python ~/iSDX/pctrl/clean_mongo.py
 		sudo rm -f ~/iSDX/xrs/ribs/*.db
 
-		echo telling mininext to shutdown
-		echo quit >$M0
+		if [ $INTERACTIVE = '0' ]
+		then
+			echo telling mininext to shutdown
+			echo quit >$M0
+		fi
 		echo waiting for mininext to exit
 		wait $M_PID
 		rm -f $M0
@@ -95,6 +125,6 @@ do
 		echo test done
 	
 	done
-	LOOPCOUNT=`expr $LOOPCOUNT - 1`
+	count=`expr $count + 1`
 done
 exit

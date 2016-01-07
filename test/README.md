@@ -70,7 +70,11 @@ In this way, misdirected traffic will still find a home and can be interrogated 
 	
 	"commands": {
 		"x0": { "cmd": "route -n" },
-		"x1": { "cmd": "ps a" }	
+		"x1": { "cmd": "ps a" },
+		"x2": { "cmd": "sudo ovs-ofctl dump-flows s1" },
+		"x3": { "cmd": "sudo ovs-ofctl dump-flows s2" },
+		"x4": { "cmd": "sudo ovs-ofctl dump-flows s3" },
+		"x5": { "cmd": "sudo ovs-ofctl dump-flows s4" }	
 	}
 }
 ```
@@ -90,10 +94,15 @@ This will run tests test-mt and test-ms in the examples directory twice.
 Log output will be placed in the test directory.
 The tmgr test in the startup shell is:
 ```
-python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0' t
+python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0 a1 b1 c1 c2' 'e x1 x2 x3 x4 x5' t
 ```
-Where $BASE is ~/iSDX and $TEST is the test name (directory in examples).
-This instructs tmgr to start all listeners, run command x0 (route -n) on all hosts, and run all tests.
+Where $BASE is ~/iSDX and $TEST is the test name (test-ms or test-mt as found in the examples directory).
+The specific operations are:
+- l: start all listeners on all hosts
+- 'r x0 a1 b1 c1 c2': remotely run command x0 (route -n) on hosts a1, b1, c1, and c2 
+- 'e x1 x2 x3 x4 x5': execute commands x1, x2, x3, and x4 locally (to dump flows)
+- t: run all tests
+Other options can be found by executing tmgr without arguments.
 
 The output from a single test will contain:
 ```
@@ -106,54 +115,82 @@ c1:i2 OK: listener established for 140.0.0.1:4322
 c2:i0 OK: listener established for 140.0.0.1:80
 c2:i1 OK: listener established for 140.0.0.1:4321
 c2:i2 OK: listener established for 140.0.0.1:4322
+
 MM:a1 REXEC x0: route -n
 Kernel IP routing table
 Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 140.0.0.0       172.0.1.1       255.255.255.0   UG    0      0        0 a1-eth0
 150.0.0.0       172.0.1.2       255.255.255.0   UG    0      0        0 a1-eth0
 172.0.0.0       0.0.0.0         255.255.0.0     U     0      0        0 a1-eth0
+
 MM:b1 REXEC x0: route -n
 Kernel IP routing table
 Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 100.0.0.0       172.0.1.2       255.255.255.0   UG    0      0        0 b1-eth0
 110.0.0.0       172.0.1.1       255.255.255.0   UG    0      0        0 b1-eth0
 172.0.0.0       0.0.0.0         255.255.0.0     U     0      0        0 b1-eth0
+
 MM:c1 REXEC x0: route -n
 Kernel IP routing table
 Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
-100.0.0.0       172.0.1.2       255.255.255.0   UG    0      0        0 c1-eth0
-110.0.0.0       172.0.1.1       255.255.255.0   UG    0      0        0 c1-eth0
+100.0.0.0       172.0.1.4       255.255.255.0   UG    0      0        0 c1-eth0
+110.0.0.0       172.0.1.2       255.255.255.0   UG    0      0        0 c1-eth0
 172.0.0.0       0.0.0.0         255.255.0.0     U     0      0        0 c1-eth0
+
 MM:c2 REXEC x0: route -n
 Kernel IP routing table
 Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
-100.0.0.0       172.0.1.2       255.255.255.0   UG    0      0        0 c2-eth0
-110.0.0.0       172.0.1.1       255.255.255.0   UG    0      0        0 c2-eth0
+100.0.0.0       172.0.1.4       255.255.255.0   UG    0      0        0 c2-eth0
+110.0.0.0       172.0.1.2       255.255.255.0   UG    0      0        0 c2-eth0
 172.0.0.0       0.0.0.0         255.255.0.0     U     0      0        0 c2-eth0
-a1:XX INFO TEST 4811259117 bind:100.0.0.1 dst:140.0.0.1:80
-a1:XX OK: TEST 4811259117 done
-b1:i0 OK: XFER 4811259117 100.0.0.1:42906->140.0.0.1:80 241.731661517 MBpS
-MM:b1 OK: TEST t0 4811259117 TEST PASSED 241.731661517 MBpS
-a1:XX INFO TEST 4421257800 bind:100.0.0.1 dst:140.0.0.1:4321
-a1:XX OK: TEST 4421257800 done
-c1:i1 OK: XFER 4421257800 100.0.0.1:37810->140.0.0.1:4321 186.235681901 MBpS
-MM:c1 OK: TEST t1 4421257800 TEST PASSED 186.235681901 MBpS
-a1:XX INFO TEST 3580719343 bind:100.0.0.1 dst:140.0.0.1:4322
-a1:XX OK: TEST 3580719343 done
-c2:i2 OK: XFER 3580719343 100.0.0.1:57181->140.0.0.1:4322 266.701893691 MBpS
-MM:c2 OK: TEST t2 3580719343 TEST PASSED 266.701893691 MBpS
+
+MM:00 EXEC: x1: ps a
+  PID TTY      STAT   TIME COMMAND
+18821 pts/0    S+     0:00 sudo sh startup.sh 1 test-ms
+18822 pts/0    S+     0:00 sh startup.sh 1 test-ms
+18824 pts/0    R+     0:11 python /home/vagrant/iSDX/logServer.py SDXRegression.log.18822
+...
+
+MM:00 EXEC: x2: sudo ovs-ofctl dump-flows s1
+NXST_FLOW reply (xid=0x4):
+ cookie=0x14, duration=15.059s, table=0, n_packets=4, n_bytes=168, idle_age=14, priority=6,arp,in_port=3,dl_dst=ff:ff:ff:ff:ff:ff actions=output:5,output:6,output:7,output:8,output:4
+ cookie=0x8, duration=15.077s, table=0, n_packets=11, n_bytes=1089, idle_age=1, priority=7,tcp,dl_dst=08:00:27:54:56:ea,
+tp_dst=179 actions=output:7
+ ...
+
+MM:00 EXEC: x3: sudo ovs-ofctl dump-flows s2
+NXST_FLOW reply (xid=0x4):
+ cookie=0x21, duration=15.149s, table=0, n_packets=0, n_bytes=0, idle_age=15, priority=1 actions=output:1
+ ...
+
+MM:00 EXEC: x4: sudo ovs-ofctl dump-flows s3
+NXST_FLOW reply (xid=0x4):
+ cookie=0x10002, duration=2.172s, table=0, n_packets=0, n_bytes=0, idle_age=2, priority=2,tcp,dl_src=08:00:27:89:3b:9f,dl_dst=20:00:00:00:00:00/60:00:00:00:00:00,tp_dst=4321 actions=mod_dl_dst:80:00:00:00:00:03,output:2
+ ...
+
+MM:00 EXEC: x5: sudo ovs-ofctl dump-flows s4
+NXST_FLOW reply (xid=0x4):
+ cookie=0x16, duration=15.430s, table=0, n_packets=0, n_bytes=0, idle_age=15, priority=2,arp,in_port=1,arp_tpa=172.0.1.0
+/24 actions=output:2
+ ...
+
+a1:XX INFO TEST 5666885175 bind:100.0.0.1 dst:140.0.0.1:80
+a1:XX OK: TEST 5666885175 done
+b1:i0 OK: XFER 5666885175 100.0.0.1:58270->140.0.0.1:80 29.1567709123 MBpS
+MM:b1 OK: TEST t0 5666885175 TEST PASSED 29.1567709123 MBpS
+a1:XX INFO TEST 3518395828 bind:100.0.0.1 dst:140.0.0.1:4321
+a1:XX OK: TEST 3518395828 done
+c1:i1 OK: XFER 3518395828 100.0.0.1:45081->140.0.0.1:4321 81.2279277926 MBpS
+MM:c1 OK: TEST t1 3518395828 TEST PASSED 81.2279277926 MBpS
+a1:XX INFO TEST 3575402122 bind:100.0.0.1 dst:140.0.0.1:4322
+a1:XX OK: TEST 3575402122 done
+c2:i2 OK: XFER 3575402122 100.0.0.1:50616->140.0.0.1:4322 30.8792736737 MBpS
+MM:c2 OK: TEST t2 3575402122 TEST PASSED 30.8792736737 MBpS
 MM:00 INFO: BYE
 ```
 
-If you need to debug a test, the simplest way is to edit the startup.sh script and change the mininext command line from:
-```
-(sleep 45; echo quit) | ./sdx_mininext.py
-```
-to just:
-```
-./sdx_mininext.py
-```
-This will leave the network intact and not start the cleanup script until you exit mininext with 'quit' or control-D.
+If you need to debug a test, the simplest way is to edit the startup.sh script and change the environment variable INTERACTIVE to a non zero value
+This will leave the network intact and not start the cleanup script until you exit mininext with a control-D.
 You can then run tmgr interactively in another window, or use mininext commands to check routes.
 A useful tmgr command is 'pending' which will query all tnodes for any results that have not been claimed, which would likely be due to misdirected traffic.
 

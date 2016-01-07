@@ -319,19 +319,27 @@ def test (tn):
         tokens = result.split()
         # keep legal messages with 7 tokens
         # b1:i0 OK: XFER 7186879947 127.0.0.1:55702->127.0.0.1:2220 12.9620259424 MBpS
-        # c1:XX INFO: RESULT:  1514184701 is still pending
+        # c1:XX INFO: RESULT:  1514184701 is still pending - retry this again
+        # c2:XX ERROR: RESULT 1514184701 does not exist - mis-routed data; check other nodes
         if len(tokens) != 7:
             print 'MM:' + xdst + ' ERROR: TEST ' + tn + ' TEST FAILED - bad return string'
             return
+        # this shouldn't happen ever
         if tokens[3] != rand:
             print 'MM:' + xdst + ' ERROR: TEST ' + tn + ' TEST FAILED - incorrect id returned'
-            return
-        if not tokens[0].endswith(xifc):
-            print 'MM:' + xdst + ' ERROR: TEST ' + tn + ' TEST FAILED - response on incorrect interface: sb: ' + xifc
             return
         if tokens[6] == 'PENDING':
             time.sleep(1)
             continue
+        # data not found on expected host
+        if tokens[6] == 'exist':
+            print 'MM:' + xdst + ' ERROR: TEST ' + tn + ' TEST FAILED - DATA NOT FOUND ON EXPECTED HOST - checking all hosts'
+            for h in sorted(hosts):
+                pending(h)
+            return
+        if not tokens[0].endswith(xifc):
+            print 'MM:' + xdst + ' ERROR: TEST ' + tn + ' TEST FAILED - response on incorrect interface: sb: ' + xifc
+            return
         if not tokens[1] == 'OK:':
             print 'MM:' + xdst + ' ERROR: TEST ' + tn + ' TEST FAILED - BAD RESULT'
             return
