@@ -181,6 +181,17 @@ TCP window size: 85.0 KByte (default)
  ````
 
 4. **_Port iSDX to the OF-DPA-Based Hardware Configuration_**  
-TBD
+The 'Refmon' (a.k.a. 'flanc', or 'Fabric Manager') component of SDX has been modified to
+support OF-DPA based switches and the modified component has been tested the on the Quanta
+switches.
 
-hello world
+ To use SDX with an OF-DPA switch, specify it in the global configuration file.  E.g., the
+ following indicates that `main`, `inbound`, and `outbound` are OF-DPA switches:
+ ````
+    "RefMon Settings" : {
+        "fabric options": {
+                "ofdpa": ["main", "inbound", "outbound"],
+		...
+ ````
+
+
