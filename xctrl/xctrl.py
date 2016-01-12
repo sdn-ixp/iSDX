@@ -32,6 +32,7 @@ def main():
 
     config = Config(config_file)
 
+    logger.info('REFMON client: ' + str(config.refmon["IP"]) + ' ' + str(config.refmon["Port"]))
     client = RefMonClient(config.refmon["IP"], config.refmon["Port"], config.refmon["key"])
 
     if config.isMDSMode():

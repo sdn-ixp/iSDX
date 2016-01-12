@@ -85,13 +85,7 @@ do
 
 		echo starting $TEST
 		cd $BASE/test
-		if [ $TEST = 'test-ms' ]
-		then
-			python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0 a1 b1 c1 c2' 'e x1 x2 x3 x4 x5' t
-		elif [ $TEST = 'test-mt' ]
-		then
-			python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0 a1 b1 c1 c2' 'e x1 x2' t
-		fi
+		python tmgr.py $BASE/examples/$TEST/config/test.cfg "regression terse"
 		
 		if [ $INTERACTIVE != '0' ]
 		then

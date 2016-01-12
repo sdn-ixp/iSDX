@@ -16,15 +16,17 @@ import os
 import subprocess
 import traceback
 import time
+import shlex
 
 config = {}     # JSON configuration data
 hosts = {}
 tests = {}
 cmdfuncs = {}
 commands = {}
+regressions = {}
 
 def main (argv):
-    global config, hosts, tests, cmdfuncs, commands
+    global config, hosts, tests, cmdfuncs, commands, regressions
     
     if len(argv) < 2:
         print 'usage: tmgr config.json [ commands ]'
@@ -57,6 +59,12 @@ def main (argv):
         print 'no test data in configuration file: ' + cfile
         exit()
         
+    try:
+        regressions = config["regressions"]
+    except:
+        print 'no regression test in configuration file: ' + cfile
+        exit()
+        
     commands = config.get('commands', {})
        
     cmdfuncs = {
@@ -82,7 +90,9 @@ def main (argv):
         'quit': (terminate, None, 'exit this manager - leave nodes intact'),
         'q': (terminate, None, None),
         'pending': (pending, hosts, 'query for any pending or completed test results'),
-        'p': (pending, hosts, None)
+        'p': (pending, hosts, None),
+        'regression': (regress, regressions, 'run a (multi command) regression test'),
+        'reg': (regress, regressions, None)
     }
     
     if len(argv) == 2:
@@ -354,6 +364,19 @@ def pending (host):
     generic(host, 'RESULT', 'result\n')
     
 
+def regress (rtest):
+    global regressions
+
+    try:
+        r = regressions[rtest]
+    except:
+        print 'MM:00 ERROR: REGRESSION TEST FAILED unknown or poorly specified cmd: ' + rtest
+        return
+    print 'MM:00 INFO: REGRESSION TEST: ' + rtest + ": " + r
+    for l in shlex.split(r):
+        parse(l)
+    
+    
 def listener (host):
     interfaces = config["hosts"][host]['interfaces']
     

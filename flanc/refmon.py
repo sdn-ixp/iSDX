@@ -151,5 +151,5 @@ class RefMon(app_manager.RyuApp):
                         fm = OFP10FlowMod(self.config, origin, flow_mod)
                     elif self.config.ofv == "1.3":
                         fm = OFP13FlowMod(self.config, origin, flow_mod)
-
+                    self.logger.debug('FLOWMOD from ' + str(origin) + ': ' + json.dumps(flow_mod))
                     self.controller.process_flow_mod(fm)
