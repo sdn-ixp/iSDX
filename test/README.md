@@ -75,6 +75,11 @@ In this way, misdirected traffic will still find a home and can be interrogated 
 		"x3": { "cmd": "sudo ovs-ofctl dump-flows s2" },
 		"x4": { "cmd": "sudo ovs-ofctl dump-flows s3" },
 		"x5": { "cmd": "sudo ovs-ofctl dump-flows s4" }	
+	} ,
+	
+	"regressions": {
+		"verbose": "l 'r x0 a1 b1 c1 c2' 'e x1 x2 x3 x4 x5' t",
+		"terse": "l t"
 	}
 }
 ```
@@ -88,15 +93,16 @@ A test script will automate the entire process of establishing the mininext conf
 A simple regression test would look like:
 ```
 cd ~/iSDX/test
-sudo sh startup.sh 2 test-mt test-ms
+sudo bash startup.sh 2 test-mt test-ms
 ```
 This will run tests test-mt and test-ms in the examples directory twice.
 Log output will be placed in the test directory.
 The tmgr test in the startup shell is:
 ```
-python tmgr.py $BASE/examples/$TEST/config/test.cfg l 'r x0 a1 b1 c1 c2' 'e x1 x2 x3 x4 x5' t
+python tmgr.py $BASE/examples/$TEST/config/test.cfg "regression verbose"
 ```
 Where $BASE is ~/iSDX and $TEST is the test name (test-ms or test-mt as found in the examples directory).
+The commands to run as part of regression called verbose are defined in the configuration file.
 The specific operations are:
 - l: start all listeners on all hosts
 - 'r x0 a1 b1 c1 c2': remotely run command x0 (route -n) on hosts a1, b1, c1, and c2 

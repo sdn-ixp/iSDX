@@ -1,8 +1,24 @@
+#!/bin/bash
+
 BASE=~/iSDX
-LOG_FILE=SDXRegression.log.$$
+LOG_DIR=regress.$$
+echo "Logging to $LOG_DIR"
+mkdir $LOG_DIR
 
 # set to anything but 0 to run mininext in interactive mode - type control d continue
 INTERACTIVE=0
+
+# name of regression test to use by default
+RTEST=terse
+
+if [ "$#" -ge 2 ] ; then
+	foo=$1
+	if [[ ${foo:0:1} = '-' ]] ; then
+		RTEST=${foo:1}
+		shift
+	fi
+fi
+echo running regression $RTEST
 
 if [ "$#" -lt 2 ] ; then
   echo "Usage: $0 number_of_loops test_name test_name ..." >&2
@@ -20,8 +36,6 @@ do
     fi
 done
 
-rm -f $LOG_FILE
-
 count=1
 while [ $count -le $LOOPCOUNT ]
 do
@@ -36,8 +50,8 @@ do
 		fi
 		echo -------------------------------
 		
-		# the cleanup script will kill this each test, so we have to restart it on same file
-		python $BASE/logServer.py $LOG_FILE >/dev/null 2>&1 &
+		# the cleanup script will kill this each test, so we have to restart it on same file - new version puts each test in its own log
+		python $BASE/logServer.py $LOG_DIR/$TEST.$count.log >/dev/null 2>&1 &
 		sleep 1
 		python $BASE/logmsg.py "running test: $TEST:$count"
 		
@@ -85,7 +99,7 @@ do
 
 		echo starting $TEST
 		cd $BASE/test
-		python tmgr.py $BASE/examples/$TEST/config/test.cfg "regression terse"
+		python tmgr.py $BASE/examples/$TEST/config/test.cfg "regression $RTEST"
 		
 		if [ $INTERACTIVE != '0' ]
 		then

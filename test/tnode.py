@@ -218,7 +218,7 @@ def cmd_thread(conn):
         daddr = tokens[3]
         dport = tokens[4]
         
-        conn.sendall(host + ':XX INFO TEST ' + rand + ' bind:' + baddr + ' dst:' + daddr + ':' + str(dport) + '\n') 
+        m = rand + ' bind:' + baddr + ' dst:' + daddr + ':' + str(dport)
     
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -231,11 +231,11 @@ def cmd_thread(conn):
             #time.sleep(1)  # seems to be needed on windows or we get a violent server exception
             s.close()
         except Exception, e:
-            conn.sendall(host + ':XX ERROR: ' + 'TEST ' + rand + ' error: ' + repr(e) + '\n')
+            conn.sendall(host + ':XX ERROR: ' + 'TEST ' + m + ' ERROR: ' + repr(e) + '\n')
             conn.close()
             return
         
-        conn.sendall(host + ':XX OK: ' + 'TEST ' + rand + ' done\n')     
+        conn.sendall(host + ':XX OK: ' + 'TEST ' + m + ' TRANSFER COMPLETE\n')     
         conn.close()
         return;
     
