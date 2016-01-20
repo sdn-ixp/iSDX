@@ -144,12 +144,16 @@ class RefMon(app_manager.RyuApp):
                         self.flow_mod_log.write(json.dumps(flow_mod) + '\n')
                     self.flow_mod_log.write('\n')
 
+                self.logger.debug('BURST: ' + str(time()))
+                self.logger.debug('PARTICIPANT: ' + str(msg['auth_info']['participant']))
+                for flow_mod in msg["flow_mods"]:
+                    self.logger.debug('FLOWMOD from ' + str(origin) + ': ' + json.dumps(flow_mod))
+
+
                 # push flow mods to the data plane
-                self.logger.info('refmon: process ' + str(len(msg["flow_mods"])) + ' flowmods from ' + str(origin))
                 for flow_mod in msg["flow_mods"]:
                     if self.config.ofv == "1.0":
                         fm = OFP10FlowMod(self.config, origin, flow_mod)
                     elif self.config.ofv == "1.3":
                         fm = OFP13FlowMod(self.config, origin, flow_mod)
-                    self.logger.debug('FLOWMOD from ' + str(origin) + ': ' + json.dumps(flow_mod))
                     self.controller.process_flow_mod(fm)
