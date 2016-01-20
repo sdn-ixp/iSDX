@@ -201,7 +201,7 @@ class MultiSwitchController(object):
 
         self.logger.info('ms_ctrlr: switch connect: ' + dp_name)
 
-        if self.is_ready() and not dp_name in self.config.ofdpa:
+        if self.is_ready():
             self.init_fabric()
 
             while not self.fm_queue.empty():
@@ -244,7 +244,7 @@ class MultiSwitchController(object):
             self.fm_queue.put(fm)
         else:
             dp = self.config.datapaths[fm.get_dst_dp()]
-            if self.config.ofdpa:
+            if self.config.dpid_2_name[dp.id] in self.config.ofdpa:
                 ofdpa = OFDPA20(self.config)
                 flow_mod, group_mods = fm.get_flow_and_group_mods(self.config)
                 for gm in group_mods:
