@@ -11,6 +11,7 @@ python-sphinx mongodb
 sudo pip install alabaster
 sudo pip install pymongo
 sudo apt-get install -y ssh git emacs sshfs
+sudo apt-get install -y libstring-crc32-perl
 
 # set up some shortcuts
 mkdir ~/bin/
