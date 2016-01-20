@@ -187,6 +187,7 @@ class MultiSwitchController(object):
         self.config = config
 
         self.fm_queue = Queue()
+        self.last_command_type = {}
 
     def switch_connect(self, dp):
         dp_name = self.config.dpid_2_name[dp.id]
@@ -252,6 +253,10 @@ class MultiSwitchController(object):
                         ofdpa.mark_group_mod_as_installed(dp, gm)
             else:
                 flow_mod = fm.get_flow_mod(self.config)
+            if (not dp.id in self.last_command_type or (self.last_command_type[dp.id] != flow_mod.command)):
+                self.logger.info('refmon: sending barrier')
+                self.last_command_type[dp.id] = flow_mod.command
+                dp.send_msg(self.config.parser.OFPBarrierRequest(dp))
             dp.send_msg(flow_mod)
 
     def packet_in(self, ev):
