@@ -197,11 +197,11 @@ class FlowMod(object):
                 table_id = self.config.tables[self.rule_type]
                 datapath = self.config.datapaths["main"]
         else:
-            table_id = self.ofdpa.get_table_id() if self.config.ofdpa else 0
             datapath = self.config.datapaths[self.rule_type]
+            table_id = self.ofdpa.get_table_id() if self.is_ofdpa_datapath(datapath) else 0
 
         if self.mod_type == "insert":
-            if self.config.ofdpa:
+            if self.is_ofdpa_datapath(datapath):
                 instructions, group_mods = self.ofdpa.make_instructions_and_group_mods(self, datapath)
             else:
                 instructions = self.make_instructions()
@@ -225,3 +225,6 @@ class FlowMod(object):
         if self.config.tables and self.rule_type != "arp":
             return "main"
         return self.rule_type
+
+    def is_ofdpa_datapath(self, datapath):
+        return self.config.ofdpa and self.config.dpid_2_name[datapath.id] in self.config.ofdpa
