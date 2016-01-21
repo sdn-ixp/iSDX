@@ -13,10 +13,10 @@ class MyFormatter(logging.Formatter):
         logging.Formatter.__init__(self, *args, **kwargs)
 
     def formatTime(self, record, datefmt=None):
-	return datetime.datetime.now().strftime('%Y%m%d %H%M%S.%f')
+	return datetime.datetime.fromtimestamp(record.created).strftime('%Y%m%d %H%M%S.%f')
 
 def getLogger(fname=None):
-    format='%(asctime)s:%(levelname)s:%(name)s:%(filename)s %(lineno)d:%(message)s'
+    format='%(asctime)s:%(levelname)s:%(name)s:%(pathname)s %(lineno)d:%(message)s'
     formatter = MyFormatter(format)
 
     logger = logging.getLogger('sdx')
