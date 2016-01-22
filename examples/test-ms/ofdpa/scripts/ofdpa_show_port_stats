@@ -4,6 +4,10 @@ HOST=localhost
 PORT=8080
 DPID=1
 
+if [ $# -gt 0 ]; then
+    DPID=$1
+fi
+
 FILTER=cat
 while getopts "p:n" opt; do
     case $opt in
