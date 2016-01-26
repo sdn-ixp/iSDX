@@ -1,0 +1,45 @@
+#!/bin/bash
+
+function usage {
+    echo "usage: $0 <config_dir> <test_container_file>"
+    exit 1
+}
+
+if [ $# -ne 2 ]; then usage; fi
+
+PARENT_DIR=$1
+CONTAINERS=$2
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+if [ ! -d $PARENT_DIR ]; then
+    echo "Not a directory: $PARENT_DIR"
+    usage
+fi
+
+if [ ! -f $CONTAINERS ]; then
+    echo "No such file: $CONTAINERS"
+    usage
+fi
+
+sed -e 's/\#.*//' -e '/^[ \t]*$/d' $CONTAINERS |
+    while read NAME HOST DEV MAC; do
+	DIR="$PARENT_DIR/$NAME"
+	if [ ! -d $DIR ]; then
+	    echo "No such directory: $DIR"
+	    usage
+	fi
+	DIR=`realpath $DIR`
+	IP=`grep 'router-id' $DIR/bgpd.conf | \
+            perl -ne 'chomp; print "$&" if /\d+\.\d+\.\d+\.\d+/'`
+	if [ -z "$IP" ]; then
+	    echo "Failed to get IP from $DIR.  Exiting."
+	    exit 1
+	fi
+	sudo docker run --net=none -d -v $DIR:/etc/quagga --privileged --name $NAME bgp-tst
+	if ! ifconfig -a|grep $DEV; then
+	    echo "No such device: $DEV"
+	    exit 1
+	fi
+	sudo $SCRIPT_DIR/physint-docker add-port eth1 $DEV $NAME $IP/16 '' $MAC
+    done
