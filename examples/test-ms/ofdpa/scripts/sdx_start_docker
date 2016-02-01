@@ -41,5 +41,9 @@ sed -e 's/\#.*//' -e '/^[ \t]*$/d' $CONTAINERS |
 	    echo "No such device: $DEV"
 	    exit 1
 	fi
+	perl -ne 'chomp; if (/network\s+(\d+\.\d+\.\d+\.\S+)/) {++$i; print "$1 $i\n"}' $DIR/bgpd.conf | \
+	    while read ADDR INDEX; do
+		sudo docker exec $NAME ifconfig lo:$INDEX $ADDR
+	    done
 	sudo $SCRIPT_DIR/physint-docker add-port eth1 $DEV $NAME $IP/16 '' $MAC
     done
