@@ -81,6 +81,9 @@ class LogRecordHandler(asyncore.dispatcher):
         self.rlen = 0
         self.dlen = 4
 
+    def writable(self):
+        return False
+
 
 class LogRecordServer(asyncore.dispatcher):
 
@@ -99,4 +102,4 @@ class LogRecordServer(asyncore.dispatcher):
 
 
 LogRecordServer('', logging.handlers.DEFAULT_TCP_LOGGING_PORT)
-asyncore.loop()
+asyncore.loop(timeout=None, use_poll=True)
