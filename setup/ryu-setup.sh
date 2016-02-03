@@ -14,4 +14,9 @@ cd ~
 git clone git://github.com/osrg/ryu.git
 sudo cp iSDX/setup/ryu-flags.py ryu/ryu/flags.py
 cd ryu
+
+# Below should be temporary until ryu's pip-requires file is fixed
+sed -i "s/python_version < '2.7'/(python_version != '2.7' and python_version != '3.0')/" tools/pip-requires
+sed -i "s/python_version >= '2.7'/(python_version == '2.7' or python_version == '3.0')/" tools/pip-requires
+
 sudo python ./setup.py install
