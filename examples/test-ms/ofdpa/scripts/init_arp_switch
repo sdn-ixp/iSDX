@@ -1,13 +1,5 @@
 #!/bin/bash
 
-
-# for BGP (yes, it is not related to ARP...)
-sudo ifconfig eth4 down
-sudo ifconfig eth4 hw ether 08:00:27:89:3b:ff
-sudo ifconfig eth4 172.0.255.254/16
-sudo ifconfig eth4 up
-
-# now the ARP stuff
 sudo ovs-vsctl del-br arp-switch
 sudo ip link del arp-ifc type veth peer name arp-ifc-ovs 2> /dev/null
 
