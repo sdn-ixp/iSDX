@@ -1,7 +1,14 @@
 #  Author:
 #  Rick Porter (Applied Communication Sciences)
 
-import logging
+import os
+import sys
+np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if np not in sys.path:
+    sys.path.append(np)
+import util.log
+
+LOG = True
 
 class OFDPA20():
     __shared_state = {}
@@ -38,7 +45,7 @@ class OFDPA20_switch():
 
         self.config = config
 
-        self.logger = logging.getLogger('OFDPA20')
+        self.logger = util.log.getLogger('OFDPA20')
         self.log_info = ' Switch: ' + self.config.dpid_2_name[datapath.id] + ' (' + str(datapath.id) + ')';
         self.logger.info('Init OFDPA_switch: ' + self.log_info)
 
@@ -86,7 +93,7 @@ class OFDPA20_switch():
             if len(fwd_ports) > 1:
                 self.logger.error('Multicast not supported in combination with MAC rewrite - ignoring all but first port' + self.log_info)
             group_mods.append(self.make_l2_rewrite_group_mod(fm, fwd_ports[0], eth_src,eth_dst))
-            group_actions = [fm.parser.OFPActionGroup(group_id=self.l2_rewrite_group_id(eth_src,eth_dst))]
+            group_actions = [fm.parser.OFPActionGroup(group_id=self.l2_rewrite_group_id(fwd_ports[0],eth_src,eth_dst))]
         elif len(fwd_ports) == 1:
             group_actions = [fm.parser.OFPActionGroup(group_id=self.l2_interface_group_id(fwd_ports[0]))]
         elif len(fwd_ports) > 1:
@@ -141,10 +148,10 @@ class OFDPA20_switch():
             actions.append(fm.parser.OFPActionSetField(eth_src=eth_src))
         if eth_dst:
             actions.append(fm.parser.OFPActionSetField(eth_dst=eth_dst))
-        return self.make_group_mod(fm, self.l2_rewrite_group_id(eth_src, eth_dst), actions)
+        return self.make_group_mod(fm, self.l2_rewrite_group_id(port, eth_src, eth_dst), actions)
 
-    def l2_rewrite_group_id(self, eth_src, eth_dst):
-        rewrite_key = ('' if not eth_src else "eth_src: " + eth_src) + ('' if not eth_dst else " eth_dst: " + eth_dst)
+    def l2_rewrite_group_id(self, port, eth_src, eth_dst):
+        rewrite_key = "port: " + str(port) + ('' if not eth_src else " eth_src: " + eth_src) + ('' if not eth_dst else " eth_dst: " + eth_dst)
         if not rewrite_key in self.l2_rewrite_to_gid:
             self.l2_rewrite_to_gid[rewrite_key] = (1 << 28) | (self.l2_rewrite_uniq & 0xffff)
             self.l2_rewrite_uniq += 1
