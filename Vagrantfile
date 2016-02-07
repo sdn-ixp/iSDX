@@ -19,6 +19,9 @@ Vagrant.configure("2") do |config|
   #config.vm.network :private_network, type: "dhcp"
   #config.vm.network :private_network, ip: "192.168.0.300"
   config.vm.network :forwarded_port, guest:6633, host:6637 # forwarding of port
+  config.vm.network :public_network, ip: "10.0.0.100", :bridge => 'sdn-cntr-br'
+  config.vm.network :public_network, :bridge => 'p1p1' # ARP
+  config.vm.network :public_network, ip: "172.0.255.254/16", :bridge => 'p1p2' # BGP
 
   ## Provisioning
   config.vm.provision :shell, privileged: false, :path => "setup/basic-setup.sh"

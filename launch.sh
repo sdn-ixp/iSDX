@@ -35,7 +35,7 @@ case $2 in
 
     (3)
         cd $RUN_DIR/flanc
-        ryu-manager refmon.py --refmon-config $RUN_DIR/examples/$TEST_DIR/config/sdx_global.cfg &
+        ryu-manager ryu.app.ofctl_rest refmon.py --refmon-config $RUN_DIR/examples/$TEST_DIR/config/sdx_global.cfg &
         sleep 1
 
         cd $RUN_DIR/xctrl

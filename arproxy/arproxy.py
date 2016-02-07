@@ -91,6 +91,7 @@ class ArpProxy(object):
             self.raw_socket.bind((self.interface, 0))
             self.raw_socket.settimeout(1.0)
         except socket.error as msg:
+            logger.error("Can't open socket" + str(self.interface))
             logger.exception('Failed to create socket. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
             raise
 
