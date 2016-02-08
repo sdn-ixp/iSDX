@@ -11,6 +11,7 @@ my $host = 'localhost';
 my $port = '8080';
 my $dpid = 1;
 my $priority = 0;
+my $hard_timeout = 0;
 my($port_in,$eth_type_arp,$eth_src_in,$eth_dst_in);
 my($tcp_src,$tcp_dst);
 my($eth_src_out,$eth_dst_out) = ('','');
@@ -20,6 +21,7 @@ my $rc;
 
 GetOptions("dpid=i" => \$dpid,
 	   "priority=i" => \$priority,
+	   "hard_timeout=i" => \$hard_timeout,
 
 	   "port_in=i" => \$port_in,
 	   "eth_type_arp" => \$eth_type_arp,
@@ -49,6 +51,7 @@ usage: $cmd <options..> output_ports...
     General OpenFlow Options:
       --dpid <n>
       --priority <n>
+      --hard_timeout <n>
     Matching Options:
       --port_in <n>
       --eth_type_arp
@@ -189,6 +192,7 @@ my $flow_msg = <<ENDMSG;
     'dpid': $dpid,
     'table_id': 60,
     'priority': $priority,
+    'hard_timeout': $hard_timeout,
     'match':{
 	$port_in_str
 	$eth_type_str
