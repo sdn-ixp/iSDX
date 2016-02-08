@@ -5,7 +5,7 @@ PORT=8080
 
 if [ $# -ne 1 ]; then
     CMD=`basename $0`
-    echo "usage: $CMD <dpid>"
+    echo "usage: $CMD [-n] [-p] <dpid>"
     exit 1
 fi
 DPID=$1
@@ -24,5 +24,5 @@ while getopts "p:n" opt; do
 done
 
 curl -X GET http://$HOST:$PORT/stats/flow/$DPID 2> /dev/null|
-perl -ne 'while (s/("actions[^]]*?\]).*?("packet_count.. (\d+)).*?("priority.. \d+).*?("match": {[^}]*})//) {  printf "$5, $1, $4, $2\n";}' | $FILTER
+perl -ne 'while (s/("actions[^]]*?\]).*?cookie...(\d+).*?("packet_count.. (\d+)).*?("priority.. \d+).*?("match": {[^}]*})//) {  printf "$2 $6, $1, $5, $3\n";}' | $FILTER
 
