@@ -1,0 +1,26 @@
+#!/bin/bash
+
+VLAN=1
+
+HOST=localhost
+PORT=8080
+
+if [ $# -ne 2 ]; then
+    echo usage: "$0 <dpid> <cookie>"
+    exit 1
+fi
+
+DPID=$1
+COOKIE=$2
+
+MSG="{
+    'dpid': $DPID,
+    'table_id': 60,
+    'cookie': $COOKIE,
+    'cookie_mask': 4095
+ }"
+
+#echo $MSG
+
+curl -X POST -d "$MSG" \
+	http://$HOST:$PORT/stats/flowentry/delete
