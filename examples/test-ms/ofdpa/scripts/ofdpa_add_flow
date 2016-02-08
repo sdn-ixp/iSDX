@@ -10,6 +10,7 @@ my $vlan = 1;
 my $host = 'localhost';
 my $port = '8080';
 my $dpid = 1;
+my $cookie = 0;
 my $priority = 0;
 my $hard_timeout = 0;
 my($port_in,$eth_type_arp,$eth_src_in,$eth_dst_in);
@@ -20,6 +21,7 @@ my $skip_intf_group;
 my $rc;
 
 GetOptions("dpid=i" => \$dpid,
+	   "cookie=i" => \$cookie,
 	   "priority=i" => \$priority,
 	   "hard_timeout=i" => \$hard_timeout,
 
@@ -50,6 +52,7 @@ usage: $cmd <options..> output_ports...
 
     General OpenFlow Options:
       --dpid <n>
+      --cookie <n>
       --priority <n>
       --hard_timeout <n>
     Matching Options:
@@ -190,6 +193,7 @@ END_MGROUP
 my $flow_msg = <<ENDMSG;
 {
     'dpid': $dpid,
+    'cookie': $cookie,
     'table_id': 60,
     'priority': $priority,
     'hard_timeout': $hard_timeout,
