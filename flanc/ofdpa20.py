@@ -99,6 +99,9 @@ class OFDPA20_switch():
         elif len(fwd_ports) > 1:
             group_mods.append(self.make_l2_multicast_group_mod(fm, fwd_ports))
             group_actions = [fm.parser.OFPActionGroup(group_id=self.l2_multicast_group_id(fwd_ports))]
+        elif len(fwd_ports) == 0:
+            # drop
+            group_actions = []
         else:
             self.logger.error("Unreachable code (I thought)!" + self.log_info)
 
