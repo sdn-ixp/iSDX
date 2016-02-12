@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+while [ "$1" != "" ]; do
+    if [ $1 = "--no-mininet" ]; then
+	NO_MININET=1
+    fi
+    shift
+done
+
 cd ~
 
 # Install Quagga
@@ -9,11 +16,13 @@ sudo apt-get install -y quagga
 # MiniNExT dependencies
 sudo apt-get install -y help2man python-setuptools
 
-git clone https://github.com/USC-NSL/miniNExT.git miniNExT/
-cd miniNExT
-git checkout 1.4.0
-sudo make install
-cd ~
+if [ -z "$NO_MININET" ]; then
+    git clone https://github.com/USC-NSL/miniNExT.git miniNExT/
+    cd miniNExT
+    git checkout 1.4.0
+    sudo make install
+    cd ~
+fi
 
 # Install Requests
 sudo pip install requests
