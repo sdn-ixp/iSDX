@@ -24,5 +24,5 @@ while getopts "p:n" opt; do
 done
 
 curl -X GET http://$HOST:$PORT/stats/flow/$DPID 2> /dev/null|
-perl -ne 'while (s/("actions[^]]*?\]).*?cookie...(\d+).*?("packet_count.. (\d+)).*?("priority.. \d+).*?("match": {[^}]*})//) {  printf "$2 $6, $1, $5, $3\n";}' | $FILTER
+perl -ne 'while (s/("actions[^]]*?\]).*?cookie...(\d+).*?("packet_count.. (\d+)).*?("priority.. \d+).*?("match": {[^}]*})//) {  $part = $2 >> 16; $pcookie = ("(P_$part/" . ($2 & 0xffff) . ")") if $part; printf "$2 $pcookie $6, $1, $5, $3\n";}' | $FILTER
 
