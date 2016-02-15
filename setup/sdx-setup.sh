@@ -5,16 +5,6 @@ cd ~
 # Install Quagga
 sudo apt-get install -y quagga
 
-# Install MiniNExT
-# MiniNExT dependencies
-sudo apt-get install -y help2man python-setuptools
-
-git clone https://github.com/USC-NSL/miniNExT.git miniNExT/
-cd miniNExT
-git checkout 1.4.0
-sudo make install
-cd ~
-
 # Install Requests
 sudo pip install requests
 
@@ -24,6 +14,7 @@ sudo pip install requests
 cd iSDX
 sudo chmod 755 xrs/client.py xrs/route_server.py
 mkdir xrs/ribs
+dos2unix launch.sh xrs/client.py pctrl/clean.sh
 cd ~
 
 # Install ExaBGP

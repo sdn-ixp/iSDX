@@ -105,8 +105,8 @@ It is part of the `xrs` module itself and it handles the BGP sessions with all t
 Outbound policy of a1: match(tcp_port=80) >> fwd(b1)
 
 ```bash
-mininext> b1 iperf -s -B 140.0.0.1 -p 80 &  
-mininext> a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 80 -t 2
+mininext> h1_b1 iperf -s -B 140.0.0.1 -p 80 &  
+mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 80 -t 2
 ```
 
 ### Test 2
@@ -115,8 +115,8 @@ Outbound policy of a1: match(tcp_port=4321) >> fwd(c)
 and Inbound policy of c: match(tcp_port=4321) >> fwd(c1)
 
 ```bash
-mininext> c1 iperf -s -B 140.0.0.1 -p 4321 &
-mininext> a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4321 -t 2  
+mininext> h1_c1 iperf -s -B 140.0.0.1 -p 4321 &
+mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4321 -t 2  
 ```
 
 ### Test 3 
@@ -125,8 +125,8 @@ Outbound policy of a1: match(tcp_port=4322) >> fwd(c)
 and Inbound policy of c: match(tcp_port=4322) >> fwd(c2)
 
 ```bash
-mininext> c2 iperf -s -B 140.0.0.1 -p 4322 &  
-mininext> a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2  
+mininext> h1_c2 iperf -s -B 140.0.0.1 -p 4322 &  
+mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2  
 ```
 
 ## Cleanup

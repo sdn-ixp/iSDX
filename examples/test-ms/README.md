@@ -153,20 +153,20 @@ _Participant C - inbound:_
 
 Starting the  `iperf` servers:  
 
-    mininext> b1 iperf -s -B 140.0.0.1 -p 80 &  
-    mininext> c1 iperf -s -B 140.0.0.1 -p 4321 &  
-    mininext> c2 iperf -s -B 140.0.0.1 -p 4322 &  
+    mininext> h1_b1 iperf -s -B 140.0.0.1 -p 80 &  
+    mininext> h1_c1 iperf -s -B 140.0.0.1 -p 4321 &  
+    mininext> h1_c2 iperf -s -B 140.0.0.1 -p 4322 &  
 
 Starting the  `iperf` clients:  
 
-    mininext> a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 80 -t 2  
-    mininext> a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4321 -t 2  
-    mininext> a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2  
+    mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 80 -t 2  
+    mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4321 -t 2  
+    mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2  
 
 Successful `iperf` connections should look like this:  
 
-    mininext> c2 iperf -s -B 140.0.0.1 -p 4322 &  
-    mininext> a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2  
+    mininext> h1_c2 iperf -s -B 140.0.0.1 -p 4322 &  
+    mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2  
     ------------------------------------------------------------  
     Client connecting to 140.0.0.1, TCP port 4322  
     Binding to local address 100.0.0.1  

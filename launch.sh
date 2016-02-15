@@ -21,13 +21,8 @@ case $2 in
 
     (2)
         # the following gets around issues with vagrant direct mount
-        MINICONFIGDIR=~/mini_rundir
-        sudo rm -rf $MINICONFIGDIR
-        mkdir -p $MINICONFIGDIR
-        cd $RUN_DIR/examples/$TEST_DIR/mininext
-        find configs | cpio -pdm $MINICONFIGDIR
         cd ~
-        sudo $RUN_DIR/examples/$TEST_DIR/mininext/sdx_mininext.py $MINICONFIGDIR/configs
+        sudo python $RUN_DIR/examples/$TEST_DIR/mininet/simple_sdx.py
 
         #cd $RUN_DIR/examples/$TEST_DIR/mininext
         #sudo ./sdx_mininext.py
