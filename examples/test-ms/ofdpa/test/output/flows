@@ -1,0 +1,67 @@
+=== dpid 1
+1  "match": {"dl_type": 2048, "tp_src": 179, "dl_dst": "08:00:27:89:3b:ff", "nw_proto": 6}, "actions": ["GROUP:65555"], "priority": 7, "packet_count": 175
+2  "match": {"dl_type": 2048, "dl_dst": "08:00:27:89:3b:ff", "nw_proto": 6, "tp_dst": 179}, "actions": ["GROUP:65555"], "priority": 7, "packet_count": 4
+3  "match": {"dl_type": 2048, "tp_src": 179, "dl_dst": "08:00:27:89:3b:9f", "nw_proto": 6}, "actions": ["GROUP:65543"], "priority": 7, "packet_count": 1
+4  "match": {"dl_type": 2048, "dl_dst": "08:00:27:89:3b:9f", "nw_proto": 6, "tp_dst": 179}, "actions": ["GROUP:65543"], "priority": 7, "packet_count": 30
+5  "match": {"dl_type": 2048, "tp_src": 179, "dl_dst": "08:00:27:92:18:1f", "nw_proto": 6}, "actions": ["GROUP:65544"], "priority": 7, "packet_count": 1
+6  "match": {"dl_type": 2048, "dl_dst": "08:00:27:92:18:1f", "nw_proto": 6, "tp_dst": 179}, "actions": ["GROUP:65544"], "priority": 7, "packet_count": 32
+7  "match": {"dl_type": 2048, "tp_src": 179, "dl_dst": "08:00:27:54:56:ea", "nw_proto": 6}, "actions": ["GROUP:65547"], "priority": 7, "packet_count": 1
+8  "match": {"dl_type": 2048, "dl_dst": "08:00:27:54:56:ea", "nw_proto": 6, "tp_dst": 179}, "actions": ["GROUP:65547"], "priority": 7, "packet_count": 34
+9  "match": {"dl_type": 2048, "tp_src": 179, "dl_dst": "08:00:27:bd:f8:b2", "nw_proto": 6}, "actions": ["GROUP:65548"], "priority": 7, "packet_count": 1
+10  "match": {"dl_type": 2048, "dl_dst": "08:00:27:bd:f8:b2", "nw_proto": 6, "tp_dst": 179}, "actions": ["GROUP:65548"], "priority": 7, "packet_count": 36
+11  "match": {"dl_type": 2054, "dl_dst": "08:00:27:89:3b:ff"}, "actions": ["GROUP:65555"], "priority": 7, "packet_count": 69
+12  "match": {"dl_type": 2054, "dl_dst": "08:00:27:89:3b:9f"}, "actions": ["GROUP:65543"], "priority": 7, "packet_count": 18
+13  "match": {"dl_type": 2054, "dl_dst": "00:00:00:00:00:01/00:00:03:ff:ff:ff", "in_port": 20}, "actions": ["GROUP:268435456"], "priority": 7, "packet_count": 3
+14  "match": {"dl_type": 2054, "dl_dst": "08:00:27:92:18:1f"}, "actions": ["GROUP:65544"], "priority": 7, "packet_count": 18
+15  "match": {"dl_type": 2054, "dl_dst": "00:00:00:00:00:02/00:00:03:ff:ff:ff", "in_port": 20}, "actions": ["GROUP:268435457"], "priority": 7, "packet_count": 4
+16  "match": {"dl_type": 2054, "dl_dst": "08:00:27:54:56:ea"}, "actions": ["GROUP:65547"], "priority": 7, "packet_count": 18
+17  "match": {"dl_type": 2054, "dl_dst": "08:00:27:bd:f8:b2"}, "actions": ["GROUP:65548"], "priority": 7, "packet_count": 19
+18  "match": {"dl_type": 2054, "dl_dst": "00:00:00:00:00:03/00:00:03:ff:ff:ff", "in_port": 20}, "actions": ["GROUP:268435458"], "priority": 7, "packet_count": 5
+19  "match": {"dl_type": 2054, "dl_dst": "00:00:00:01:00:03/00:00:03:ff:ff:ff", "in_port": 20}, "actions": ["GROUP:268435459"], "priority": 7, "packet_count": 5
+20  "match": {"dl_type": 2054, "dl_dst": "ff:ff:ff:ff:ff:ff", "in_port": 20}, "actions": ["GROUP:805371904"], "priority": 6, "packet_count": 100
+21  "match": {"dl_type": 2054}, "actions": ["GROUP:65556"], "priority": 5, "packet_count": 100
+25  "match": {"in_port": 7}, "actions": ["GROUP:268435460"], "priority": 4, "packet_count": 37
+26  "match": {"dl_dst": "00:00:00:00:00:03/80:00:03:ff:ff:ff"}, "actions": ["GROUP:268435461"], "priority": 4, "packet_count": 0
+27  "match": {"dl_dst": "00:00:00:01:00:03/80:00:03:ff:ff:ff"}, "actions": ["GROUP:268435462"], "priority": 4, "packet_count": 0
+28  "match": {"dl_dst": "00:00:00:00:00:01/00:00:00:00:ff:ff"}, "actions": ["GROUP:268435463"], "priority": 4, "packet_count": 0
+29  "match": {"dl_dst": "00:00:00:00:00:02/00:00:00:00:ff:ff"}, "actions": ["GROUP:268435464"], "priority": 4, "packet_count": 0
+30  "match": {"dl_dst": "80:00:00:00:00:00/80:00:00:00:00:00"}, "actions": ["GROUP:65538"], "priority": 2, "packet_count": 0
+"group_id": 65538 "actions": ["OUTPUT:2", "POP_VLAN"]
+"group_id": 268435457 "actions": ["GROUP:65544", "SET_FIELD: {eth_dst:ff:ff:ff:ff:ff:ff}"]
+"group_id": 805371904 "actions": ["GROUP:65543", "GROUP:65544", "GROUP:65547", "GROUP:65548", "GROUP:65555"]
+"group_id": 268435456 "actions": ["GROUP:65543", "SET_FIELD: {eth_dst:ff:ff:ff:ff:ff:ff}"]
+"group_id": 268435463 "actions": ["GROUP:65543", "SET_FIELD: {eth_dst:08:00:27:89:3b:9f}"]
+"group_id": 268435462 "actions": ["GROUP:65548", "SET_FIELD: {eth_dst:08:00:27:bd:f8:b2}"]
+"group_id": 268435458 "actions": ["GROUP:65547", "SET_FIELD: {eth_dst:ff:ff:ff:ff:ff:ff}"]
+"group_id": 65555 "actions": ["OUTPUT:19", "POP_VLAN"]
+"group_id": 268435460 "actions": ["GROUP:65538", "SET_FIELD: {eth_src:08:00:27:89:3b:9f}"]
+"group_id": 268435461 "actions": ["GROUP:65547", "SET_FIELD: {eth_dst:08:00:27:54:56:ea}"]
+"group_id": 65544 "actions": ["OUTPUT:8", "POP_VLAN"]
+"group_id": 65547 "actions": ["OUTPUT:11", "POP_VLAN"]
+"group_id": 65556 "actions": ["OUTPUT:20", "POP_VLAN"]
+"group_id": 268435464 "actions": ["GROUP:65544", "SET_FIELD: {eth_dst:08:00:27:92:18:1f}"]
+"group_id": 65543 "actions": ["OUTPUT:7", "POP_VLAN"]
+"group_id": 65548 "actions": ["OUTPUT:12", "POP_VLAN"]
+"group_id": 268435459 "actions": ["GROUP:65548", "SET_FIELD: {eth_dst:ff:ff:ff:ff:ff:ff}"]
+=== dpid 2
+31  "match": {}, "actions": ["GROUP:65539"], "priority": 1, "packet_count": 37
+65538 (P_1/2) "match": {"dl_type": 2048, "dl_dst": "20:00:00:00:00:00/60:00:00:00:00:00", "tp_dst": 4321, "dl_src": "08:00:27:89:3b:9f", "nw_proto": 6}, "actions": ["GROUP:268435456"], "priority": 2, "packet_count": 0
+65539 (P_1/3) "match": {"dl_type": 2048, "dl_dst": "20:00:00:00:00:00/60:00:00:00:00:00", "tp_dst": 4322, "dl_src": "08:00:27:89:3b:9f", "nw_proto": 6}, "actions": ["GROUP:268435456"], "priority": 2, "packet_count": 0
+65537 (P_1/1) "match": {"dl_type": 2048, "dl_dst": "10:00:00:00:00:00/50:00:00:00:00:00", "tp_dst": 80, "dl_src": "08:00:27:89:3b:9f", "nw_proto": 6}, "actions": ["GROUP:268435457"], "priority": 2, "packet_count": 0
+"group_id": 268435457 "actions": ["GROUP:65539", "SET_FIELD: {eth_dst:80:00:00:00:00:02}"]
+"group_id": 268435456 "actions": ["GROUP:65539", "SET_FIELD: {eth_dst:80:00:00:00:00:03}"]
+"group_id": 65539 "actions": ["OUTPUT:3", "POP_VLAN"]
+=== dpid 3
+32  "match": {"dl_dst": "00:00:00:00:00:03/00:00:00:00:ff:ff"}, "actions": ["GROUP:268435456"], "priority": 3, "packet_count": 0
+33  "match": {}, "actions": ["GROUP:65537"], "priority": 1, "packet_count": 37
+196609 (P_3/1) "match": {"dl_type": 2048, "dl_dst": "00:00:00:00:00:03/00:00:00:00:ff:ff", "nw_proto": 6, "tp_dst": 4321}, "actions": ["GROUP:268435456"], "priority": 4, "packet_count": 0
+196610 (P_3/2) "match": {"dl_type": 2048, "dl_dst": "00:00:00:00:00:03/00:00:00:00:ff:ff", "nw_proto": 6, "tp_dst": 4322}, "actions": ["GROUP:268435457"], "priority": 4, "packet_count": 0
+"group_id": 65537 "actions": ["OUTPUT:1", "POP_VLAN"]
+"group_id": 268435457 "actions": ["GROUP:65537", "SET_FIELD: {eth_dst:00:00:00:01:00:03}"]
+"group_id": 268435456 "actions": ["GROUP:65537", "SET_FIELD: {eth_dst:00:00:00:00:00:03}"]
+=== dpid 4
+22  "match": {"dl_type": 2054, "arp_tpa": "172.0.1.0/255.255.255.0", "in_port": 1}, "actions": ["OUTPUT:2"], "priority": 2, "packet_count": 0
+23  "match": {"dl_type": 2054, "in_port": 1}, "actions": ["OUTPUT:IN_PORT"], "priority": 1, "packet_count": 100
+24  "match": {"dl_type": 2054, "in_port": 2}, "actions": ["OUTPUT:1"], "priority": 1, "packet_count": 17
+0  "match": {}, "actions": ["OUTPUT:CONTROLLER"], "priority": 0, "packet_count": 0
+

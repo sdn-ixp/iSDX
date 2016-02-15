@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+while [ "$1" != "" ]; do
+    if [ $1 = "--no-mininet" ]; then
+	NO_MININET=1
+    fi
+    shift
+done
+
 # install packages
 sudo apt-get update
 
@@ -13,7 +20,9 @@ sudo pip install pymongo
 sudo apt-get install -y ssh git emacs sshfs
 sudo apt-get install -y libstring-crc32-perl
 
-# set up some shortcuts
-mkdir ~/bin/
-echo "sudo mn -c; sudo mn --topo single,3 --mac --switch ovsk --controller remote" > ~/bin/mininet.sh
-chmod 755 ~/bin/mininet.sh
+if [ -z "$NO_MININET" ]; then
+    # set up some shortcuts
+    mkdir ~/bin/
+    echo "sudo mn -c; sudo mn --topo single,3 --mac --switch ovsk --controller remote" > ~/bin/mininet.sh
+    chmod 755 ~/bin/mininet.sh
+fi

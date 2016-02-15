@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+while [ "$1" != "" ]; do
+    if [ $1 = "--no-mininet" ]; then
+	NO_MININET=1
+    fi
+    shift
+done
+
 cd ~
 
 # Install Quagga

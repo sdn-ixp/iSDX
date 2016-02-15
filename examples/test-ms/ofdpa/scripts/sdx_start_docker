@@ -36,7 +36,7 @@ sed -e 's/\#.*//' -e '/^[ \t]*$/d' $CONTAINERS |
 	    echo "Failed to get IP from $DIR.  Exiting."
 	    exit 1
 	fi
-	sudo docker run --net=none -d -v $DIR:/etc/quagga --privileged --name $NAME bgp-tst
+	sudo docker run --net=none -d -v /tmp/share:/tmp/share -v $DIR:/etc/quagga --privileged --name $NAME bgp-tst
 	if ! ifconfig -a|grep $DEV; then
 	    echo "No such device: $DEV"
 	    exit 1

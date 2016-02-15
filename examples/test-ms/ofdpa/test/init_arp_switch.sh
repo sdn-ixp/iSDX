@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo ovs-vsctl del-br arp-switch
+sudo ovs-vsctl del-br arp-switch 2> /dev/null
 sudo ip link del arp-ifc type veth peer name arp-ifc-ovs 2> /dev/null
 
 sudo ovs-vsctl add-br arp-switch
