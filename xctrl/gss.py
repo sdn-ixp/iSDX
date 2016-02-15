@@ -15,16 +15,18 @@ from vmac_lib import VMACBuilder
 
 
 # Priorities
-BGP_PRIORITY = 7
-ARP_PRIORITY = 7
-ARP_BROADCAST_PRIORITY = 6
-VNH_ARP_FILTER_PRIORITY = 5
-OUTBOUND_PRIORITY = 4
+BGP_PRIORITY = 8
+ARP_PRIORITY = 8
+ARP_BROADCAST_PRIORITY = 7
+VNH_ARP_FILTER_PRIORITY = 6
+OUTBOUND_PRIORITY = 5
 FORWARDING_PRIORITY = 4
 
 VNH_ARP_PRIORITY = 2
 
 INBOUND_PRIORITY = 3
+
+LOOP_PRIORITY = 3
 
 INBOUND_BIT_PRIORITY = 2
 
@@ -244,6 +246,9 @@ class GSSmS(GSS):
         ### default forwarding
         self.default_forwarding("main-in")
 
+        ## break loop for packets with false VMACs
+        self.break_loop()
+
         ## direct packets with inbound bit set to the inbound switch
         self.handle_inbound("main-in")
 
@@ -257,6 +262,11 @@ class GSSmS(GSS):
 
         ## send all other packets to main
         self.match_any_fwd("inbound", "main-in")
+
+    def break_loop(self):
+        match = {"in_port": "inbound"}
+        action = {}
+        self.fm_builder.add_flow_mod("insert", "main-in", LOOP_PRIORITY, match, action)
 
 
 class GSSmT(GSS):
