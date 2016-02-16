@@ -245,13 +245,13 @@ def run (args):
         print 'MM:00 EXEC: ERROR usage: exec cmd cmd ...'
         print 'Commands are:'
         for c in sorted(commands):
-            print '  ' + c + ': ' + commands[c].get('cmd', '<CMD>')
+            print '  ' + c + ': ' + commands[c]
         return
     
     for i in range(1, len(args)):
         cmdname = args[i]
         try:
-            c = commands[cmdname]['cmd']
+            c = commands[cmdname]
         except:
             log.error('MM:00 ERROR: EXEC FAILED unknown or poorly specified cmd: ' + cmdname)
             continue
@@ -275,11 +275,11 @@ def rexec (args):
         print 'MM:00 REXEC: ERROR usage: rexec cmd host host ...'
         print 'Commands are:'
         for c in sorted(commands):
-            print '  ' + c + ': ' + commands[c].get('cmd', '<CMD>')
+            print '  ' + c + ': ' + commands[c]
         return
     cmdname = args[1]
     try:
-        c = commands[cmdname]['cmd']
+        c = commands[cmdname]
     except:
         log.error('MM:00 ERROR: REXEC FAILED unknown or poorly specified cmd: ' + cmdname)
         return
@@ -468,7 +468,7 @@ def show (args):
     print
     print 'Commands:'
     for c in sorted(commands):
-        print '  ' + c + ': ' + commands[c].get('cmd', '<CMD>')
+        print '  ' + c + ': ' + commands[c]
     if len(args) != 1:
         print
         print 'Complete configuration:'

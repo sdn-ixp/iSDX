@@ -130,7 +130,7 @@ def interface_thread(conn, fromto, interface):
     try:
         #conn.send('You have reached ' + name + '\n')
         count = 0
-        conn.settimeout(None)   # platform dependent - sometimes new connection inherits from accept()
+        conn.settimeout(5)   # platform dependent - sometimes new connection inherits from accept()
         t = time.time();
         rand = conn.recv(10)    # id is 10 characters
         lock.acquire()
@@ -223,6 +223,7 @@ def cmd_thread(conn):
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((baddr, 0))
+            s.settimeout(5)
             s.connect((daddr, int(dport)))
             s.sendall(rand) #must be 10 characters
             for _ in range(2000):

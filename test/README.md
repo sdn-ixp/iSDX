@@ -3,7 +3,7 @@
 This directory includes tools for supporting the automated regression testing of the iSDX system.
 It consists of a constellation of traffic receivers and generators (tnodes) whose behavior can be orchestrated by a managing process (tmgr), which uses a JSON specification to define the testing actions to be performed.
 The tests are designed to generate traffic that will be influenced by the policies established in the switching fabric by the iSDX controller and to verify that the proper pathways are traversed.
-The role of the testing framework using the multi-table configuration (test-mt) is shown below.
+The role of the testing framework using the multi-table configuration (test1-mt) is shown below.
 
 ## Example Configuration 
 ![Experimental Setup](https://docs.google.com/drawings/d/1Hw2UdhdyfINE-BmS8xSCfEND3ZxkIzhgMoLKK9yb4Fc/pub?w=960&h=720)
@@ -14,6 +14,26 @@ Specific inbound and outbound policies established by A and C will alter the def
 Participant A has outbound policies that steer port 80 traffic to B and port 4321 and 4322 traffic towards C.
 Participant C has inbound policies that steer port 4321 traffic towards router C1 and port 4322 traffic towards router C2.
 
+#### Note that although the test specification is rather verbose, both the iSDX configuration files and the test definition can be generated automatically from a simplified specification.
+For example, test1-ms (equivalent to test-ms) was generated from the specification found in specs/test1-ms.spec.
+See the README in the specs directory for more examples and instructions.
+The abridged specification was:
+```
+mode multi-switch
+participants 3
+peers 1 2 3
+
+flow a1 80 >> b
+flow a1 4321 >> c
+flow a1 4322 >> c
+flow c1 << 4321
+flow c2 << 4322
+
+test a1 i0 80 b1 i0 80
+test a1 i0 4321 c1 i0 4321
+test a1 i0 4322 c2 i0 4322
+test a1 i0 8888 c1 i0 8888
+``` 
 Each mininext router host now includes a tnode process that accepts instructions to bind to and listen for traffic on a specified interface and port, as well as commands to generate traffic towards a specified port using a specified outbound interface.
 The tnodes contain no knowledge of the tests to be performed; they are dynamically driven by the tmgr controller and are subsequently interrogated by the tmgr to see if expected traffic has arrived.
 The tnodes and tmgr communicate over a separate management network to avoid the need to establish SDX paths for their traffic.  This is based on unix domain sockets for the mininext case, and an additional set of interfaces for HW implementations.
@@ -25,62 +45,81 @@ A tnode executes a limited number of commands:
 - execute a local command (e.g., route -n)
 
 A tmgr uses a JSON specification to describe listeners, tests and programs.
-Note that the tnodes on hosts B, C1 and C2 all open the same set of ports.
-In this way, misdirected traffic will still find a home and can be interrogated with tmgr
+Note that the tnodes on all hosts open the same set of ports.
+In this way, misdirected traffic will still find a home and can be interrogated with tmgr.
+Note also that a port (8888) that is not referenced in any of the flow rules is included to test default routing.
 
 ```
 {
-	"hosts": {
-	
-		"a1": {
-			"interfaces": {
-	    	}
-		} ,
-		
-		"b1": {
-			"interfaces": {
-	     		"i0": { "bind": "140.0.0.1", "port": 80 },
-				"i1": { "bind": "140.0.0.1", "port": 4321 },
-				"i2": { "bind": "140.0.0.1", "port": 4322 }
-	    	}
-		} ,
-		
-		"c1": {
-			"interfaces": {
-	     		"i0": { "bind": "140.0.0.1", "port": 80 },
-				"i1": { "bind": "140.0.0.1", "port": 4321 },
-				"i2": { "bind": "140.0.0.1", "port": 4322 }
-	    	}
-		} ,
-		
-		"c2": {
-			"interfaces": {
-	     		"i0": { "bind": "140.0.0.1", "port": 80 },
-				"i1": { "bind": "140.0.0.1", "port": 4321 },
-				"i2": { "bind": "140.0.0.1", "port": 4322 }
-	    	}
-		}
-	} ,
-	
-	"tests": {
-		"t0": { "src": "a1", "baddr": "100.0.0.1", "daddr": "140.0.0.1", "dport": 80, "xdst": "b1", "xifc": "i0" },
-		"t1": { "src": "a1", "baddr": "100.0.0.1", "daddr": "140.0.0.1", "dport": 4321, "xdst": "c1", "xifc": "i1" },
-		"t2": { "src": "a1", "baddr": "100.0.0.1", "daddr": "140.0.0.1", "dport": 4322, "xdst": "c2", "xifc": "i2" }
-	} ,
-	
-	"commands": {
-		"x0": { "cmd": "route -n" },
-		"x1": { "cmd": "ps a" },
-		"x2": { "cmd": "sudo ovs-ofctl dump-flows s1" },
-		"x3": { "cmd": "sudo ovs-ofctl dump-flows s2" },
-		"x4": { "cmd": "sudo ovs-ofctl dump-flows s3" },
-		"x5": { "cmd": "sudo ovs-ofctl dump-flows s4" }	
-	} ,
-	
-	"regressions": {
-		"verbose": "l 'r x0 a1 b1 c1 c2' 'e x1 x2 x3 x4 x5' t",
-		"terse": "l t"
-	}
+    "hosts": {
+        "a1": {
+            "interfaces": {
+                "i0_0": { "bind": "100.0.0.1", "port": "80" },
+                "i0_1": { "bind": "100.0.0.1", "port": "4321" },
+                "i0_2": { "bind": "100.0.0.1", "port": "4322" },
+                "i0_3": { "bind": "100.0.0.1", "port": "8888" },
+                "i1_0": { "bind": "110.0.0.1", "port": "80" },
+                "i1_1": { "bind": "110.0.0.1", "port": "4321" },
+                "i1_2": { "bind": "110.0.0.1", "port": "4322" },
+                "i1_3": { "bind": "110.0.0.1", "port": "8888" }
+            }
+        },
+        "b1": {
+            "interfaces": {
+                "i0_0": { "bind": "140.0.0.1", "port": "80" },
+                "i0_1": { "bind": "140.0.0.1", "port": "4321" },
+                "i0_2": { "bind": "140.0.0.1", "port": "4322" },
+                "i0_3": { "bind": "140.0.0.1", "port": "8888" },
+                "i1_0": { "bind": "150.0.0.1", "port": "80" },
+                "i1_1": { "bind": "150.0.0.1", "port": "4321" },
+                "i1_2": { "bind": "150.0.0.1", "port": "4322" },
+                "i1_3": { "bind": "150.0.0.1", "port": "8888" }
+            }
+        },
+        "c1": {
+            "interfaces": {
+                "i0_0": { "bind": "140.0.0.1", "port": "80" },
+                "i0_1": { "bind": "140.0.0.1", "port": "4321" },
+                "i0_2": { "bind": "140.0.0.1", "port": "4322" },
+                "i0_3": { "bind": "140.0.0.1", "port": "8888" },
+                "i1_0": { "bind": "150.0.0.1", "port": "80" },
+                "i1_1": { "bind": "150.0.0.1", "port": "4321" },
+                "i1_2": { "bind": "150.0.0.1", "port": "4322" },
+                "i1_3": { "bind": "150.0.0.1", "port": "8888" }
+            }
+        },
+        "c2": {
+            "interfaces": {
+                "i0_0": { "bind": "140.0.0.1", "port": "80" },
+                "i0_1": { "bind": "140.0.0.1", "port": "4321" },
+                "i0_2": { "bind": "140.0.0.1", "port": "4322" },
+                "i0_3": { "bind": "140.0.0.1", "port": "8888" },
+                "i1_0": { "bind": "150.0.0.1", "port": "80" },
+                "i1_1": { "bind": "150.0.0.1", "port": "4321" },
+                "i1_2": { "bind": "150.0.0.1", "port": "4322" },
+                "i1_3": { "bind": "150.0.0.1", "port": "8888" }
+            }
+        }
+    },
+    "regressions": {
+        "terse": "l t",
+        "verbose": "l 'r x0 a1 b1 c1 c2' 'e x1 x2 x3 x4 x5 x6' t"
+    },
+    "tests": {
+        "t00": { "baddr": "100.0.0.1", "daddr": "140.0.0.1", "dport": "80", "src": "a1", "xdst": "b1", "xifc": "i0_0" },
+        "t01": { "baddr": "100.0.0.1", "daddr": "140.0.0.1", "dport": "4321", "src": "a1", "xdst": "c1", "xifc": "i0_1" },
+        "t02": { "baddr": "100.0.0.1", "daddr": "140.0.0.1", "dport": "4322", "src": "a1", "xdst": "c2", "xifc": "i0_2" },
+        "t03": { "baddr": "100.0.0.1", "daddr": "140.0.0.1", "dport": "8888", "src": "a1", "xdst": "c1", "xifc": "i0_3" }
+    },
+    "commands": {
+		"x0": "route -n",
+        "x1": "ps ax",
+        "x2": "sudo ovs-ofctl dump-flows s1",
+        "x3": "sudo ovs-ofctl dump-flows s2",
+        "x4": "sudo ovs-ofctl dump-flows s3",
+        "x5": "sudo ovs-ofctl dump-flows s4",
+        "x6": "sudo ovs-ofctl show s1"
+    }
 }
 ```
 
@@ -93,15 +132,15 @@ A test script will automate the entire process of establishing the mininext conf
 A simple regression test would look like:
 ```
 cd ~/iSDX/test
-sudo bash startup.sh 2 test-mt test-ms
+sudo bash startup.sh -n 2 -t verbose test1-mt test1-ms
 ```
-This will run tests test-mt and test-ms in the examples directory twice.
+This will run tests test1-mt and test1-ms in the examples directory twice.
 Log output will be placed in the test directory.
 The tmgr test in the startup shell is:
 ```
 python tmgr.py $BASE/examples/$TEST/config/test.cfg "regression verbose"
 ```
-Where $BASE is ~/iSDX and $TEST is the test name (test-ms or test-mt as found in the examples directory).
+Where $BASE is ~/iSDX and $TEST is the test name (test1-ms or test1-mt as found in the examples directory).
 The commands to run as part of regression called verbose are defined in the configuration file.
 The specific operations are:
 - l: start all listeners on all hosts
@@ -110,7 +149,7 @@ The specific operations are:
 - t: run all tests
 Other options can be found by executing tmgr without arguments.
 
-The output from a single test will contain:
+Abridged output from a single test will contain:
 ```
 b1:i0 OK: listener established for 140.0.0.1:80
 b1:i1 OK: listener established for 140.0.0.1:4321
@@ -180,19 +219,16 @@ NXST_FLOW reply (xid=0x4):
 /24 actions=output:2
  ...
 
-a1:XX INFO TEST 5666885175 bind:100.0.0.1 dst:140.0.0.1:80
-a1:XX OK: TEST 5666885175 done
-b1:i0 OK: XFER 5666885175 100.0.0.1:58270->140.0.0.1:80 29.1567709123 MBpS
-MM:b1 OK: TEST t0 5666885175 TEST PASSED 29.1567709123 MBpS
-a1:XX INFO TEST 3518395828 bind:100.0.0.1 dst:140.0.0.1:4321
-a1:XX OK: TEST 3518395828 done
-c1:i1 OK: XFER 3518395828 100.0.0.1:45081->140.0.0.1:4321 81.2279277926 MBpS
-MM:c1 OK: TEST t1 3518395828 TEST PASSED 81.2279277926 MBpS
-a1:XX INFO TEST 3575402122 bind:100.0.0.1 dst:140.0.0.1:4322
-a1:XX OK: TEST 3575402122 done
-c2:i2 OK: XFER 3575402122 100.0.0.1:50616->140.0.0.1:4322 30.8792736737 MBpS
-MM:c2 OK: TEST t2 3575402122 TEST PASSED 30.8792736737 MBpS
+MM:a1 TEST t00: a1:XX OK: TEST 8888730373 bind:100.0.0.1 dst:140.0.0.1:80 TRANSFER COMPLETE
+MM:b1 OK: TEST t00 8888730373 TEST PASSED 20.7535469556 MBpS
+MM:a1 TEST t01: a1:XX OK: TEST 4833942259 bind:100.0.0.1 dst:140.0.0.1:4321 TRANSFER COMPLETE
+MM:c1 OK: TEST t01 4833942259 TEST PASSED 28.1713862854 MBpS
+MM:a1 TEST t02: a1:XX OK: TEST 8180375219 bind:100.0.0.1 dst:140.0.0.1:4322 TRANSFER COMPLETE
+MM:c2 OK: TEST t02 8180375219 TEST PASSED 61.0961442421 MBpS
+MM:a1 TEST t03: a1:XX OK: TEST 4935505892 bind:100.0.0.1 dst:140.0.0.1:8888 TRANSFER COMPLETE
+MM:c1 OK: TEST t03 4935505892 TEST PASSED 39.6531115327 MBpS
 MM:00 INFO: BYE
+
 ```
 
 If you need to debug a test, the simplest way is to edit the startup.sh script and change the environment variable INTERACTIVE to a non zero value

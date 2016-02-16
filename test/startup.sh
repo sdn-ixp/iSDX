@@ -1,36 +1,57 @@
 #!/bin/bash
 
 BASE=~/iSDX
-LOG_DIR=regress.$$
+LOG_DIR=regress/regress.$$
 echo "Logging to $LOG_DIR"
-mkdir $LOG_DIR
+mkdir -p $LOG_DIR
+
+# if you change EXAMPLES to point elsewhere (like the examples dir unsed iSDX)
+#    change the ../../../ ... tnode.py line in multi-table-sdx_mininext.py and multi-switch-sdx_mininext.py 
+EXAMPLES=$BASE/test/output
+EXAMPLES=$BASE/examples
 
 # set to anything but 0 to run mininext in interactive mode - type control d continue
 INTERACTIVE=0
 
 # name of regression test to use by default
 RTEST=terse
+#number of tests to run
+LOOPCOUNT=1
 
-if [ "$#" -ge 2 ] ; then
-	foo=$1
-	if [[ ${foo:0:1} = '-' ]] ; then
-		RTEST=${foo:1}
-		shift
-	fi
-fi
+while [[ $# > 1 ]]
+do
+  key="$1"
+
+  case $key in
+  -n|--loopcount)
+     LOOPCOUNT="$2"
+     shift
+     ;;
+  -t|--traffic_test_name)
+     RTEST="$2"
+     shift
+     ;;
+   -*)
+     echo "Usage: $0 -n number_of_loops -t traffic_test_group_name test_name test_name ..." >&2
+     exit 1
+     ;;
+   *)
+     break
+     ;;
+  esac
+  shift
+done
+
 echo running regression $RTEST
 
-if [ "$#" -lt 2 ] ; then
-  echo "Usage: $0 number_of_loops test_name test_name ..." >&2
+if [ "$#" -lt 1 ] ; then
+  echo "Usage: $0 -n number_of_loops -t traffic_test_group_name test_name test_name ..." >&2
   exit 1
 fi
 
-LOOPCOUNT=$1
-shift
-
 for i in $@
 do
-	if [ ! -e $BASE/examples/$i ] ; then
+	if [ ! -e $EXAMPLES/$i ] ; then
         echo $0 ERROR: Test $i is not defined
         exit 1
     fi
@@ -60,23 +81,28 @@ do
 		MINICONFIGDIR=~/mini_rundir
 		rm -rf $MINICONFIGDIR
 		mkdir -p $MINICONFIGDIR
-		cd $BASE/examples/$TEST/mininext
+		cd $EXAMPLES/$TEST/mininext
 		find configs | cpio -pdm $MINICONFIGDIR
 
 		M0=/tmp/sdxm0.$$
 		mkfifo $M0
-		cat <$M0 | ./sdx_mininext.py $MINICONFIGDIR/configs &
+		
+		SYNC=/tmp/sdxsync.$$
+		mkfifo $SYNC
+		
+		cat <$M0 | ./sdx_mininext.py $MINICONFIGDIR/configs $SYNC &
 		M_PID=$!
 	
 		echo delaying for mininet
-		sleep 15
+		
+		cat $SYNC
 		echo starting ryu
-		ryu-manager $BASE/flanc/refmon.py --refmon-config $BASE/examples/$TEST/config/sdx_global.cfg >/dev/null 2>&1 &
+		ryu-manager $BASE/flanc/refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg >/dev/null 2>&1 &
 		sleep 2
 
 		echo starting xctrl
 		cd $BASE/xctrl/
-		./xctrl.py $BASE/examples/$TEST/config/sdx_global.cfg
+		./xctrl.py $EXAMPLES/$TEST/config/sdx_global.cfg
 
 		echo starting arp proxy
 		cd $BASE/arproxy/
@@ -90,16 +116,24 @@ do
 
 		echo starting participants
 		cd $BASE/pctrl/
-		sh run_pctrlr.sh $TEST &
-		sleep 3
+		while read -r part other
+		do
+        	if [[ $other == *"participant"* ]]
+			then
+				part=`echo $part | tr -d :\"`
+				echo starting participant $part
+				sudo python participant_controller.py $TEST $part &
+			fi
+		done < $EXAMPLES/$TEST/config/sdx_policies.cfg
+		sleep 5
 
 		echo starting exabgp
-		exabgp $BASE/examples/$TEST/config/bgp.conf >/dev/null 2>&1 &
-		sleep 5
+		exabgp $EXAMPLES/$TEST/config/bgp.conf >/dev/null 2>&1 &
+		sleep 10
 
 		echo starting $TEST
 		cd $BASE/test
-		python tmgr.py $BASE/examples/$TEST/config/test.cfg "regression $RTEST"
+		python tmgr.py $EXAMPLES/$TEST/config/test.cfg "regression $RTEST"
 		
 		if [ $INTERACTIVE != '0' ]
 		then
@@ -126,7 +160,7 @@ do
 		fi
 		echo waiting for mininext to exit
 		wait $M_PID
-		rm -f $M0
+		rm -f $M0 $SYNC
 
 		echo cleaning up mininext
 		sudo mn -c
