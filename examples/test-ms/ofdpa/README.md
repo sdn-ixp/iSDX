@@ -3,7 +3,7 @@
 In order for iSDX to be truly useful, it must run at line speed on hardware switches.  We
 have taken the following steps to demonstrate this.
 
-1. **_Configure three hardware switches in the iSDX multi-switch (MS) configuration as shown
+1. **_Configure three hardware switches and one software switch (OVS) in the iSDX multi-switch (MS) configuration as shown
 below._**   
 The switches we chose are Quanta LY2.  To support iSDX's requirement of OpenFlow
 1.3, we installed
@@ -30,6 +30,7 @@ Matching on various combinations of:
 
  Actions to:
  * forward to a port
+ * drop packet
  * set eth_src
  * set eth_dst  
 
@@ -182,7 +183,7 @@ TCP window size: 85.0 KByte (default)
 
 4. **_Port iSDX to the OF-DPA-Based Hardware Configuration_**  
 The 'Refmon' (a.k.a. 'flanc', or 'Fabric Manager') component of SDX has been modified to
-support OF-DPA based switches and the modified component has been tested the on the Quanta
+support OF-DPA based switches and the modified component has been tested on the Quanta
 switches.
 
  To use SDX with an OF-DPA switch, specify it in the global configuration file.  E.g., the
@@ -194,4 +195,34 @@ switches.
 		...
  ````
 
+ In order to leverage the mininet-based system configuration as much as possible, we
+reused the mininet-based system's Vagrant VM, making a few changes to adapt it to the
+hardware switch environment.  The changes to the VM required for the hardware environment include:
+  * remove mininet
+  * add a script (init_arp_switch.sh) to create and configure the OVS instance for the ARP
+ switch.  This script is invoked from `/etc/rc.local` at boot.
+  * modify the network parameters in the Vagrantfile so that the correct interfaces are
+ used for the ARP and BGP links from the main switch
+  * create a separate configuration directory -- ``test`` -- corresponding to the hardware
+ configuration.  The differences in this configuration are in the file
+ ``sdx_global.cfg`. These include: 
+    * specify the OF-DPA switches as shown above
+    * change the switch port numbers to correspond to the hardware configuration
+    * change the name of the interface used by the ARP Proxy
 
+ Other than these changes, the configuration remains the same as in Mininet-based
+ example.  I.e., it uses the same IP and MAC addresses.
+
+ The modified Vagrantfile used for this test configuration is
+`iSDX/examples/test-ms/ofdpa/test/Vagrantfile`.
+ To launch this VM, on the host for the control software do:
+ ````
+$ cd iSDX/examples/test-ms/ofdpa/test
+$ vagrant up
+ ````
+  ### Test ASes
+  The ASes for the experiment are implemented as 4 Docker containers on a single host
+  machine.  Each container runs the Quagga routing software.  They run a slightly
+  modified version of the Docker image `alectolytic/quagga-bgp-tutorial`.  The network
+  interface of each container is connected to a different physical interface on the host
+  which is in turn connected to a port on the main switch.
