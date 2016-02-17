@@ -11,7 +11,7 @@ The switches we chose are Quanta LY2.  To support iSDX's requirement of OpenFlow
 running on Open Network Linux.  The switches are connected to
 two Linux machines (Dell R630's) via 10GB links as shown.  
 
- **Current Wiring Configuration**
+ **Hardware Testbed Wiring Configuration**
 ![Current Wiring Configuration]
 (https://docs.google.com/drawings/d/1Z31EwSiUv8rKb9EqCd8TIS5-N9iTvfsiXOKnah7KToA/pub?w=960&h=720)  
  
