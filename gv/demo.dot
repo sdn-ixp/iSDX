@@ -1,0 +1,72 @@
+digraph {
+      size = "100,100";
+      main, outbound, inbound, arp [shape=box];
+      { rank=min; inbound outbound ARPPXY BGP}
+      { rank=same; A1 B1 C1 C2 } 
+      { rank=same; main arp }
+      /*
+      edge [style=dashed, dir=none]
+      main -> outbound;
+      main -> inbound;
+      inbound -> outbound;
+      arp -> main;
+      ARPPXY -> arp;
+      BGP -> main;
+      A1 -> main;
+      B1 -> main;
+      C1 -> main;
+      C2 -> main;
+      edge [dir=forward]
+      */
+
+	// BGP flows
+      main -> BGP; // MAIN-BGP
+      main -> A1; // MAIN-A1_BGP
+      main -> B1; // MAIN-B1_BGP
+      main -> C1; // MAIN-C1_BGP
+      main -> C2; // MAIN-C2_BGP
+
+      // ARP flows
+      main -> BGP; // BGP_ARP
+      main -> A1; // MAIN-A1_ARP
+      main -> B1; // MAIN-B1_ARP
+      main -> C1; // MAIN-C1_ARP
+      main -> C2; // MAIN-C2_ARP
+
+      // VMAC ARP flows
+      main -> A1; // MAIN-VA1_ARP
+      main -> B1; // MAIN-VB1_ARP
+      main -> C1; // MAIN-VC1_ARP
+      main -> C2; // MAIN-VC2_ARP
+
+      main -> arp; // MAIN-ARP
+      
+      arp -> ARPPXY; // ARP-ARPPXY
+
+      arp -> main; // ARP-MAIN
+
+      main -> outbound; // MAIN-OUTBOUND
+      main -> C1; // MAIN-VC1
+      main -> C2; // MAIN-VC2
+      main -> A1; // MAIN-VA1
+      main -> B1; // MAIN-VB1
+
+      main -> outbound; // MAIN-OUTBOUND4IN
+
+      outbound -> inbound; // OUTBOUND-INBOUND_DFLT
+
+      inbound -> main; // INBOUND-MAIN_C_DFLT
+      inbound -> main; // INBOUND-MAIN_DFLT
+      inbound -> main; // INBOUND-MAIN_C1
+      inbound -> main; // INBOUND-MAIN_C2
+
+      outbound -> inbound; // OUTBOUND-INBOUND_B1
+      outbound -> inbound; // OUTBOUND-INBOUND_C1, OUTBOUND-INBOUND_C2
+
+      A1 -> main; // A1-MAIN
+      B1 -> main; // B1-MAIN
+      C1 -> main; // C1-MAIN
+      C2 -> main; // C2-MAIN
+      BGP -> main; // BGP-MAIN
+      ARPPXY -> arp; //ARPPXY-ARP
+}

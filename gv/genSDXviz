@@ -1,0 +1,132 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+my(%styles) = (
+    bgp => "red",
+    arp => "blue",
+    arp_v => "lightblue",
+    default => "green",
+    default_v => "greenyellow"
+    );
+    
+
+my($TMP) = "/tmp/sdxviz.dot";
+my($PNG) = "/tmp/sdxviz.png";
+
+my(%prev_cnt,%cookie2cnt);
+my(%tag2style, %tag2cookies);
+
+usage() if scalar(@ARGV) != 2;
+
+my ($config_file, $dot_template) = (@ARGV);
+
+load_config();
+
+while (1) {
+    gen_file();
+    system("dot -Tpng $TMP > $PNG");
+    sleep(1);
+}
+
+sub usage {
+    print "usage: genSDXviz <config_file> <dot_template>\n";
+    exit 1;
+}
+
+sub load_config {
+    open(CONFIG, "< $config_file") or die "Can't read $config_file";
+    while (<CONFIG>) {
+	s/#.*//;
+	next if /^\s*$/;
+	my @fields = split(/\s+/);
+	die "Wrong number of fields in: $_" if scalar(@fields) != 4;
+	my $tag = "$fields[0]-$fields[1]";
+	$tag2style{$tag} = $fields[2];
+	@{$tag2cookies{$tag}} = split(/,/, $fields[3]);
+    }
+    close(CONFIG);
+}
+
+sub gen_file {
+    load_stats();
+    
+    open(OUT,">$TMP") or die "Can't open $TMP";
+    open(DOT, "<$dot_template") or die "Can't read $dot_template";
+    while (<DOT>) {
+	my $line = $_;
+	my @tags = ();
+	if ($line =~ s|;\s*//\s*(.*)||) {
+	    my($tag) = $1;
+	    $tag =~ s/ //g;
+	    @tags = split(/,/, $tag);
+	    chomp $line;
+	    print OUT "$line " . style_string(@tags) . "\n";
+	} else {
+	    print OUT "$line";
+	}
+    }
+    close(DOT);
+    close(OUT);
+}
+
+sub load_stats {
+    open(FLOW_STATS, "(ofdpa_show_flows 1; ofdpa_show_flows 2; ofdpa_show_flows 3; ofdpa_show_flows 4 )|") or die "Can't run show flows script";
+
+    %prev_cnt = %cookie2cnt;
+    while (<FLOW_STATS>) {
+	if (/(\d+).*packet_count\":\s+(\d+)/) {
+	    my ($cookie,$count) = ($1,$2);
+	    next if $cookie == 0;
+	    $cookie2cnt{$cookie} = $count;
+	    $prev_cnt{$cookie} = 0 if !defined($prev_cnt{$cookie});
+#	    my $diff = $cookie2cnt{$cookie} - $prev_cnt{$cookie};
+#	    my $diff = cookie_diff($cookie);
+#	    print "cookie $cookie, count $count, diff $diff\n";
+	}
+    }
+
+    close(FLOW_STATS);
+
+    my($dpid);
+    foreach $dpid (1, 2, 3, 4) {
+	open(PORT_STATS, "ofdpa_show_port_stats $dpid|") or die "Can't run port stats script";
+	while (<PORT_STATS>) {
+	    if (/port_no.: (\d+).*rx_packets.: (\d+)/) {
+		my ($cookie,$count) = ($1,$2);
+		$cookie = "PORT_${dpid}_$cookie";
+		$cookie2cnt{$cookie} = $count;
+		$prev_cnt{$cookie} = 0 if !defined($prev_cnt{$cookie});
+	    }	    
+	}
+	close(PORT_STATS);
+    }
+}
+
+sub cookie_diff {
+    my($cookie) = (@_);
+    return 0 if !defined($prev_cnt{$cookie});
+    return $cookie2cnt{$cookie} - $prev_cnt{$cookie};
+}
+
+sub style_string {
+    my(@tags) = (@_);
+
+    my($diff,$style_string) = (0, "style=invis");
+    my($tag, $cookie);
+    foreach $tag (@tags) {
+	next if !defined $tag2cookies{$tag};
+#	print "tag/cookies: $tag $tag2cookies{$tag}\n"; exit;
+	foreach $cookie (@{$tag2cookies{$tag}}) {
+	    $diff += cookie_diff($cookie);
+	    next if $diff == 0;
+	    die "No style for tag: $tag" if !defined($tag2style{$tag});
+	    my $style = $tag2style{$tag};
+	    die "No string for style: $style" if !defined($styles{$style});
+	    $style_string = "color=$styles{$style}";
+	    $style_string .= ",penwidth=3.0" if $diff > 100;
+#	    print "$diff\n" if $diff > 10;
+	}
+    }
+    return "[$style_string]";
+}
