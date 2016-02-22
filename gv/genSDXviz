@@ -7,7 +7,10 @@ my(%styles) = (
     arp => "blue",
     arp_v => "lightblue",
     default => "black",
-    default_v => "green"
+    default_v => "green",
+    b1_v => "cyan",
+    c1_v => "gold",
+    c2_v => "gold4"
     );
     
 
