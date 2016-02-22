@@ -6,8 +6,8 @@ my(%styles) = (
     bgp => "red",
     arp => "blue",
     arp_v => "lightblue",
-    default => "green",
-    default_v => "greenyellow"
+    default => "black",
+    default_v => "green"
     );
     
 
@@ -17,20 +17,36 @@ my($PNG) = "/tmp/sdxviz.png";
 my(%prev_cnt,%cookie2cnt);
 my(%tag2style, %tag2cookies);
 
-usage() if scalar(@ARGV) != 2;
+my $count = 0;
+my ($cur_flow_file, $cur_port_file, $cur_dot_file, $cur_png_file);
 
-my ($config_file, $dot_template) = (@ARGV);
+usage() if scalar(@ARGV) != 3;
+
+my ($config_file, $dot_template, $out_dir) = (@ARGV);
 
 load_config();
 
+system("mkdir -p $out_dir/flows $out_dir/ports $out_dir/dot $out_dir/png") == 0 or die "Failed to make directories";
+system("rm -f $out_dir/flows/* $out_dir/ports/* $out_dir/dot/* $out_dir/png/*");
+
 while (1) {
-    gen_file();
-    system("dot -Tpng $TMP > $PNG");
+    $cur_flow_file = sprintf("$out_dir/flows/%03d.flow", $count);
+    $cur_port_file = sprintf("$out_dir/ports/%03d.ports", $count);
+    $cur_dot_file = sprintf("$out_dir/dot/%03d.dot", $count);
+    $cur_png_file = sprintf("$out_dir/png/%03d.png", $count);
+
+    load_stats_files();
+    load_stats();
+    gen_dot_file();
+    system("dot -Tpng $cur_dot_file > $cur_png_file");
+    system("ln $cur_png_file $out_dir/tmp");
+    system("mv $out_dir/tmp $out_dir/cur.png");
+    ++$count;
     sleep(1);
 }
 
 sub usage {
-    print "usage: genSDXviz <config_file> <dot_template>\n";
+    print "usage: genSDXviz <config_file> <dot_template> <out_dir>\n";
     exit 1;
 }
 
@@ -48,10 +64,8 @@ sub load_config {
     close(CONFIG);
 }
 
-sub gen_file {
-    load_stats();
-    
-    open(OUT,">$TMP") or die "Can't open $TMP";
+sub gen_dot_file {
+    open(OUT,">$cur_dot_file") or die "Can't open $cur_dot_file";
     open(DOT, "<$dot_template") or die "Can't read $dot_template";
     while (<DOT>) {
 	my $line = $_;
@@ -70,9 +84,17 @@ sub gen_file {
     close(OUT);
 }
 
-sub load_stats {
-    open(FLOW_STATS, "(ofdpa_show_flows 1; ofdpa_show_flows 2; ofdpa_show_flows 3; ofdpa_show_flows 4 )|") or die "Can't run show flows script";
+# loads stats into flows and ports files
+sub load_stats_files {
+    system("( ofdpa_show_flows 1|sort -n; ofdpa_show_flows 2|sort -n; ofdpa_show_flows 3|sort -n; ofdpa_show_flows 4|sort -n ) > $cur_flow_file") == 0 or die "Can't run show flows script";
+    my($dpid);
+    foreach $dpid (1, 2, 3, 4) {
+	system("ofdpa_show_port_stats $dpid |sort -n| sed \'s/^/dpid: $dpid, /\' >> $cur_port_file") == 0 or die "Can't run port stats script";
+    }
+}
 
+sub load_stats {
+    open(FLOW_STATS,"<$cur_flow_file") or die "Can't open $cur_flow_file";
     %prev_cnt = %cookie2cnt;
     while (<FLOW_STATS>) {
 	if (/(\d+).*packet_count\":\s+(\d+)/) {
@@ -85,22 +107,18 @@ sub load_stats {
 #	    print "cookie $cookie, count $count, diff $diff\n";
 	}
     }
-
     close(FLOW_STATS);
 
-    my($dpid);
-    foreach $dpid (1, 2, 3, 4) {
-	open(PORT_STATS, "ofdpa_show_port_stats $dpid|") or die "Can't run port stats script";
-	while (<PORT_STATS>) {
-	    if (/port_no.: (\d+).*rx_packets.: (\d+)/) {
-		my ($cookie,$count) = ($1,$2);
-		$cookie = "PORT_${dpid}_$cookie";
-		$cookie2cnt{$cookie} = $count;
-		$prev_cnt{$cookie} = 0 if !defined($prev_cnt{$cookie});
-	    }	    
+    open(PORT_STATS,"<$cur_port_file") or die "Can't open $cur_port_file";
+    while (<PORT_STATS>) {
+	if (/dpid: (\d+).*port_no.: (\d+).*rx_packets.: (\d+)/) {
+	    my ($dpid,$cookie,$count) = ($1,$2,$3);
+	    $cookie = "PORT_${dpid}_$cookie";
+	    $cookie2cnt{$cookie} = $count;
+	    $prev_cnt{$cookie} = 0 if !defined($prev_cnt{$cookie});
 	}
-	close(PORT_STATS);
     }
+    close(PORT_STATS);
 }
 
 sub cookie_diff {
@@ -124,7 +142,8 @@ sub style_string {
 	    my $style = $tag2style{$tag};
 	    die "No string for style: $style" if !defined($styles{$style});
 	    $style_string = "color=$styles{$style}";
-	    $style_string .= ",penwidth=3.0" if $diff > 100;
+	    $style_string .= ",penwidth=2.0" if $diff > 100;
+	    $style_string .= ",penwidth=4.0" if $diff > 50000;
 #	    print "$diff\n" if $diff > 10;
 	}
     }
