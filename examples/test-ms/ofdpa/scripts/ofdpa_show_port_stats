@@ -22,5 +22,8 @@ while getopts "p:n" opt; do
 done
 
 curl -X GET http://$HOST:$PORT/stats/port/$DPID 2> /dev/null|
-perl -ne 'while (s/("rx_packets.. \d+).*?("port_no.. \d+).*?("tx_packets.. \d+)//) {  print "$2 $1 $3\n";}' | $FILTER
+perl -ne '@a = split(/}\s*,\s*{/); foreach (@a) {$line=$_; $port = $& if $line =~ /"port_no.. [^,]*+/; $rx = $& if $line =~ /"rx_packets.. \d+/; $tx = $& if $line =~ /"tx_packets.. \d+/; print "$port $rx $tx\n";}' | $FILTER
+
+#perl -ne 'while (s/(("rx_packets.. \d+)|("port_no.. [^,]*+)|("tx_packets.. \d+))//) {  print "$1\n";}' | $FILTER
+#perl -ne 'while (s/("rx_packets.. \d+).*?("port_no.. \d+).*?("tx_packets.. \d+)//) {  print "$2 $1 $3\n";}' | $FILTER
 
