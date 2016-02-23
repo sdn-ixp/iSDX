@@ -13,10 +13,6 @@ my(%styles) = (
     c2_v => "gold4"
     );
     
-
-my($TMP) = "/tmp/sdxviz.dot";
-my($PNG) = "/tmp/sdxviz.png";
-
 my(%prev_cnt,%cookie2cnt);
 my(%tag2style, %tag2cookies);
 
@@ -38,13 +34,13 @@ while (1) {
     $cur_dot_file = sprintf("$out_dir/dot/%03d.dot", $count);
     $cur_png_file = sprintf("$out_dir/png/%03d.png", $count);
 
-    load_stats_files();
+    load_stats_into_files();
     load_stats();
     gen_dot_file();
     system("dot -Tpng $cur_dot_file > $cur_png_file");
     system("ln $cur_png_file $out_dir/tmp");
     system("mv $out_dir/tmp $out_dir/cur.png");
-    ++$count;
+    ++$count; $count %= 1000;
     sleep(1);
 }
 
@@ -88,7 +84,7 @@ sub gen_dot_file {
 }
 
 # loads stats into flows and ports files
-sub load_stats_files {
+sub load_stats_into_files {
     system("( ofdpa_show_flows 1|sort -n; ofdpa_show_flows 2|sort -n; ofdpa_show_flows 3|sort -n; ofdpa_show_flows 4|sort -n ) > $cur_flow_file") == 0 or die "Can't run show flows script";
     my($dpid);
     foreach $dpid (1, 2, 3, 4) {
@@ -105,7 +101,6 @@ sub load_stats {
 	    next if $cookie == 0;
 	    $cookie2cnt{$cookie} = $count;
 	    $prev_cnt{$cookie} = 0 if !defined($prev_cnt{$cookie});
-#	    my $diff = $cookie2cnt{$cookie} - $prev_cnt{$cookie};
 #	    my $diff = cookie_diff($cookie);
 #	    print "cookie $cookie, count $count, diff $diff\n";
 	}
