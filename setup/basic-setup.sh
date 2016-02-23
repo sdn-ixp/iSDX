@@ -20,6 +20,8 @@ sudo pip install pymongo
 sudo apt-get install -y ssh git emacs sshfs
 sudo apt-get install -y libstring-crc32-perl
 
+echo PATH=\$PATH:`dirname "$(readlink -f "$0")"`/../bin >> ~/.profile
+
 if [ -z "$NO_MININET" ]; then
     # set up some shortcuts
     mkdir ~/bin/
