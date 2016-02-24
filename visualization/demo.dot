@@ -1,7 +1,7 @@
 digraph {
       size = "100,100";
       main, outbound, inbound, arp [shape=box];
-      { rank=min; inbound outbound ARPPXY BGP}
+      { rank=min; inbound outbound ARPPXY ExaBGP}
       { rank=same; A1 B1 C1 C2 } 
       { rank=same; main arp }
       /*
@@ -11,7 +11,7 @@ digraph {
       inbound -> outbound;
       arp -> main;
       ARPPXY -> arp;
-      BGP -> main;
+      ExaBGP -> main;
       A1 -> main;
       B1 -> main;
       C1 -> main;
@@ -20,14 +20,14 @@ digraph {
       */
 
 	// BGP flows
-      main -> BGP; // MAIN-BGP
+      main -> ExaBGP; // MAIN-BGP
       main -> A1; // MAIN-A1_BGP
       main -> B1; // MAIN-B1_BGP
       main -> C1; // MAIN-C1_BGP
       main -> C2; // MAIN-C2_BGP
 
       // ARP flows
-      main -> BGP; // BGP_ARP
+      main -> ExaBGP; // BGP_ARP
       main -> A1; // MAIN-A1_ARP
       main -> B1; // MAIN-B1_ARP
       main -> C1; // MAIN-C1_ARP
@@ -67,6 +67,6 @@ digraph {
       B1 -> main; // B1-MAIN
       C1 -> main; // C1-MAIN
       C2 -> main; // C2-MAIN
-      BGP -> main; // BGP-MAIN
+      ExaBGP -> main; // BGP-MAIN
       ARPPXY -> arp; //ARPPXY-ARP
 }
