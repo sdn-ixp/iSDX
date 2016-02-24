@@ -58,7 +58,7 @@ sub load_config {
 	die "Wrong number of fields in: $_" if scalar(@fields) != 4;
 	my $tag = "$fields[0]-$fields[1]";
 	$tag2style{$tag} = $fields[2];
-	@{$tag2cookies{$tag}} = split(/,/, $fields[3]);
+	push(@{$tag2cookies{$tag}}, split(/,/, $fields[3]));
     }
     close(CONFIG);
 }
