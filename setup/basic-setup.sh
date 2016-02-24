@@ -20,7 +20,7 @@ sudo pip install pymongo
 sudo apt-get install -y ssh git emacs sshfs graphviz feh
 sudo apt-get install -y libstring-crc32-perl
 
-echo PATH=\$PATH:`dirname "$(readlink -f "$0")"`/../bin >> ~/.profile
+echo PATH=\$PATH:~/iSDX/bin >> ~/.profile
 
 if [ -z "$NO_MININET" ]; then
     # set up some shortcuts
