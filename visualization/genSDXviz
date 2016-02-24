@@ -85,10 +85,10 @@ sub gen_dot_file {
 
 # loads stats into flows and ports files
 sub load_stats_into_files {
-    system("( ofdpa_show_flows 1|sort -n; ofdpa_show_flows 2|sort -n; ofdpa_show_flows 3|sort -n; ofdpa_show_flows 4|sort -n ) > $cur_flow_file") == 0 or die "Can't run show flows script";
+    system("( of_show_flows 1|sort -n; of_show_flows 2|sort -n; of_show_flows 3|sort -n; of_show_flows 4|sort -n ) > $cur_flow_file") == 0 or die "Can't run show flows script";
     my($dpid);
     foreach $dpid (1, 2, 3, 4) {
-	system("ofdpa_show_port_stats $dpid |sort -n| sed \'s/^/dpid: $dpid, /\' >> $cur_port_file") == 0 or die "Can't run port stats script";
+	system("of_show_port_stats $dpid |sort -n| sed \'s/^/dpid: $dpid, /\' >> $cur_port_file") == 0 or die "Can't run port stats script";
     }
 }
 
