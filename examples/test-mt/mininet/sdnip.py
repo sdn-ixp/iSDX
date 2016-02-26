@@ -138,15 +138,19 @@ class BgpRouter(Router):
             configFile.write('%s%s\n' % (intentStr, line))
             
         def getRouterId(interfaces):
-            intfAttributes = interfaces.itervalues().next()
-            print intfAttributes
-            if isinstance(intfAttributes, list):
+            for intfAttributesList in interfaces.itervalues():
+                if not isinstance(intfAttributesList, list):
+                    continue
                 # Try use the first set of attributes, but if using vlans they might not have addresses
-                intfAttributes = intfAttributes[1] if not intfAttributes[0]['ipAddrs'] else intfAttributes[0]
-            return intfAttributes['ipAddrs'][0].split('/')[0]
-        
+                intfAttributes = intfAttributesList[1] if not intfAttributesList[0]['ipAddrs'] else intfAttributesList[0]
+                return intfAttributes['ipAddrs'][0].split('/')[0]
+
+        print("FDP %s" % getRouterId(self.intfDict))
+        print("  FDP %s" % str(self.intfDict))
         writeLine(0, 'hostname %s' % self.name);
         writeLine(0, 'password %s' % 'sdnip')
+        writeLine(0, 'log file /var/run/quagga/q_%s' % self.asNum)
+        writeLine(0, 'debug bgp')
         writeLine(0, '!')
         writeLine(0, 'router bgp %s' % self.asNum)
         writeLine(1, 'bgp router-id %s' % getRouterId(self.intfDict))
@@ -171,6 +175,7 @@ class BgpRouter(Router):
         configFile = open(self.zebraConfFile, 'w+')
         configFile.write('hostname %s\n' % self.name)
         configFile.write('password %s\n' % 'sdnip')
+        configFile.write('log file /var/run/quagga/z_%s debugging\n' % self.asNum)
         configFile.close()
 
     def terminate(self):

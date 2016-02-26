@@ -105,7 +105,7 @@ def main (argv):
         't': (test, tests, None),
         'rexec': (rexec, None, 'run command on remote hosts'),
         'r': (rexec, None, None),
-        'exec': (run, None, 'run command on this host'),
+        'exec': (run, None, 'run command on this (tmgr) host'),
         'e': (run, None, None),
         'config': (show, None, 'show json configuration'),
         'c': (show, None, None),
@@ -177,12 +177,13 @@ def parse (line):
 def connect (host, why):
     global config
     
+    # should be either a listener host or a router host (edge-router)
     try:
         hostdata = config['hosts'][host]
     except:
-        log.error('MM:' + host + ' ERROR: ' + why + ': Unknown host: ' + host)
-        return None
-        
+        if host not in config['rhosts']:
+            log.error('MM:' + host + ' ERROR: ' + why + ': Unknown host: ' + host)
+            return None    
     try:
         cmdifc = hostdata['cmdifc']
         cmdport = hostdata['cmdport']
@@ -332,80 +333,55 @@ def test (tn):
         baddr = config["tests"][tn]['baddr']
         daddr = config["tests"][tn]['daddr']
         dport = config["tests"][tn]['dport']
-        xifc = config["tests"][tn]['xifc']
         xdst = config["tests"][tn]['xdst']
     except:
         log.error('MM:00 ERROR: TEST FAILED unknown or poorly specified test: ' + tn)
         return
             
-    s = connect(src, 'TEST')
-    if s == None:
+    r = generic(src, 'TEST', 'test ' + rand + ' ' + baddr + ' ' + daddr + ' ' + str(dport) + '\n')
+    if r is None:   # connection error
         return
+    log.info('MM:' + src + ' TEST ' + tn + ': ' + r.strip())
     
-    try:
-        s.send('test ' + rand + ' ' + baddr + ' ' + daddr + ' ' + str(dport) + '\n')
-        alldata = ''
-        while True:
-            data = s.recv(1024)
-            if len(data) == 0:
-                break
-            alldata += data
-            #sys.stdout.write(data)
-        s.close()
-    except Exception, e:
-        log.error('MM:' + src + ' ERROR: TEST FAILED ' + repr(e))
-        return
-    
-    log.info('MM:' + src + ' TEST ' + tn + ': ' + alldata.strip())
-    
-    if alldata.find("ERROR") >= 0:
-        log.error('MM:' + src + ' ERROR: TEST ' + tn + ' TEST FAILED aborted')
+    if r.find("ERROR") >= 0:
+        log.error('MM:' + src + ' ERROR: TEST ' + tn + ' TEST FAILED ON SOURCE ' + r.strip())
         return
     
     for _ in range(5):
-        out = generic(xdst, 'RESULT', 'result ' + rand + '\n')   
-        lines = out.splitlines() # each line of result
-        if len(lines) < 1:
-            log.error('MM:' + xdst + ' ERROR: TEST FAILED No result from ' + xdst)
-            return
-        result = lines[len(lines)-1]
+        result = generic(xdst, 'RESULT', 'result ' + rand + '\n')
         tokens = result.split()
-        # keep legal messages with 7 tokens
-        # b1:i0 OK: XFER 7186879947 127.0.0.1:55702->127.0.0.1:2220 12.9620259424 MBpS
-        # c1:XX INFO: RESULT:  1514184701 is still pending - retry this again
-        # c2:XX ERROR: RESULT 1514184701 does not exist - mis-routed data; check other nodes
-        if len(tokens) != 7:
-            log.error('MM:' + xdst + ' ERROR: TEST ' + tn + ' TEST FAILED - bad return string')
+        # possible return codes are:
+        # COMPLETE - transfer is done
+        # FAILURE - transfer is complete but a fault occurred
+        # PENDING - transfer is still in progress
+        # UNKNOWN - this host has no record of this transfer (misdirected)
+        if result.find('COMPLETE') >= 0:
+            log.info('MM:' + xdst + ' TEST PASSED ' + tn + ' ' + rand + ' ' + tokens[3] + ' ' + tokens[4] + ' ' + tokens[5])
             return
-        # this shouldn't happen ever
-        if tokens[3] != rand:
-            log.error('MM:' + xdst + ' ERROR: TEST ' + tn + ' TEST FAILED - incorrect id returned')
-            return
-        if tokens[6] == 'PENDING':
+        if result.find('PENDING') >= 0:
+            log.info('MM:' + xdst + ' TEST TRANSFER STILL IN PROGRESS ' + tn + ' ' + rand)
             time.sleep(1)
             continue
-        # data not found on expected host
-        if tokens[6] == 'exist':
-            log.error('MM:' + xdst + ' ERROR: TEST ' + tn + ' TEST FAILED - DATA NOT FOUND ON EXPECTED HOST - checking all hosts')
+        if result.find('FAILURE') >= 0:
+            log.error('MM:' + xdst + ' TEST FAILED ' + tn + ' BAD RESULT (' + result + ')')
+            return
+        if result.find('UNKNOWN') >= 0:
+            log.error('MM:' + xdst + ' TEST FAILED ' + tn + ' DATA NOT FOUND ON EXPECTED HOST (' + xdst + ') - checking all hosts')
             for h in sorted(hosts):
-                pending(h)
+                p = generic(h, 'RESULT', 'result ' + rand + '\n')
+                if p.find('COMPLETE') >= 0:
+                    log.error('MM:' + h + ' TEST MISDIRECTED ' + tn + ' ' + rand + ' to ' + p.strip())
+                    return
+            log.error('MM:' + h + ' TEST LOST ' + tn + ' ' + rand)
             return
-        if not tokens[0].endswith(xifc):
-            log.error('MM:' + xdst + ' ERROR: TEST ' + tn + ' TEST FAILED - response on incorrect interface: sb: ' + xifc)
-            return
-        if not tokens[1] == 'OK:':
-            log.error('MM:' + xdst + ' ERROR: TEST ' + tn + ' TEST FAILED - BAD RESULT')
-            return
-        log.info('MM:' + xdst + ' OK: TEST ' + tn + ' ' + rand + ' TEST PASSED ' + tokens[5] + ' ' + tokens[6])
-        return
-    log.error('MM:' + xdst + ' ERROR: TEST ' + tn + ' ' + rand + ' TEST FAILED: PENDING TOO LONG')
+    log.error('MM:' + xdst + ' TEST FAILED ' + tn + ' ' + rand + ' PENDING TOO LONG')
 
 
 # retrieve any pending or completed test results (does not consume result)
 
 def pending (host):
     r = generic(host, 'RESULT', 'result\n')
-    if r is not None:
+    if r is not None and len(r) > 0:
         log.info('MM:' + host + ' PENDING: ' + r.strip())
     
 
@@ -422,31 +398,13 @@ def regress (rtest):
         parse(l)
     
     
-def listener (host):
-    interfaces = config["hosts"][host]['interfaces']
-    
-    for name in sorted(interfaces):
-        s = connect(host, 'LISTENER')
-        if s == None:
-            return
-        try:
-            interface = interfaces[name]
-            addr = interface['bind']
-            port = interface['port']
-        except:
-            log.error('MM: ' + host + 'ERROR: Bad interface spec ' + name)
-            continue
-            
-        try:
-            s.send('listener ' + name + ' ' + addr + ' ' + str(port) + '\n')
-            while True:
-                data = s.recv(1024)
-                if len(data) == 0:
-                    break
-                sys.stdout.write(data)
-            s.close()
-        except Exception, e:
-            log.error('MM:00 ERROR: ' + repr(e))
+def listener (host):    
+    l = config["hosts"][host]
+    addr = l['bind']
+    for p in l['ports']:
+        r = generic(host, 'LISTENER', 'listener ' + addr + ' ' + str(p) + '\n')
+        if r is not None and len(r) > 0:
+            log.info('MM:' + host + ' LISTENER: ' + r.strip())
   
             
 def show (args):

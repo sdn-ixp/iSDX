@@ -16,6 +16,7 @@ import os
 import string
 import subprocess
 import copy
+import shlex
 
 buf = "\x00" * 1024     # buffer for traffic generation
 host = ""               # me
@@ -26,6 +27,7 @@ generation = 0          # generation family of listeners for resetting earlier o
 lock = threading.Lock() # lock for accessing data reception results (completed and pending)
 completed = { }         # completed data reception results
 pending = { }           # pending data reception results
+connection_timeout = 5  # for sending/eating data
 
 def main (argv):
     global host, hosts, tests
@@ -95,19 +97,20 @@ def output(interface, s):
 
 # create a listener for this interface
 
-def create_listener (baddr, port, interface):
+def create_listener (baddr, port):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind((baddr, port))
         s.listen(10)
     except socket.error, msg:
         return 'ERROR: Bind failed on ' + baddr + ':' + str(port) + ': ' + msg[1]
-    t = threading.Thread(target=interface_listener_thread, args=(s, baddr, port, interface))
+    t = threading.Thread(target=interface_listener_thread, args=(s, baddr, port))
     t.start()
-    return 'OK: listener established for ' + baddr + ':' + str(port)
+    return ''
+    #return 'OK: listener established for ' + baddr + ':' + str(port)
 
 
-def interface_listener_thread(s, baddr, port, interface):
+def interface_listener_thread(s, baddr, port):
     s.settimeout(10)
     mygeneration = generation
     while True:
@@ -117,25 +120,24 @@ def interface_listener_thread(s, baddr, port, interface):
             if mygeneration == generation:
                 continue
             else:
-                output(interface, 'INFO: Listener terminating for ' + baddr + ':' + str(port))
+                output('XX', 'INFO: Listener terminating for ' + baddr + ':' + str(port))
                 return
         fromto = addr[0] + ':' + str(addr[1]) + '->' + baddr + ':' + str(port)
         #print 'New connection on ' + baddr + ':' + str(port) + ' from ' + addr[0] + ':' + str(addr[1])
-        threading.Thread(target=interface_thread , args=(conn, fromto, interface)).start()
+        threading.Thread(target=interface_thread , args=(conn, fromto)).start()
 
 
 # on-demand thread to consume data
 
-def interface_thread(conn, fromto, interface):
+def interface_thread(conn, fromto):
     try:
         #conn.send('You have reached ' + name + '\n')
         count = 0
-        conn.settimeout(5)   # platform dependent - sometimes new connection inherits from accept()
+        conn.settimeout(connection_timeout)   # platform dependent - sometimes new connection inherits from accept()
         t = time.time();
         rand = conn.recv(10)    # id is 10 characters
         lock.acquire()
-        # keep at 7 tokens
-        pending[rand] = host + ':' + interface + ' INFO: XFER ' + rand + ' IS STILL PENDING\n'
+        pending[rand] = host + ':' + '00 PENDING ' + rand + '\n'
         lock.release()
         while True:
             data = conn.recv(2048)
@@ -146,9 +148,9 @@ def interface_thread(conn, fromto, interface):
                 break
             count += len(data)
         t = time.time() - t
-        msg = host + ':' + interface + ' OK: XFER ' + rand + ' ' + fromto + ' ' + str(count/(t*1e6)) + ' MBpS' + '\n'
+        msg = host + ':' + '00 COMPLETE ' + rand + ' ' + fromto + ' ' + str(count/(t*1e6)) + ' MBpS' + '\n'
     except Exception, e:
-        msg = host + ':' + interface + ' ERROR: XFER ' + rand + ' ' + fromto + ' ' + repr(e) + '\n'
+        msg = host + ':' + '00 FAILURE ' + rand + ' ' + fromto + ' ' + repr(e) + '\n'
     try:
         conn.close()
     except:
@@ -171,6 +173,7 @@ def cmd_thread(conn):
         return;
     
     tokens = data.split()
+    tokens = shlex.split(data)
     n = len(tokens)
     if n == 0:
         conn.sendall(host + ':XX ERROR: Null data\n')
@@ -200,15 +203,16 @@ def cmd_thread(conn):
             err = ''
         conn.sendall(out)
         conn.sendall(err)
+        conn.sendall(str(tokens))
         conn.close()
         return
     
-    if cmd == 'listener' and n == 4:
-        name = tokens[1]
-        addr = tokens[2]
-        port = tokens[3]
-        r = create_listener(addr, int(port), name)
-        conn.sendall(host +':' + name + ' ' + r + '\n')
+    if cmd == 'listener' and n == 3:
+        addr = tokens[1]
+        port = tokens[2]
+        r = create_listener(addr, int(port))
+        if len(r) > 0:
+            conn.sendall(host +':00' + ' ' + r + '\n')
         conn.close()
         return;
     
@@ -223,7 +227,7 @@ def cmd_thread(conn):
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((baddr, 0))
-            s.settimeout(5)
+            s.settimeout(connection_timeout)
             s.connect((daddr, int(dport)))
             s.sendall(rand) #must be 10 characters
             for _ in range(2000):
@@ -232,7 +236,7 @@ def cmd_thread(conn):
             #time.sleep(1)  # seems to be needed on windows or we get a violent server exception
             s.close()
         except Exception, e:
-            conn.sendall(host + ':XX ERROR: ' + 'TEST ' + m + ' ERROR: ' + repr(e) + '\n')
+            conn.sendall(host + ':XX ERROR: ' + 'TEST ' + m + ' ' + repr(e) + '\n')
             conn.close()
             return
         
@@ -247,7 +251,7 @@ def cmd_thread(conn):
         p = pending.get(rid)
         if c is None and p is None:
             lock.release()
-            msg = host + ':XX ERROR: RESULT ' + rid + ' does not exist\n'
+            msg = host + ':00 UNKNOWN ' + rid + '\n'
         elif p is not None:
             lock.release()
             msg = p

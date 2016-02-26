@@ -32,10 +32,12 @@ mode = None                     # operating mode - multi-table or multi-switch
 modemin = 1000                  # first available switch port for this mode
 outdir = 'output'               # base directory for results, will have XXXXX from XXXXX.spec added to it
 template_dir = 'templates'      # directory for templates for configurations
-sdx_mininext_template = None    # mode specific version of sdx_mininext.py
+sdx_mininet_template = None     # mode specific version of sdx_mininet.py
 sdx_global_template = None      # mode specific version of sdx_global.cfg
 nodes = {}                      # testing definitions of tnode ports
+rhosts = []                     # hosts that are routers, not listeners, but we may want to send commands to anyway
 tests = []                      # testing definitions of test operations
+genmini = False                 # don't generate mininet sub directories for quagga
 
 def main (argv):
     global outdir
@@ -110,10 +112,11 @@ def main (argv):
         print 'Output directory ' + outdir + ' already exists or cannot be made'
         exit()
         
-    mininext_dir = os.path.join(outdir, 'mininext')
-    os.mkdir(mininext_dir)
-    mininext_configs_dir = os.path.join(mininext_dir, 'configs')
-    os.mkdir(mininext_configs_dir)
+    mininet_dir = os.path.join(outdir, 'mininet')
+    os.mkdir(mininet_dir)
+    if genmini:
+        mininet_configs_dir = os.path.join(mininet_dir, 'configs')
+        os.mkdir(mininet_configs_dir)
     config_dir = os.path.join(outdir, 'config')
     os.mkdir(config_dir)
     policies_dir = os.path.join(outdir, 'policies')
@@ -143,12 +146,20 @@ def main (argv):
     fin.close()
     fout.close()
     
-    # sdx_mininext.py
+    # sdx_mininet.py
     
-    dst_file = 'sdx_mininext.py'
-    dst_file = os.path.join(mininext_dir, dst_file)
-    print 'copying ' + sdx_mininext_template + ' to ' + dst_file
-    shutil.copy(sdx_mininext_template, dst_file)
+    dst_file = 'sdx_mininet.py'
+    dst_file = os.path.join(mininet_dir, dst_file)
+    print 'copying ' + sdx_mininet_template + ' to ' + dst_file
+    shutil.copy(sdx_mininet_template, dst_file)
+    
+    # sdnip.py - one size fits all
+    
+    dst_file = 'sdnip.py'
+    dst_file = os.path.join(mininet_dir, dst_file)
+    sdnip_template = os.path.join(template_dir, 'sdnip.py')
+    print 'copying ' + sdnip_template + ' to ' + dst_file
+    shutil.copy(sdnip_template, dst_file)
     
     # per participant policy files (flow rules)
     # policy file that includes these file names
@@ -213,6 +224,7 @@ def main (argv):
             gc['RefMon Settings']['fabric connections']['main'][p] = ports[0]
         else:
             gc['RefMon Settings']['fabric connections']['main'][p] = ports
+    # there are refmon settings for the fabric that assign the next port, but it doesn't seem to be used
             
     with open(dst_file,'w') as f:
         json.dump(gc, f, indent=4, sort_keys=True)
@@ -224,29 +236,28 @@ def main (argv):
         for r in participants[p]['Ports']:  # routers
             # print r
             q = {}
-            cmds = []
-            q['ip'] = r['IP']
+            q['ip'] = r['NET']
             q['mac'] = r['MAC']
             q['port'] = r['Id']     #switch port
-            q['cmds'] = cmds
-            for ifc in participants[p]['ifconfig']:
-                #print ifc
-                x = ifc.split('.')
-                lo = 'lo:' + x[0] + x[3]
-                c = 'sudo ifconfig ' + lo + ' ' + ifc + ' netmask 255.255.255.0 up'
-                #print c
-                cmds.append(c)
+            q['networks'] = participants[p]['announce']
+            
+            netnames = []
+            for netnumb in range(len(q['networks'])):
+                netnames.append(genname(netnumb, q['networks'][netnumb], part2as(p), r['index']))
+            q['netnames'] = netnames
+            
+            q['asn'] = participants[p]['ASN']
             # convert participant + index into a1, b1, c1, c2, etc.
             hostname = part_router2host(p, r['index'])
             # cmds.append('sudo python tnode.py ' + hostname)    # handle in sdx_mininet.py to simplify finding tnode.py
             quagga[hostname] = q
     
-    mininext_file = 'mininext.cfg'
-    mininext_file = os.path.join(mininext_dir, mininext_file)
-    print 'generating mininext configuration file ' + mininext_file       
+    mininet_file = 'mininet.cfg'
+    mininet_file = os.path.join(mininet_dir, mininet_file)
+    print 'generating mininet configuration file ' + mininet_file       
     if noisy:
         print json.dumps(quagga, indent=4, sort_keys=True)
-    with open(mininext_file,'w') as f:
+    with open(mininet_file,'w') as f:
         json.dump(quagga, f, indent=4, sort_keys=True)
         
     # exabgp bgp.conf file
@@ -274,7 +285,7 @@ def main (argv):
         for part in sorted(participants):
             p = participants[part]
             for r in p['Ports']:    # routers
-                dprint('\n\tneighbor ' + r['IP'] + ' {', fout)
+                dprint('\n\tneighbor ' + r['IP'].split('/')[0] + ' {', fout)
                 dprint('\t\tdescription "' + r['description'] + '";', fout)
                 dprint('\t\trouter-id 172.0.255.254;', fout)
                 dprint('\t\tlocal-address 172.0.255.254;', fout)
@@ -286,36 +297,29 @@ def main (argv):
     fout.close()
     
     # test.cfg test configuration
-    
-    test = {}
-    test['hosts'] = {}
-    
+        
+    testcfg = {}
+    testcfg['hosts'] = nodes
+       
+    # generate list of all nodes for creating cmds that run on all nodes
     l = ''
-    for part in sorted(participants):
-        p = participants[part]
-        for r in p['Ports']:
-            l += ' ' + r['hostname']
-            
-    for part in sorted(participants):
-        p = participants[part]
-        for r in p['Ports']:   # routers 
-            ifcs = {}
-            ns = nodes[r['hostname']]
-            for n in ns:
-                i = 0
-                for pt in ns[n]['ports']:
-                    ifcs[n+'_'+str(i)] = { 'bind' : ns[n]['interface'], 'port' : pt}
-                    i += 1
-            test['hosts'][r['hostname']] = {'interfaces': ifcs}
+    for node in sorted(nodes):
+        l += ' ' + node
+    testcfg['rhosts'] = rhosts
+    # list of all routers.  these are not listeners, but we want to run commands on them
+    r = ''
+    for rtr in rhosts:
+        r += ' ' + rtr
     
-    test['tests'] = {}
+    testcfg['tests'] = {}
+
     i = 0
     for t in tests:
-        test['tests']['t' + str(i).zfill(2)] = t
+        testcfg['tests']['t' + str(i).zfill(2)] = t
         i += 1
     
-    test['commands'] = {}
-    test['commands'] = {'x0': 'route -n',
+    testcfg['commands'] = {}
+    testcfg['commands'] = {'x0': 'route -n',
                         "x1": "ps ax",
                         "x2": "sudo ovs-ofctl dump-flows s1",
                         "x3": "sudo ovs-ofctl dump-flows s2",
@@ -324,19 +328,24 @@ def main (argv):
                         "x6": "sudo ovs-ofctl show s1"
                         }
     
-    test['regressions'] = {}
-    test['regressions']['verbose'] = "l 'r x0" + l + "' 'e x1 x2 x3 x4 x5 x6' t"
-    test['regressions']['terse'] = "l t"
+    testcfg['regressions'] = {}
+    testcfg['regressions']['verbose'] = "l 'r x0" + r + "' 'e x1 x2 x3 x4 x5 x6' t"
+    testcfg['regressions']['verbose-retry'] = "'r x0" + r + "' 'e x1 x2 x3 x4 x5 x6' t"
+    testcfg['regressions']['terse'] = "l t"
+    testcfg['regressions']['terse-retry'] = "t"
     
     dst_file = 'test.cfg'
     dst_file = os.path.join(config_dir, dst_file)
     print 'creating ' + dst_file
     if noisy:
-        print json.dumps(test, indent=4, sort_keys=True)
+        print json.dumps(testcfg, indent=4, sort_keys=True)
     with open(dst_file,'w') as f:
-        json.dump(test, f, indent=4, sort_keys=True)
+        json.dump(testcfg, f, indent=4, sort_keys=True)
         
 
+    if not genmini:
+        return
+    
     # quagga bgpd.conf file
     '''
     !
@@ -361,12 +370,12 @@ def main (argv):
     for part in sorted(participants):
         p = participants[part]
         for r in p['Ports']:   # routers  
-            mininext_configs_host_dir = os.path.join(mininext_configs_dir, r['hostname'])
-            os.mkdir(mininext_configs_host_dir)
+            mininet_configs_host_dir = os.path.join(mininet_configs_dir, r['hostname'])
+            os.mkdir(mininet_configs_host_dir)
   
             src_quagga_file = 'quagga-bgpd.conf'
             dst_quagga_file = 'bgpd.conf'
-            dst_quagga_file = os.path.join(mininext_configs_host_dir, dst_quagga_file)
+            dst_quagga_file = os.path.join(mininet_configs_host_dir, dst_quagga_file)
             src_quagga_file = os.path.join(template_dir, src_quagga_file)
             print 'generating quagga bgpd.conf configuration file ' + dst_quagga_file + ' using ' + src_quagga_file
             fin = open(src_quagga_file)
@@ -400,7 +409,7 @@ def main (argv):
             
             src_quagga_file = 'quagga-zebra.conf'
             dst_quagga_file = 'zebra.conf'
-            dst_quagga_file = os.path.join(mininext_configs_host_dir, dst_quagga_file)
+            dst_quagga_file = os.path.join(mininet_configs_host_dir, dst_quagga_file)
             src_quagga_file = os.path.join(template_dir, src_quagga_file)
             print 'generating quagga zebra.conf configuration file ' + dst_quagga_file + ' using ' + src_quagga_file
             fin = open(src_quagga_file)
@@ -408,6 +417,10 @@ def main (argv):
             for line in fin:
                 if '_HOSTNAME_' in line:
                     line = line.replace('_HOSTNAME_', r['description'].replace(' ', '-'))
+                    dprint(line, fout)
+                    continue
+                if '_HOST_' in line:
+                    line = line.replace('_HOST_', r['hostname'])
                     dprint(line, fout)
                     continue
                 dprint(line.rstrip('\n'), fout)
@@ -419,7 +432,7 @@ def main (argv):
                          )
             for c in copylist:
                 src_file = os.path.join(template_dir, c[0])
-                dst_file = os.path.join(mininext_configs_host_dir, c[1])
+                dst_file = os.path.join(mininet_configs_host_dir, c[1])
                 print 'copying ' + src_file + ' to ' + dst_file
                 shutil.copy(src_file, dst_file)
     
@@ -431,10 +444,9 @@ def dprint (line, fout):
     
 
 def parse (line):
+    line = line.partition('#')[0]
     tokens = line.split()
     if len(tokens) == 0:
-        return True
-    if tokens[0][0] == '#':
         return True
     seen(tokens[0])
     
@@ -454,6 +466,8 @@ def parse (line):
         return do_test(tokens)
     if tokens[0] == 'node':
         return do_node(tokens)
+    if tokens[0] == 'host':
+        return do_host(tokens)
     return False
 
     
@@ -581,9 +595,13 @@ def do_participant (args):
 
         router = {}
         router['hostname'] = part_router2host(part, index)
+        rhosts.append(part_router2host(part, index))
         router['Id'] = int(port) # switch port
         router['MAC'] = mac
-        router['IP'] = ip
+        if len(ip.split('/')) != 2:
+            raise Exception('malformed network address ' + ip)
+        router['IP'] = ip.split('/')[0]
+        router['NET'] = ip
         router['index'] = index
         router['description'] = 'Virtual AS ' + part2as(part)
         if len(args) > 6:
@@ -620,73 +638,73 @@ def do_participant (args):
     participants[part] = p
     return True
 
+# define formatter for names of hosts.  special macros are:
+# IP first part of network address, i.e., 150 in 150.0.0.0.24
+# ROUTER - router number styarting from 1
+# NET - network number starting from 1
+# AS - AS letter name
+
+hostformer = []
+
+def do_host (args):
+    global hostformer
     
-'''
-announce 1 100.0.0.0/24:2 110.0.0.0/24
+    hostformer = []
+    if len(args) < 2: 
+        raise Exception('usage: host sequence of chars, IP, ROUTER, NET, AS (will be concatenated)')
+    for i in range(1, len(args)):
+        hostformer.append(args[i])
+    return True
 
-*****  in bgp.conf in quagga config directory for each host
+def genname (netnumb, ip, asys, router):
+    h = ''
+    for i in hostformer:
+        if i == 'NETNUMB':
+            h += str(netnumb + 1)
+        elif i == 'IP':
+            h += ip.split('.')[0]
+        elif i == 'ROUTER':
+            h += str(int(router) + 1)
+        elif i == 'AS':
+            h += asys
+        else:
+            h += i
+    return h
 
-!
-! Zebra configuration saved from vty
-!   2013/10/02 20:47:51
-!
-hostname Virtual-AS-A
-password bgpd
-log stdout
-!
-router bgp 100
- bgp router-id 172.0.0.1
- neighbor 172.0.255.254 remote-as 65000
- neighbor 172.0.255.254 next-hop-self
- network 100.0.0.0/24
- network 110.0.0.0/24
- redistribute static
-!
-line vty
-!
 
-***** in sdx_mininext.py to run in container as it comes up
-
-host.cmd('sudo ifconfig lo:1 100.0.0.1 netmask 255.255.255.0 up')
-host.cmd('sudo ifconfig lo:2 100.0.0.2 netmask 255.255.255.0 up')
-host.cmd('sudo ifconfig lo:110 110.0.0.1 netmask 255.255.255.0 up')
-       
-      
-'''
+# announce participant# name network name network ...
 
 def do_announce (args):
     global announcements, participants
     
-    if len(args) < 3:       
-        return False
+    if len(args) < 3: 
+        raise Exception('usage: announce participant# network network ...')      
     
-    ifconfig = []
     announce = []
     
     part = args[1]
     p = participants.get(part, {})
-    i = 2
-    while i < len(args):
+    netnumb = 0
+    for i in range(2, len(args)):
         net = args[i]
-        i += 1
-        #print 'part=' + part + ' net=' + net
-        x = net.split(':')
-        if len(x) == 1:
-            announce.append(net)
-            ip = net.split('.')
-            ifconfig.append(ip[0] + '.' + ip[1] + '.' + ip[2] + '.' + '1')
-        elif len(x) == 2:
-            announce.append(x[0])
-            n = int(x[1])
-            for s in range(n):
-                ip = net.split('.')
-                ifconfig.append(ip[0] + '.' + ip[1] + '.' + ip[2] + '.' + str(s+1))
-        else:
-            return False
+        ip_fix = net.split('/')
+        if len(ip_fix) != 2:
+            raise Exception('Invalid network announcement ' + net)
+        ip = ip_fix[0].split('.')
+        if len(ip) != 4:
+            raise Exception('Invalid ip address ' + ip_fix[0])
+        announce.append(net)
+        for r in p['Ports']:  # routers
+            n = genname(netnumb, net, part2as(part), r['index'])
+            print 'auto gen nodename = ' + n
+            # seed with the bind address in case will autogen nodes
+            # and empty ports for sanity
+            nodes[n] = {'bind': ip[0] + '.' + ip[1] + '.' + ip[2] + '.' + '1',
+                        'ports': [] }
+        netnumb += 1
     p['announce'] = announce
-    p['ifconfig'] = ifconfig
-    participants[part] = p
     return True
+
 
 def do_peers (args):
     global number_of_participants
@@ -706,18 +724,17 @@ def do_peers (args):
 
 
 def do_mode (args):
-    global mode, sdx_mininext_template, sdx_global_template
+    global mode, sdx_mininet_template, sdx_global_template
     
     if len(args) != 2:
-        return False
+        raise Exception('usage: mode multi-switch | multi-table')
     if mode is not None:
-        print "mode already set"
-        return False
+        raise Exception('error: mode already set')
     
     mode = args[1]
-    sdx_mininext_template = os.path.join(template_dir, mode + '-sdx_mininext.py')
+    sdx_mininet_template = os.path.join(template_dir, mode + '-sdx_mininet.py')
     sdx_global_template = os.path.join(template_dir, mode + '-sdx_global.cfg')
-    if os.path.isfile(sdx_mininext_template) is False or os.path.isfile(sdx_global_template) is False:
+    if os.path.isfile(sdx_mininet_template) is False or os.path.isfile(sdx_global_template) is False:
         print 'mode ' + mode + ' is not recognized'
         return False
     
@@ -734,72 +751,66 @@ def do_mode (args):
 
 
 def do_node (args):
-    if len(args) < 5:
-        print 'node spec missing args'
-        return False
-    n = nodes.get(args[1], {})
-    n[args[2]] = {}
-    n[args[2]]['interface'] = args[3]
+    autogen = len(args) > 2 and args[1] == 'AUTOGEN'
+    if autogen and len(args) < 3 or not autogen and len(args) < 4:
+        raise Exception('usage: node host binding_address port ... OR node AUTOGEN port port ...')
+    if autogen:
+        for nn in sorted(nodes):
+            n = nodes[nn]
+            ports = []
+            for i in range(2, len(args)):
+                ports.append(args[i])
+            n['ports'] = ports
+            print 'auto gen node = ' + nn + ' ' + n['bind'] + ' ' + str(n['ports'])
+        return
+    n = nodes.get(args[1])
+    if n is None:
+        raise Exception('Node ' + args[1] + ' is not defined by an earlier network announcement')
+    if len(n['ports']) != 0:
+        raise Exception('Node ' + args[1] + ' is already defined')
+    n['bind'] = args[2]
     ports = []
-    for i in range(4, len(args)):
+    for i in range(3, len(args)):
         ports.append(args[i])
-    n[args[2]]['ports'] = ports
-    nodes[args[1]] = n
+    n['ports'] = ports
     return True
 
 
 def do_test (args):
-    if len(args) != 7:
-        print 'usage: test src_host src_bind_ifc src_port dst_host dst_ifc dst_port'
-        return False
+    if len(args) != 4:
+        raise Exception('usage: test src_host dst_host dst_port')
 
     src = args[1]
-    sifc = args[2]
-    sport = args[3]
-    dst = args[4]
-    difc = args[5]
-    dport = args[6]
+    dst = args[2]
+    dport = args[3]
 
     x = { }
     
-    # validate the source
-    found = False
+    # validate that the source is a valid node - the binding address also comes from the node description
     try:
-        i = 0
-        for p in nodes[src][sifc]['ports']:
-            if p == sport:
-                #sifc + '_' + str(i)    # which tcp port on this intfc
-                x['src'] = src
-                x['baddr'] = nodes[src][sifc]['interface']
-                x['dport'] = sport
-                found = True
-                break
-            i += 1
+        n = nodes[src]
+        x['src'] = src
+        x['baddr'] = n['bind']
     except:
-        print 'exception'
-    if found == False:
-        print 'bad test source'
-        return False
-    
-    # validdate the destination
+        raise Exception('bad source node')
+
+    # validate the destination - the destination address also comes from the node description
+    # there must be a listener for the port
     found = False
     try:
         i = 0
-        for p in nodes[dst][difc]['ports']:
+        for p in nodes[dst]['ports']:
             if p == dport:
                 x['xdst'] = dst
-                x['daddr'] = nodes[dst][difc]['interface']
+                x['daddr'] = nodes[dst]['bind']
                 x['dport'] = dport
-                x['xifc'] = difc + '_' + str(i)    # which tcp port on this intfc
                 found = True
                 break
             i += 1
     except:
-        print 'exception'
+        raise Exception('bad destination node')
     if found == False:
-        print 'bad test destination'
-        return False
-    
+        raise Exception('bad destination port - no listener defined')    
     tests.append(x)
     return True
 
@@ -813,17 +824,17 @@ def as2part (name):
         p = p * len(nameset)
         n = nameset.find(c)
         if n < 0:
-            print 'bad hostname: ' + name
-            return 0
+            raise Exception('bad AS name: ' + name)
         p += n + 1
+    if p < 1 or p > number_of_participants:
+        raise Exception('Illegal AS name: ' + name)
     return str(p)
 
 
 def part2as (part):
     part = int(part)    # just in case
-    if part <= 0:
-        print 'bad partition number: ' + str(part)
-        return 'bad_partition'
+    if part < 1 or part > number_of_participants:
+        raise Exception('Illegal participant number: ' + str(part))
     base = len(nameset)
     n = ''
     while part != 0:
@@ -853,6 +864,10 @@ def host2as_router(name):
     if n <= 0:
         raise Exception('bad hostname: ' + name)
     n -= 1  # routers run from 0 even though host is called a1, a2
+    # is this a valid AS and router?
+    p = as2part(asys)   # will raise exception if out of range
+    if n >= len(participants[p]['Ports']): # number of edge-routers
+        raise Exception('router does not exist for ' + name)
     return asys, str(n)
     
 # convert participant + index into a1, b1, c1, c2, etc., index starts at 0
@@ -864,7 +879,7 @@ def part_router2host(part, router):
 # all successor cmds must not have occurred
 # return True if cmd has already been seen
 
-cmdorder = [ 'mode', 'participants', 'peers', 'participant', 'announce', 'flow', 'node', 'test']
+cmdorder = [ 'mode', 'participants', 'peers', 'participant', 'host', 'announce', 'flow', 'node', 'test']
 cmdoptional = ['node', 'test']
 cmdseen = {}
     
@@ -1004,7 +1019,7 @@ if __name__ == "__main__":
     if False:
         for i in range(53):
             print str(i) + ' ' + part2as(i) + ' ' + str(as2part(part2as(i))) +' ' + part2as(as2part(part2as(i)))
-        for x in ('a1', 'ab12', 'd1', '1c', 'a1b', 'a', '1', 'a0'):
+        for x in ('a1', 'ab12', 'd1', '1c', 'a1b', 'a', '1', 'a0', 'l1'):
             try:
                 a, r = host2as_router(x)   
                 print x + ' ' + a + ' ' + r

@@ -5,12 +5,11 @@ LOG_DIR=regress/regress.$$
 echo "Logging to $LOG_DIR"
 mkdir -p $LOG_DIR
 
-# if you change EXAMPLES to point elsewhere (like the examples dir unsed iSDX)
-#    change the ../../../ ... tnode.py line in multi-table-sdx_mininext.py and multi-switch-sdx_mininext.py 
 EXAMPLES=$BASE/test/output
+# for now, tests must run from examples folder
 EXAMPLES=$BASE/examples
 
-# set to anything but 0 to run mininext in interactive mode - type control d continue
+# set to anything but 0 to run mininet in interactive mode - type control d continue
 INTERACTIVE=0
 
 # name of regression test to use by default
@@ -31,6 +30,9 @@ do
      RTEST="$2"
      shift
      ;;
+   -i)
+     INTERACTIVE=1
+     ;;
    -*)
      echo "Usage: $0 -n number_of_loops -t traffic_test_group_name test_name test_name ..." >&2
      exit 1
@@ -45,7 +47,8 @@ done
 echo running regression $RTEST
 
 if [ "$#" -lt 1 ] ; then
-  echo "Usage: $0 -n number_of_loops -t traffic_test_group_name test_name test_name ..." >&2
+  echo "Usage: $0 -i -n number_of_loops -t traffic_test_group_name test_name test_name ..." >&2
+  echo "    -i is for interactive commands to mininet after running tests" >&2
   exit 1
 fi
 
@@ -67,7 +70,7 @@ do
 		echo running test: $TEST:$count
 		if [ $INTERACTIVE != '0' ]
 		then
-			echo "****** RUNNING MININEXT IN INTERACTVE MODE - type control-D at end of test to continue **********"
+			echo "****** RUNNING MININET IN INTERACTVE MODE - type control-D at end of test to continue **********"
 		fi
 		echo -------------------------------
 		
@@ -76,28 +79,23 @@ do
 		sleep 1
 		python $BASE/logmsg.py "running test: $TEST:$count"
 		
-		echo starting mininext
+		echo starting mininet
 		
-		MINICONFIGDIR=~/mini_rundir
-		rm -rf $MINICONFIGDIR
-		mkdir -p $MINICONFIGDIR
-		cd $EXAMPLES/$TEST/mininext
-		find configs | cpio -pdm $MINICONFIGDIR
-
 		M0=/tmp/sdxm0.$$
 		mkfifo $M0
 		
 		SYNC=/tmp/sdxsync.$$
 		mkfifo $SYNC
 		
-		cat <$M0 | ./sdx_mininext.py $MINICONFIGDIR/configs $SYNC &
+		rm /var/run/quagga/*
+		cd $EXAMPLES/$TEST/mininet
+		cat <$M0 | ./sdx_mininet.py mininet.cfg $BASE/test/tnode.py $SYNC &
 		M_PID=$!
-	
-		echo delaying for mininet
-		
 		cat $SYNC
+		
 		echo starting ryu
-		ryu-manager $BASE/flanc/refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg >/dev/null 2>&1 &
+		cd $BASE/flanc
+		ryu-manager ryu.app.ofctl_rest refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg >/dev/null 2>&1 &
 		sleep 2
 
 		echo starting xctrl
@@ -114,7 +112,6 @@ do
 		python route_server.py $TEST &
 		sleep 3
 
-		echo starting participants
 		cd $BASE/pctrl/
 		while read -r part other
 		do
@@ -123,6 +120,7 @@ do
 				part=`echo $part | tr -d :\"`
 				echo starting participant $part
 				sudo python participant_controller.py $TEST $part &
+				sleep 1
 			fi
 		done < $EXAMPLES/$TEST/config/sdx_policies.cfg
 		sleep 5
@@ -135,10 +133,28 @@ do
 		cd $BASE/test
 		python tmgr.py $EXAMPLES/$TEST/config/test.cfg "regression $RTEST"
 		
+		FAIL=`grep -c FAILED $LOG_DIR/$TEST.$count.log`
+		if [ $FAIL = '0' ]
+		then
+			echo "Test $TEST:$count succeeded.  All tests passed"
+			python $BASE/logmsg.py "Test $TEST:$count succeeded.  All tests passed"
+		else
+			python $BASE/logmsg.py "Test $TEST:$count failed.  Retrying"
+			echo TEST FAILED - SLEEPING AND RETRYING
+			sleep 3 # 60
+			python tmgr.py $EXAMPLES/$TEST/config/test.cfg "regression $RTEST-retry"
+			NFAIL=`grep -c FAILED $LOG_DIR/$TEST.$count.log`
+			if [ $NFAIL = $FAIL ]
+			then
+				echo "Test $TEST:$count succeeded on retry."
+				python $BASE/logmsg.py "Test $TEST:$count succeeded on retry."
+			fi
+		fi
+		
 		if [ $INTERACTIVE != '0' ]
 		then
 			echo; echo "************************"
-			echo enter mininext commands followed by control-d to exit
+			echo enter mininet commands followed by control-d to exit
 			echo; echo "************************"
 			while read in
 			do
@@ -147,23 +163,24 @@ do
 		fi
 
 		echo cleaning up processes and files
-		sudo killall python
+		(
+		sudo killall python 
 		sudo killall exabgp
 		sudo fuser -k 6633/tcp
 		python ~/iSDX/pctrl/clean_mongo.py
 		sudo rm -f ~/iSDX/xrs/ribs/*.db
-
+		) >/dev/null 2>&1
+		
 		if [ $INTERACTIVE = '0' ]
 		then
-			echo telling mininext to shutdown
+			echo telling mininet to shutdown
 			echo quit >$M0
 		fi
-		echo waiting for mininext to exit
 		wait $M_PID
 		rm -f $M0 $SYNC
 
-		echo cleaning up mininext
-		sudo mn -c
+		echo cleaning up mininet
+		sudo mn -c >/dev/null 2>&1
 		echo test done
 	
 	done
