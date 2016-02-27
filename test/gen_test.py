@@ -332,7 +332,7 @@ def main (argv):
     testcfg['regressions']['verbose'] = "l 'r x0" + r + "' 'e x1 x2 x3 x4 x5 x6' t"
     testcfg['regressions']['verbose-retry'] = "'r x0" + r + "' 'e x1 x2 x3 x4 x5 x6' t"
     testcfg['regressions']['terse'] = "l t"
-    testcfg['regressions']['terse-retry'] = "t"
+    testcfg['regressions']['terse-retry'] = "'r x0" + r + "' t"
     
     dst_file = 'test.cfg'
     dst_file = os.path.join(config_dir, dst_file)

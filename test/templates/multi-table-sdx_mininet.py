@@ -120,6 +120,7 @@ if __name__ == "__main__":
     if tnode_file is not None:
         tnodenames = []
         for h in config:
+            tnodenames.append(h)
             for nn in config[h]['netnames']:
                 tnodenames.append(nn)
         
@@ -131,7 +132,7 @@ if __name__ == "__main__":
     if argc > 3:
         semaphore_file = sys.argv[3]
         sync = open(semaphore_file, 'w')
-        sync.write("MININEXT READY\n")
+        sync.write("MININET READY\n")
         sync.close()
 
     CLI(net)

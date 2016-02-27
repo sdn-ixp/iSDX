@@ -203,7 +203,7 @@ def cmd_thread(conn):
             err = ''
         conn.sendall(out)
         conn.sendall(err)
-        conn.sendall(str(tokens))
+        # DEBUG conn.sendall(str(tokens))
         conn.close()
         return
     
