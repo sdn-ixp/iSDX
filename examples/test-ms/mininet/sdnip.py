@@ -9,6 +9,7 @@ from mininet.log import info, debug
 from mininet.cli import CLI
 from mininet.util import netParse, ipStr
 import imp, os, sys
+from time import sleep
 
 # Import the ONOS classes from onos.py in the ONOS repository
 #if not 'ONOS_ROOT' in os.environ:
@@ -121,6 +122,7 @@ class BgpRouter(Router):
 
         self.cmd('%s/zebra -d -f %s -z %s -i %s'
                  % (BgpRouter.binDir, self.zebraConfFile, self.socket, self.zebraPidFile))
+        sleep(1)
         self.cmd('%s/bgpd -d -f %s -z %s -i %s'
                  % (BgpRouter.binDir, self.quaggaConfFile, self.socket, self.quaggaPidFile))
 
