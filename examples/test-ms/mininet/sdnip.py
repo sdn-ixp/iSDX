@@ -8,12 +8,9 @@ from mininet.net import Mininet
 from mininet.log import info, debug
 from mininet.cli import CLI
 from mininet.util import netParse, ipStr
-<<<<<<< HEAD
 import imp, os, sys, time, socket
-=======
 import imp, os, sys
 from time import sleep
->>>>>>> 6763cc639d5673f0ae4592c76d46cdfc019f7a64
 
 # Import the ONOS classes from onos.py in the ONOS repository
 #if not 'ONOS_ROOT' in os.environ:
