@@ -37,7 +37,7 @@ $ vagrant up
 The provisioning scripts will install all the required software (and their dependencies) to run the SDX demo. Specifically it will install:
 * [Ryu](http://osrg.github.io/ryu/)
 * [Quagga](http://www.nongnu.org/quagga/)
-* [MiniNExT](https://github.com/USC-NSL/miniNExT/)
+* [Mininet](http://mininet.org/)
 * [Exabgp](https://github.com/Exa-Networks/exabgp)
 
 ## Usage
