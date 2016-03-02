@@ -8,7 +8,7 @@ from mininet.net import Mininet
 from mininet.log import info, debug
 from mininet.cli import CLI
 from mininet.util import netParse, ipStr
-import imp, os, sys
+import imp, os, sys, time, socket
 
 # Import the ONOS classes from onos.py in the ONOS repository
 #if not 'ONOS_ROOT' in os.environ:
@@ -121,6 +121,16 @@ class BgpRouter(Router):
 
         self.cmd('%s/zebra -d -f %s -z %s -i %s'
                  % (BgpRouter.binDir, self.zebraConfFile, self.socket, self.zebraPidFile))
+        while True:
+            try:
+                s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) # @UndefinedVariable
+                s.connect(self.socket)
+                #print 'connected - breaking'
+                break
+            except Exception, e:
+                #print' ERROR: ' + repr(e)
+                time.sleep(.1)
+        #print 'zebra ready'
         self.cmd('%s/bgpd -d -f %s -z %s -i %s'
                  % (BgpRouter.binDir, self.quaggaConfFile, self.socket, self.quaggaPidFile))
 
@@ -145,8 +155,8 @@ class BgpRouter(Router):
                 intfAttributes = intfAttributesList[1] if not intfAttributesList[0]['ipAddrs'] else intfAttributesList[0]
                 return intfAttributes['ipAddrs'][0].split('/')[0]
 
-        print("FDP %s" % getRouterId(self.intfDict))
-        print("  FDP %s" % str(self.intfDict))
+        #print("FDP %s" % getRouterId(self.intfDict))
+        #print("  FDP %s" % str(self.intfDict))
         writeLine(0, 'hostname %s' % self.name);
         writeLine(0, 'password %s' % 'sdnip')
         writeLine(0, 'log file /var/run/quagga/q_%s' % self.asNum)

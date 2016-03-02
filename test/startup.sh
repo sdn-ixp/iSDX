@@ -11,6 +11,8 @@ EXAMPLES=$BASE/examples
 
 # set to anything but 0 to run mininet in interactive mode - type control d continue
 INTERACTIVE=0
+STOPONERROR=0
+PAUSEONERROR=0
 
 # name of regression test to use by default
 RTEST=terse
@@ -33,8 +35,14 @@ do
    -i)
      INTERACTIVE=1
      ;;
+   -p)
+     PAUSEONERROR=1
+     ;;
+   -s)
+     STOPONERROR=1
+     ;;
    -*)
-     echo "Usage: $0 -n number_of_loops -t traffic_test_group_name test_name test_name ..." >&2
+     echo "Usage error.  Type just $0 for options" >&2
      exit 1
      ;;
    *)
@@ -47,8 +55,10 @@ done
 echo running regression $RTEST
 
 if [ "$#" -lt 1 ] ; then
-  echo "Usage: $0 -i -n number_of_loops -t traffic_test_group_name test_name test_name ..." >&2
+  echo "Usage: $0 -i -p -s -n number_of_loops -t traffic_test_group_name test_name test_name ..." >&2
   echo "    -i is for interactive commands to mininet after running tests" >&2
+  echo "    -p is for pause after any errors.  Type return to continue" >&2
+  echo "    -s is for stopping after any errors. Can be used with -p" >&2
   exit 1
 fi
 
@@ -142,12 +152,21 @@ do
 			python $BASE/logmsg.py "Test $TEST:$count failed.  Retrying"
 			echo TEST FAILED - SLEEPING AND RETRYING
 			sleep 3 # 60
-			python tmgr.py $EXAMPLES/$TEST/config/test.cfg "regression $RTEST-retry"
+			python tmgr.py $EXAMPLES/$TEST/config/test.cfg "regression verbose-retry"
 			NFAIL=`grep -c FAILED $LOG_DIR/$TEST.$count.log`
 			if [ $NFAIL = $FAIL ]
 			then
 				echo "Test $TEST:$count succeeded on retry."
 				python $BASE/logmsg.py "Test $TEST:$count succeeded on retry."
+			fi
+			if [ $PAUSEONERROR != '0' ]
+			then
+				echo "******************************* pausing until carriage return *************************"
+				read </dev/tty
+			fi
+			if [ $STOPONERROR != '0' ]
+			then
+				count=9999999		# terminates loop
 			fi
 		fi
 		
