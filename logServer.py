@@ -26,7 +26,7 @@ def getLogger(fname=None):
         fh.setFormatter(formatter)
         logger.addHandler(fh)
 
-    ch = logging.StreamHandler()
+    ch = logging.StreamHandler(stream=sys.stdout)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
