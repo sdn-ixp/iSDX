@@ -48,7 +48,7 @@ $ rm -f SDXLog.log
 $ python logServer.py SDXLog.log
 ```
 
-### Mininext
+### Mininet
 ```bash
 $ cd ~
 $ ./iSDX/launch.sh test-ms 2
@@ -57,13 +57,8 @@ $ ./iSDX/launch.sh test-ms 2
 This performs the following tasks:
 
 ```bash
-$ # the following gets around issues with vagrant direct mount
-$ sudo rm -rf ~/mini_rundir
-$ mkdir -p ~/mini_rundir
-$ cd ~/iSDX/examples/test-ms/mininext
-$ find configs | cpio -pdm ~/mini_rundir
 $ cd ~
-$ sudo ~/iSDX/examples/test-ms/mininext/sdx_mininext.py ~/mini_rundir/configs
+$ sudo python iSDX/examples/test-mt/mininet/simple_sdx.py
 ```
 
 ### Run everything else
@@ -139,29 +134,34 @@ Check if the route server has correctly advertised the routes
     150.0.0.0       172.0.1.4       255.255.255.0   UG    0      0        0 a1-eth0  
     172.0.0.0       0.0.0.0         255.255.0.0     U     0      0        0 a1-eth0  
 
-Testing the Policies
+### Test 1
 
-The participants have specified the following policies:  
+Outbound policy of a1: match(tcp_port=80) >> fwd(b1)
 
-_Participant A - outbound:_
+```bash
+mininext> h1_b1 iperf -s -B 140.0.0.1 -p 80 &  
+mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 80 -t 2
+```
 
-    match(dstport=80) >> fwd(B) + match(dstport=4321/4322) >> fwd(C)
+### Test 2
 
-_Participant C - inbound:_
+Outbound policy of a1: match(tcp_port=4321) >> fwd(c)
+and Inbound policy of c: match(tcp_port=4321) >> fwd(c1)
 
-    match(dstport = 4321) >>  fwd(C1) + match(dstport=4322) >> fwd(C2)
+```bash
+mininext> h1_c1 iperf -s -B 140.0.0.1 -p 4321 &
+mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4321 -t 2  
+```
 
-Starting the  `iperf` servers:  
+### Test 3 
 
-    mininext> h1_b1 iperf -s -B 140.0.0.1 -p 80 &  
-    mininext> h1_c1 iperf -s -B 140.0.0.1 -p 4321 &  
-    mininext> h1_c2 iperf -s -B 140.0.0.1 -p 4322 &  
+Outbound policy of a1: match(tcp_port=4322) >> fwd(c)
+and Inbound policy of c: match(tcp_port=4322) >> fwd(c2)
 
-Starting the  `iperf` clients:  
-
-    mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 80 -t 2  
-    mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4321 -t 2  
-    mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2  
+```bash
+mininext> h1_c2 iperf -s -B 140.0.0.1 -p 4322 &  
+mininext> h1_a1 iperf -c 140.0.0.1 -B 100.0.0.1 -p 4322 -t 2  
+```
 
 Successful `iperf` connections should look like this:  
 
