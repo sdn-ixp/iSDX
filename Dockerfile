@@ -81,4 +81,4 @@ RUN chmod 755 xrs/client.py xrs/route_server.py && \
 
 USER root
 WORKDIR /home/vagrant
-ENTRYPOINT service openvswitch-switch start && service mongodb start && su - vagrant
+ENTRYPOINT service openvswitch-switch start && su - vagrant
