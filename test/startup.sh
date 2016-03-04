@@ -99,7 +99,7 @@ do
 		
 		rm /var/run/quagga/*
 		cd $EXAMPLES/$TEST/mininet
-		cat <$M0 | ./sdx_mininet.py mininet.cfg $BASE/test/tnode.py $SYNC &
+		cat <$M0 | python ./sdx_mininet.py mininet.cfg $BASE/test/tnode.py $SYNC &
 		M_PID=$!
 		cat $SYNC
 		
@@ -110,7 +110,7 @@ do
 
 		echo starting xctrl
 		cd $BASE/xctrl/
-		./xctrl.py $EXAMPLES/$TEST/config/sdx_global.cfg
+		python ./xctrl.py $EXAMPLES/$TEST/config/sdx_global.cfg
 
 		echo starting arp proxy
 		cd $BASE/arproxy/
@@ -183,7 +183,7 @@ do
 
 		echo cleaning up processes and files
 		(
-		sudo killall python 
+		sudo killall python /usr/bin/python /usr/lib/quagga/bgpd /usr/lib/quagga/zebra
 		sudo killall exabgp
 		sudo fuser -k 6633/tcp
 		python ~/iSDX/pctrl/clean_mongo.py

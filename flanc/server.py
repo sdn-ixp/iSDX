@@ -25,7 +25,7 @@ class Server(object):
 
         self.refmon = refmon
         #self.listener = Listener((address, port), authkey=str(key))
-        self.listener = Listener((address, port))
+        self.listener = Listener((address, port), backlog=10)
 
     def start(self):
         self.receive = True
