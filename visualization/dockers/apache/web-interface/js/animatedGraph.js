@@ -103,6 +103,7 @@ var graph;
              .attr("viewBox", "0 -5 10 10")
              .attr("refX", 15)
              .attr("refY", -1.5)
+             .attr("markerUnits", "strokeWidth")
              .attr("markerWidth", 8)
              .attr("markerHeight", 8)
              .attr("orient", "auto")
@@ -123,7 +124,7 @@ var graph;
                        return d.source.id + "-" + d.target.id;
                    })
                    .attr("class", "link")
-                   .attr("stroke-width", "3px")
+                   .attr("stroke-width", "5px")
                    .attr("marker-end", "url(#end)")
                    .attr("stroke", function(d) { return d.color;})
                    .attr("fill", "none");
@@ -143,7 +144,7 @@ var graph;
                    .attr("class", "node")
                    .call(force.drag);
 
-           nodeEnter.append("svg:circle")
+          /* nodeEnter.append("svg:circle")
                    .attr("r", 12)
                    .attr("id", function (d) {
                        return "Node;" + d.id;
@@ -158,7 +159,7 @@ var graph;
                    .text(function (d) {
                        return d.id;
                    });
-
+                     */
            node.exit().remove();
 
            force.on("tick", function () {
@@ -274,7 +275,7 @@ var graph;
       graph.addNode('Router-A', 169, 470);
       graph.addNode('Main', 555, 389);
       graph.addNode('Outbound', 327, 127);
-      graph.addNode('InBound', 648, 142);
+      graph.addNode('Inbound', 648, 142);
       graph.addNode('ARP-Proxy', 953, 141);
       graph.addNode('Router-C1', 847, 471);
       graph.addNode('Router-C2', 874, 676);
@@ -315,7 +316,7 @@ var graph;
       var socket = io.connect(localStorage.getItem("nodejs"));
 
       socket.on('connect', function() {
-      	console.log("Node.js - Connected to Server");
+      	console.log("Node.js - Connected to Server animatedGraph");
       });
 
       socket.on('channel', function() {
@@ -323,7 +324,6 @@ var graph;
       });
 
       socket.on('message', function(message){
-      		//console.log("Node.js - " + JSON.stringify(message));
       		type = message.split("|")[0];
       		console.log(message);
 
@@ -332,6 +332,7 @@ var graph;
       			source = message.split("|")[1];
       			target = message.split("|")[2];
             weight = message.split("|")[3];
+            console.log(source,target);
             graph.removeLink(source, target);
             graph.addLink(source, target, weight);
             keepNodesOnTop();
