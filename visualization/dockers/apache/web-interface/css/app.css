@@ -1,0 +1,237 @@
+body {
+    font: 16px "Lato", sans-serif;
+    font-weight: 300;
+    color: #ffa500;
+    margin: 0px; padding: 0px;
+    background-image: url(../img/brushed.png);
+}
+a {
+    color: #000;
+    font-weight: bold;
+    text-decoration: none;
+}
+a:hover {
+    color: #666;
+}
+
+/* Header */
+.header {
+    margin-top:10px;
+    text-align: center;
+}
+.tagline {
+    margin: 0;
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 13px;
+}
+.interaction {
+    text-align: center;
+    font-size: 11px;
+    font-style: italic;
+}
+#product_title {
+    font-family: 'Josefin Slab',Helvetica, Arial, sans-serif;
+    font-size: 2em;
+    font-variant: small-caps;
+    text-transform: uppercase;
+    font-weight: 200;
+    color: #33a02c;
+}
+@media (min-width: 990px) {
+    #product_title{
+        font-size: 3em;
+    }
+    .tagline {
+        font-size: 11px;
+    }
+}
+.dark {
+    font-weight: 800;
+}
+
+/* Main Vizualization */
+#viz_panel {
+    width: 100%;
+    float: left;
+    margin-left: 1%;
+}
+#sunburst {
+    margin-left: 8%;
+}
+@media (min-width: 990px) {
+    #viz_panel {
+        width: 44%;
+        margin-left: 17%;
+    }
+    #sunburst {
+      margin-top: -12%;
+    }
+}
+
+/* Perspective Visualization */
+#perspective-sunburst {
+    display: none;
+}
+@media (min-width: 990px) {
+    #perspective-sunburst {
+        display: block;
+    }
+}
+
+/* Breadcrumb */
+#sequence {
+    margin-top: 1%;
+}
+#sequence text, #legend text {
+  font-weight: 600;
+  fill: #222;
+}
+
+/* MLVL Logo */
+#mlvl_logo {
+    position: absolute;
+    left: 1%;
+
+}
+.logo-img {
+    width: 60px;
+}
+
+/* About links */
+#about_link {
+    position: absolute;
+    right: 1%;
+    top: -0em;
+    text-align: center;
+    font-size: .8em;
+}
+.questionmk {
+    font-size: 1.5em;
+}
+@media (min-width: 990px) {
+    .logo-img {
+        width: 100px;
+    }
+    #about_link {
+        font-size: 1em;
+    }
+    .questionmk {
+        font-size: 3em;
+    }
+}
+@media (min-width: 990px) {
+    #perspective-sunburst {
+      margin-top: 12%;
+      margin-left: 16%;
+      float: left;
+    }
+}
+/* Footer */
+#footer {
+    width: 100%;
+}
+#chart_footer {
+    position: fixed;
+    bottom: 0;
+    width: 99%;
+    margin-right: 1em;
+}
+@media (min-width: 990px) {
+    #chart_footer {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        width: inherit;
+
+    }
+}
+#links {
+    display: block;
+    text-align: right;
+    height: 100%;
+    font-size: .8em;
+    padding: .5em;
+}
+#links a, #about_link a {
+    color: #33a02c;
+}
+#links a:hover, #about_link a:hover {
+    color: #666;
+}
+@media (min-width: 990px) {
+    #links {
+        font-size: .9em;
+    }
+}
+#dac_logo {
+    display: block;
+    z-index: 1000;
+    text-align: right;
+}
+#dac_logo img {
+    height: 60px;
+}
+
+@media (min-width: 990px) {
+    #dac_logo {
+        text-align: right;
+    }
+    #dac_logo img {
+        height: 60px;
+    }
+}
+
+/* Word size formatting */
+.w0, .w1 {
+    text-transform:uppercase;
+}
+.w0, .w1, .w2, .w3 {
+    font-weight:bold;
+}
+.sunburst.word {
+    font-size: .7em;
+}
+.sunburst.w0 {
+    font-size: 1.1em;
+}
+.sunburst.w1 {
+    font-size: .9em;
+}
+.sunburst.w2 {
+    font-size: .8em;
+}
+.sunburst.w3, .sunburst.w4, .sunburst.w5 {
+    font-size: .7em;
+}
+
+/* About */
+.about {
+    margin: auto;
+    max-width: 800px;
+    padding: 20px;
+    display: inherit;
+}
+
+.about > .header {
+    margin-bottom: 20px;
+}
+
+.h-link {
+    color: #33a02c;
+}
+
+.about > .footer {
+    text-align:center;
+    margin-top: 20px;
+    font-style: italic;
+    font-size: 12px;
+}
+
+.image-holder {
+    text-align: center;
+}
+
+.image-holder img {
+    width: 100%;
+}
