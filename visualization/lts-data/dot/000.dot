@@ -1,0 +1,72 @@
+digraph {
+      size = "100,100";
+      main, outbound, inbound, arp [shape=box];
+      { rank=min; inbound outbound ARPPXY ExaBGP}
+      { rank=same; A1 B1 C1 C2 } 
+      { rank=same; main arp }
+      /*
+      edge [style=dashed, dir=none]
+      main -> outbound;
+      main -> inbound;
+      inbound -> outbound;
+      arp -> main;
+      ARPPXY -> arp;
+      ExaBGP -> main;
+      A1 -> main;
+      B1 -> main;
+      C1 -> main;
+      C2 -> main;
+      edge [dir=forward]
+      */
+
+	// BGP flows
+      main -> ExaBGP [color=red,penwidth=2.0]
+      main -> A1 [color=red,penwidth=2.0]
+      main -> B1 [color=red,penwidth=2.0]
+      main -> C1 [color=red,penwidth=2.0]
+      main -> C2 [color=red,penwidth=2.0]
+
+      // ARP flows
+      main -> ExaBGP [style=invis]
+      main -> A1 [color=blue,penwidth=2.0]
+      main -> B1 [color=blue,penwidth=2.0]
+      main -> C1 [color=blue,penwidth=2.0]
+      main -> C2 [color=blue,penwidth=2.0]
+
+      // VMAC ARP flows
+      main -> A1 [color=lightblue]
+      main -> B1 [color=lightblue]
+      main -> C1 [color=lightblue]
+      main -> C2 [color=lightblue]
+
+      main -> arp [color=blue]
+      
+      arp -> ARPPXY [color=blue]
+
+      arp -> main [color=blue]
+
+      main -> outbound [color=black,penwidth=2.0,penwidth=4.0]
+      main -> C1 [color=green,penwidth=2.0,penwidth=4.0]
+      main -> C2 [color=green,penwidth=2.0,penwidth=4.0]
+      main -> A1 [color=green,penwidth=2.0,penwidth=4.0]
+      main -> B1 [color=green,penwidth=2.0,penwidth=4.0]
+
+      main -> outbound [style=invis]
+
+      outbound -> inbound [color=green,penwidth=2.0]
+
+      inbound -> main [style=invis]
+      inbound -> main [color=green,penwidth=2.0,penwidth=4.0]
+      inbound -> main [color=gold,penwidth=2.0,penwidth=4.0]
+      inbound -> main [color=gold4,penwidth=2.0,penwidth=4.0]
+
+      outbound -> inbound [color=cyan,penwidth=2.0,penwidth=4.0]
+      outbound -> inbound [color=gold,penwidth=2.0,penwidth=4.0]
+
+      A1 -> main [color=black,penwidth=2.0,penwidth=4.0]
+      B1 -> main [color=black,penwidth=2.0,penwidth=4.0]
+      C1 -> main [color=black,penwidth=2.0,penwidth=4.0]
+      C2 -> main [color=black,penwidth=2.0,penwidth=4.0]
+      ExaBGP -> main [color=black,penwidth=2.0,penwidth=4.0]
+      ARPPXY -> arp [color=black,penwidth=2.0]
+}
