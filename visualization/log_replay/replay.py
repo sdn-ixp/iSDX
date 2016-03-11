@@ -24,7 +24,7 @@ name_mapping = {
     "INBOUND_B1": "InBound",
     "INBOUND_C1": "InBound",
     "INBOUND_C2": "InBound",
-    "ARP": "ARP-Proxy",
+    "ARP": "ARPSwitch",
     "ARPPXY": "ARP-Proxy",
     "BGP": "BGP-Proxy",
     "BGP_ARP": "BGP-Proxy",
@@ -54,7 +54,7 @@ name_mapping = {
 traffic_mapping = {
     "bgp": "bgp",
     "arp": "arp",
-    "arp_v": "arp",
+    "arp_v": "arp_v",
     "default": "default",
     "default_v": "default",
     "b1_v": "b1",
@@ -62,11 +62,16 @@ traffic_mapping = {
     "c2_v": "c2",
 }
 
+no_stats = [
+    "bad",
+]
+
 
 class LogReplay(object):
-    def __init__(self, log_history, publisher, time_step=1):
+    def __init__(self, log_history, publisher, time_step=1, debug=False):
         self.logger = logging.getLogger("LogReplay")
-        self.logger.setLevel(logging.DEBUG)
+        if debug:
+            self.logger.setLevel(logging.DEBUG)
 
         self.log_history = log_history
         self.time_step = time_step
@@ -85,7 +90,7 @@ class LogReplay(object):
             for d in data:
                 message = "|".join(d)
                 self.logger.debug(message)
-                #self.publisher.publish(message)
+                self.publisher.publish(message)
 
             sleep_time = self.time_step - time.time() + start_time
             if sleep_time < 0:
@@ -99,16 +104,21 @@ class LogReplay(object):
 
 
 class LogHistory(object):
-    def __init__(self, config, flows_dir, ports_dir, num_timesteps):
+    def __init__(self, config, flows_dir, ports_dir, num_timesteps, debug=False):
+        self.logger = logging.getLogger("LogHistory")
+        if debug:
+            self.logger.setLevel(logging.DEBUG)
+
         self.log_entry = namedtuple("LogEntry", "source destination type")
-        self.ports = dict()
-        self.flows = dict()
+        self.ports = defaultdict(list)
+        self.flows = defaultdict(list)
 
         self.data = defaultdict(lambda: defaultdict(int))
         self.current_timestep = 0
 
         self.parse_config(config)
         self.parse_logs(num_timesteps, flows_dir, ports_dir)
+        self.info()
 
     def parse_config(self, config):
         with open(config, 'r') as infile:
@@ -127,12 +137,12 @@ class LogHistory(object):
                     # Format: PORT_<dpid>_<port>
                     dpid = int(data[3].split("_")[1])
                     port = int(data[3].split("_")[2])
-                    self.ports[(dpid, port)] = self.log_entry(from_node, to_node, traffic_type)
+                    self.ports[(dpid, port)].append(self.log_entry(from_node, to_node, traffic_type))
                 else:
                     # Format: <cookie>,<cookie>,...,<cookie>
                     cookies = [int(x) for x in data[3].split(",")]
                     for cookie in cookies:
-                        self.flows[cookie] = self.log_entry(from_node, to_node, traffic_type)
+                        self.flows[cookie].append(self.log_entry(from_node, to_node, traffic_type))
 
     def parse_logs(self, num_timesteps, flows_dir, ports_dir):
         for i in range(0, num_timesteps):
@@ -155,9 +165,10 @@ class LogHistory(object):
                 byte_count = int(data[-1])
 
                 if cookie in self.flows:
-                    entry_label = self.flows[cookie]
+                    entry_labels = self.flows[cookie]
 
-                    self.data[entry_label][step] += byte_count
+                    for entry_label in entry_labels:
+                        self.data[entry_label][step] += byte_count
 
     def parse_port_log(self, file, step):
         with open(file, 'r') as infile:
@@ -168,10 +179,11 @@ class LogHistory(object):
                 port = int(data[3]) if data[3].isdigit() else -1
                 byte_count = int(data[-1])
 
-                if (dpid, port) in self.flows:
-                    entry_label = self.ports[(dpid, port)]
+                if (dpid, port) in self.ports:
+                    entry_labels = self.ports[(dpid, port)]
 
-                    self.data[entry_label][step] += byte_count
+                    for entry_label in entry_labels:
+                        self.data[entry_label][step] += byte_count
 
     def next_values(self, step=1):
         data = list()
@@ -183,10 +195,11 @@ class LogHistory(object):
             type = str(key.type)
             value = str(values[self.current_timestep + step] - values[self.current_timestep])
 
-            data.append((source,
-                         destination,
-                         type,
-                         value))
+            if not (source in no_stats or destination in no_stats):
+                data.append((source,
+                             destination,
+                             type,
+                             value))
 
         self.current_timestep += step
 
@@ -199,6 +212,26 @@ class LogHistory(object):
             for i in range(0, max_length):
                 if i not in values:
                     values[i] = values[i - 1]
+
+    def info(self):
+        # data sources
+        info_message = "data sources: got " + str(len(self.flows)) + " flows and " + str(len(self.ports)) + " ports, "
+        debug_message = "data sources\n"
+        for key, value in self.flows.iteritems():
+            debug_message += str(key) + " " + str(value) + "\n"
+        for key, value in self.ports.iteritems():
+            debug_message += str(key) + " " + str(value) + "\n"
+
+        # edges in the graph
+        max_length = max([len(values) for values in self.data.values()])
+        info_message += "graph edges: got " + str(len(self.data)) + " edges with " + str(max_length) + " values each"
+
+        debug_message += "\ngraph edges\n"
+        for key, values in self.data.iteritems():
+            debug_message += str(key) + " with " + str(len(values)) + " values\n"
+
+        self.logger.info(info_message)
+        self.logger.debug(debug_message)
 
 
 class Publisher(object):
@@ -213,7 +246,7 @@ class Publisher(object):
 def main(argv):
     logging.basicConfig(level=logging.INFO)
 
-    log_history = LogHistory(argv.config, argv.flow_dir, argv.port_dir, int(argv.num_steps))
+    log_history = LogHistory(argv.config, argv.flow_dir, argv.port_dir, int(argv.num_steps), debug=False)
 
     channel = "sdx_stats"
     address = "192.168.99.100"
@@ -222,7 +255,7 @@ def main(argv):
 
     publisher = Publisher(channel, address, port, db)
 
-    log_replay = LogReplay(log_history, publisher, 1)
+    log_replay = LogReplay(log_history, publisher, int(argv.timestep), debug=False)
 
     # start replay
     replay_thread = Thread(target=log_replay.start)
@@ -233,7 +266,7 @@ def main(argv):
         try:
             replay_thread.join(1)
         except KeyboardInterrupt:
-            replay_thread.stop()
+            log_replay.stop()
 
 ''' main '''
 if __name__ == '__main__':
@@ -242,7 +275,8 @@ if __name__ == '__main__':
     parser.add_argument('config', help='path of config file')
     parser.add_argument('flow_dir', help='path of flow stats')
     parser.add_argument('port_dir', help='path of port stats')
-    parser.add_argument('num_steps', help='number of timesteps')
+    parser.add_argument('num_steps', help='number of steps')
+    parser.add_argument('timestep', help='time step')
     args = parser.parse_args()
 
     main(args)
