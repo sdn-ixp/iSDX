@@ -21,6 +21,9 @@ name_mapping = {
     "OUTBOUND4IN": "Outbound",
     "INBOUND": "InBound",
     "INBOUND_DFLT": "InBound",
+    "INBOUND_B1": "InBound",
+    "INBOUND_C1": "InBound",
+    "INBOUND_C2": "InBound",
     "ARP": "ARP-Proxy",
     "ARPPXY": "ARP-Proxy",
     "BGP": "BGP-Proxy",
@@ -67,7 +70,7 @@ class LogReplay(object):
 
         self.log_history = log_history
         self.time_step = time_step
-        #self.publisher = publisher
+        self.publisher = publisher
 
         self.run = False
 
@@ -82,9 +85,12 @@ class LogReplay(object):
             for d in data:
                 message = "|".join(d)
                 self.logger.debug(message)
-                self.publisher.publish(message)
+                #self.publisher.publish(message)
 
-            sleep_time = time.time() - start_time
+            sleep_time = self.time_step - time.time() + start_time
+            if sleep_time < 0:
+                sleep_time = 0
+                self.logger.debug("processing took longer than the time step")
             self.logger.info("sleep for " + str(sleep_time) + "s")
             time.sleep(sleep_time)
 
@@ -98,7 +104,7 @@ class LogHistory(object):
         self.ports = dict()
         self.flows = dict()
 
-        self.data = defaultdict(list)
+        self.data = defaultdict(lambda: defaultdict(int))
         self.current_timestep = 0
 
         self.parse_config(config)
@@ -112,7 +118,7 @@ class LogHistory(object):
                     continue
 
                 # build data structure which we can use to assign the logs to the correct edge and traffic type
-                data = line.split("\t")
+                data = line.split()
                 from_node = name_mapping[data[0]]
                 to_node = name_mapping[data[1]]
                 traffic_type = traffic_mapping[data[2]]
@@ -124,8 +130,6 @@ class LogHistory(object):
                     self.ports[(dpid, port)] = self.log_entry(from_node, to_node, traffic_type)
                 else:
                     # Format: <cookie>,<cookie>,...,<cookie>
-                    print str(line)
-                    print str(data[3])
                     cookies = [int(x) for x in data[3].split(",")]
                     for cookie in cookies:
                         self.flows[cookie] = self.log_entry(from_node, to_node, traffic_type)
@@ -140,43 +144,44 @@ class LogHistory(object):
             port_file = ports_dir + "/" + file_name + ".ports"
             self.parse_port_log(port_file, i)
 
+        # add missing values
+        self.clean_logs()
+
     def parse_flow_log(self, file, step):
         with open(file, 'r') as infile:
             for line in infile:
-                data = line.split(" ")
+                data = line.split()
                 cookie = int(data[0])
                 byte_count = int(data[-1])
 
-                entry_label = self.flows[cookie]
+                if cookie in self.flows:
+                    entry_label = self.flows[cookie]
 
-                if len(self.data[entry_label]) == step + 1:
                     self.data[entry_label][step] += byte_count
-                else:
-                    self.data[entry_label].append(byte_count)
 
     def parse_port_log(self, file, step):
         with open(file, 'r') as infile:
             for line in infile:
-                data = line.split(" ")
-                dpid = int(''.join(c for c in data[0] if c.isdigit()))
+                data = line.split()
+
+                dpid = int(''.join(c for c in data[1] if c.isdigit()))
                 port = int(data[3]) if data[3].isdigit() else -1
                 byte_count = int(data[-1])
 
-                entry_label = self.ports[(dpid, port)]
+                if (dpid, port) in self.flows:
+                    entry_label = self.ports[(dpid, port)]
 
-                if len(self.data[entry_label]) == step + 1:
                     self.data[entry_label][step] += byte_count
-                else:
-                    self.data[entry_label].append(byte_count)
 
     def next_values(self, step=1):
         data = list()
 
-        for key, value in self.data.iteritems():
+        for key, values in self.data.iteritems():
+
             source = str(key.source)
             destination = str(key.destination)
             type = str(key.type)
-            value = str(value[self.current_timestep + step] - value[self.current_timestep])
+            value = str(values[self.current_timestep + step] - values[self.current_timestep])
 
             data.append((source,
                          destination,
@@ -186,6 +191,14 @@ class LogHistory(object):
         self.current_timestep += step
 
         return data
+
+    def clean_logs(self):
+        max_length = max([len(values) for values in self.data.values()])
+
+        for key, values in self.data.iteritems():
+            for i in range(0, max_length):
+                if i not in values:
+                    values[i] = values[i - 1]
 
 
 class Publisher(object):
@@ -198,7 +211,9 @@ class Publisher(object):
 
 
 def main(argv):
-    log_history = LogHistory(argv.config, argv.flow_dir, argv.port_dir, argv.num_steps)
+    logging.basicConfig(level=logging.INFO)
+
+    log_history = LogHistory(argv.config, argv.flow_dir, argv.port_dir, int(argv.num_steps))
 
     channel = "sdx_stats"
     address = "192.168.99.100"
