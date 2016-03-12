@@ -233,7 +233,7 @@ class LogHistory(object):
                             value = values[self.current_timestep + step] - values[self.current_timestep]
 
                             if value < 0:
-                                self.logger.info("negative value (" + value + ") for " +
+                                self.logger.info("negative value (" + str(value) + ") for " +
                                                  source + "-" + destination + "-" + traffic_type +
                                                  " at step " + str(self.current_timestep + step))
                                 value = math.fabs(value)
