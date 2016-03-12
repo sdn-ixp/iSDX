@@ -1,22 +1,40 @@
-<?php
-error_reporting(E_ALL);
-
-function doSomething() {
-    echo 'Guess this is working';
-}
-function doSomething2() {
-    echo 'Guess this is working2';
-}
-if(count($_POST) > 0 && isset($_POST['execfunction'])) {
-    doSomething();
-}
-if(count($_POST) > 0 && isset($_POST['execfunction2'])) {
-    doSomething2();
-}
-?>
 <!DOCTYPE html>
 <html lang="en" class="no-js">
 <style>
+path.link {
+  fill: none;
+  stroke: #666;
+}
+
+marker#licensing {
+  fill: green;
+}
+
+path.link.licensing {
+  stroke: green;
+}
+
+path.link.resolved {
+  stroke-dasharray: 0,2 1;
+}
+
+circle {
+  fill: #ccc;
+  stroke: #333;
+  stroke-width: 1.5px;
+}
+
+text {
+  font: 10px sans-serif;
+  pointer-events: none;
+}
+
+text.shadow {
+  stroke: #fff;
+  stroke-width: 3px;
+  stroke-opacity: .8;
+}
+
 text.mono {
 	font-size: 9pt;
 	font-family: Consolas, courier;
@@ -562,18 +580,6 @@ circle:hover + g.tooltip.css {
 				</td>
 						</tr>
 						<tr>
-				<td>
-					<div class="widgetc content-box-gray">
-								<div class="wtitle"> Paths</div>
-
-								<div class="content">
-                  <form method="post" action="<?php echo $_SERVER['PHP_SELF']; ?>">
-                      <button type="button" onclick="doSomething()">Execute</button>
-                      <button type="button" onclick="doSomething2()">Execute2</button>
-                  </form>
-				</div>
-			</div>
-				</td>
 				</tr>
 			</table>
 				</td>

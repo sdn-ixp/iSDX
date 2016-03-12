@@ -24,9 +24,11 @@ var graph;
 
        this.removeLink = function (source, target) {
            for (var i = 0; i < links.length; i++) {
+             console.log("removing: " , links[i].source.id , " ", links[i].target.id);
                if (links[i].source.id == source && links[i].target.id == target) {
+                   console.log("removing: " , links[i].source.id , " ", links[i].target.id);
                    links.splice(i, 1);
-                   break;
+                   console.log(links, i);
                }
            }
            update();
@@ -73,66 +75,46 @@ var graph;
        var vis = d3.select("#graphLink")
                .append("svg:svg")
                .attr("width", w)
-               .attr("height", h)
-               .attr("id", "svg")
-               .attr("pointer-events", "all")
-               .attr("viewBox", "0 0 " + w + " " + h)
-               .attr("perserveAspectRatio", "xMinYMid")
-               .append('svg:g');
+               .attr("height", h);
+               // Per-type markers, as they don't inherit styles.
+        vis.append("svg:defs").selectAll("marker")
+        .data(["suit", "licensing", "resolved"])
+          .enter().append("svg:marker")
+            .attr("id", String)
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 5)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+          .append("svg:path")
+            .attr("d", "M0,-5L10,0L0,5");
+
+       var vis = vis.append("svg:g");
 
        var force = d3.layout.force();
 
        var nodes = force.nodes(),
-               links = force.links();
+           links = force.links();
 
        var update = function () {
 
-         var defs = vis.selectAll("defs")
-               .data(links, function (d) {
-                   return d.source.id + "-" + d.target.id;
-               });
-          var marker = defs.enter().append("svg:defs")
-              .attr("id", function (d) {
-                        return d.source.id + "-" + d.target.id;
-                    })
-              .selectAll("marker")
-             .data(["end"]) ;     // Different link/path types can be defined here
 
-           marker.enter().append("svg:marker")    // This section adds in the arrows
-             .attr("id", String)
-             .attr("viewBox", "0 -5 10 10")
-             .attr("refX", 15)
-             .attr("refY", -1.5)
-             .attr("markerUnits", "strokeWidth")
-             .attr("markerWidth", 8)
-             .attr("markerHeight", 8)
-             .attr("orient", "auto")
-             .attr("fill", function(d) { return "#e5e500";})
-           .append("svg:path")
-             .attr("d", "M0,-5L10,0L0,5");
-
-            //marker.exit().remove();
-
-            var link = vis.append("svg:g").selectAll("path")
+            var link = vis.selectAll("path")
                     .data(links, function (d) {
-                        return d.source.id + "-" + d.target.id;
+                        return d.source.id + "_" + d.target.id;
                     });
 
 
            link.enter().append("svg:path")
                    .attr("id", function (d) {
-                       return d.source.id + "-" + d.target.id;
+                       return d.source.id + "_" + d.target.id;
                    })
                    .attr("class", "link")
-                   .attr("stroke-width", "5px")
-                   .attr("marker-end", "url(#end)")
+                   .attr("stroke-width", function(d) { return Math.sqrt(d.value); })
+                   .attr("marker-end", function(d) { return "url(#licensing)"; })
                    .attr("stroke", function(d) { return d.color;})
                    .attr("fill", "none");
 
-           link.append("title")
-                   .text(function (d) {
-                       return d.value;
-                   });
            link.exit().remove();
 
            var node = vis.selectAll("g.node")
