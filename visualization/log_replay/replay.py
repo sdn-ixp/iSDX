@@ -6,6 +6,7 @@ import argparse
 import logging
 import time
 import redis
+import math
 
 from collections import namedtuple, defaultdict
 from threading import Thread
@@ -24,7 +25,7 @@ name_mapping = {
     "INBOUND_B1": "InBound",
     "INBOUND_C1": "InBound",
     "INBOUND_C2": "InBound",
-    "ARP": "ARPSwitch",
+    "ARP": "Main",
     "ARPPXY": "ARP-Proxy",
     "BGP": "BGP-Proxy",
     "BGP_ARP": "BGP-Proxy",
@@ -62,9 +63,36 @@ traffic_mapping = {
     "c2_v": "c2",
 }
 
-no_stats = [
-    "bad",
-]
+messages = {
+    "network_graph": {
+        "type": "difference",
+        "values": [("Outbound", "Main", []),
+                   ("Main", "Outbound", []),
+                   ("InBound", "Main", []),
+                   ("Main", "InBound", []),
+                   ("Main", "Router-A", []),
+                   ("Router-A", "Main", []),
+                   ("Main", "Router-B", []),
+                   ("Router-B", "Main", []),
+                   ("Main", "Router-C1", []),
+                   ("Router-C1", "Main", []),
+                   ("Main", "Router-C2", []),
+                   ("Router-C2", "Main", []),
+                   ("Main", "ARP-Proxy", []),
+                   ("ARP-Proxy", "Main", []),
+                   ("Main", "BGP-Proxy", []),
+                   ("BGP-Proxy", "Main", []),
+                   ("Outbound", "InBound", []),
+                   ("InBound", "Outbound", []),
+                   ],
+    },
+    "time_series": {
+        "type": "total",
+        "values": [("Main", "Router-B", ["default"]),
+                   ("Main", "Router-C1", ["default"]),
+                   ("Main", "Router-C2", ["default"])],
+    },
+}
 
 
 class LogReplay(object):
@@ -90,7 +118,7 @@ class LogReplay(object):
             for d in data:
                 message = "|".join(d)
                 self.logger.debug(message)
-                self.publisher.publish(message)
+                #self.publisher.publish(message)
 
             sleep_time = self.time_step - time.time() + start_time
             if sleep_time < 0:
@@ -113,8 +141,9 @@ class LogHistory(object):
         self.ports = defaultdict(list)
         self.flows = defaultdict(list)
 
-        self.data = defaultdict(lambda: defaultdict(int))
+        self.data = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
         self.current_timestep = 0
+        self.total_timesteps = num_timesteps
 
         self.parse_config(config)
         self.parse_logs(num_timesteps, flows_dir, ports_dir)
@@ -168,7 +197,7 @@ class LogHistory(object):
                     entry_labels = self.flows[cookie]
 
                     for entry_label in entry_labels:
-                        self.data[entry_label][step] += byte_count
+                        self.data[(entry_label.source, entry_label.destination)][entry_label.type][step] += byte_count
 
     def parse_port_log(self, file, step):
         with open(file, 'r') as infile:
@@ -183,35 +212,58 @@ class LogHistory(object):
                     entry_labels = self.ports[(dpid, port)]
 
                     for entry_label in entry_labels:
-                        self.data[entry_label][step] += byte_count
+                        self.data[(entry_label.source, entry_label.destination)][entry_label.type][step] += byte_count
 
     def next_values(self, step=1):
         data = list()
 
-        for key, values in self.data.iteritems():
+        for message_type, settings in messages.iteritems():
+            label = str(message_type)
 
-            source = str(key.source)
-            destination = str(key.destination)
-            type = str(key.type)
-            value = str(values[self.current_timestep + step] - values[self.current_timestep])
+            for message in settings["values"]:
 
-            if not (source in no_stats or destination in no_stats):
-                data.append((source,
-                             destination,
-                             type,
-                             value))
+                source = str(message[0])
+                destination = str(message[1])
+                traffic_types = message[2]
+
+                for traffic_type, values in self.data[(source, destination)].iteritems():
+                    if not traffic_types or traffic_type in traffic_types:
+                        type = str(traffic_type)
+                        if settings["type"] == "difference":
+                            value = values[self.current_timestep + step] - values[self.current_timestep]
+
+                            if value < 0:
+                                self.logger.info("negative value (" + value + ") for " +
+                                                 source + "-" + destination + "-" + traffic_type +
+                                                 " at step " + str(self.current_timestep + step))
+                                value = math.fabs(value)
+
+                            value = str(value)
+                        elif settings["type"] == "total":
+                            value = str(values[self.current_timestep + step])
+
+                        data.append((label,
+                                     source,
+                                     destination,
+                                     type,
+                                     value))
 
         self.current_timestep += step
 
         return data
 
     def clean_logs(self):
-        max_length = max([len(values) for values in self.data.values()])
+        lengths = []
+        for edge, data in self.data.iteritems():
+            for type, values in data.iteritems():
+                lengths.append(len(values))
+        max_length = max(lengths)
 
-        for key, values in self.data.iteritems():
-            for i in range(0, max_length):
-                if i not in values:
-                    values[i] = values[i - 1]
+        for edge, data in self.data.iteritems():
+            for type, values in data.iteritems():
+                for i in range(0, max_length):
+                    if i not in values:
+                        values[i] = values[i - 1]
 
     def info(self):
         # data sources
