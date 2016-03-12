@@ -236,7 +236,7 @@ class LogHistory(object):
                                 self.logger.info("negative value (" + str(value) + ") for " +
                                                  source + "-" + destination + "-" + traffic_type +
                                                  " at step " + str(self.current_timestep + step))
-                                value = math.fabs(value)
+                                value = 0
 
                             value = str(value)
                         elif settings["type"] == "total":
