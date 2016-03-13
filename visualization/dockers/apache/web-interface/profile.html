@@ -1,20 +1,30 @@
 <!DOCTYPE html>
 <html lang="en" class="no-js">
 <style>
-path.link {
-  fill: none;
-  stroke: #666;
+
+marker#bgp {
+  fill: red;
 }
 
-marker#licensing {
-  fill: green;
+marker#arp {
+  fill: blue;
 }
 
-path.link.licensing {
-  stroke: green;
+marker#default {
+  fill: black;
 }
 
-path.link.resolved {
+path.link.arp {
+  stroke: blue;
+  stroke-dasharray: 0,2 1;
+}
+
+path.link.default {
+  stroke: black;
+}
+
+path.link.bgp {
+  stroke: red;
   stroke-dasharray: 0,2 1;
 }
 
@@ -197,6 +207,9 @@ div, span, p, td {
 	left: 8px;
 }
 
+.path {
+  stroke-width: 3px;
+}
 .chart-gauge {
   width: 400px;
   margin: 100px auto;

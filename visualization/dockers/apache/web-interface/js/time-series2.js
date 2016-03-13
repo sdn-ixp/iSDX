@@ -267,7 +267,7 @@ var throughput = new Rickshaw.Graph({
     stroke: true,
   	preserve: true,
     series: new Rickshaw.SeriesXDateTime.FixedDurationMovable([{
-        name: 'B', color: '#00FFFF', scale: s1
+        name: 'Router-B', color: '#000000', scale: s1
     }], undefined, {
         timeInterval: tv,
         maxDataPoints: 20,
@@ -333,7 +333,7 @@ function cpuProcessor(response) {
         addCPUData(throughput, arr[i].ts);
     }
 		throughput.render();
-		previewXAxis.render();
+//		previewXAxis.render();
 		xAxis.render();
 		yAxis.render();
 }
@@ -358,7 +358,7 @@ function addCPUData(chart, ts) {
       lastCPUTS_sec = currentTS_sec;
     }
 }
-
+/*
 var preview = new Rickshaw.Graph.RangeSlider.Preview( {
 	graph: throughput,
 	element: document.getElementById('preview2')
@@ -371,7 +371,7 @@ var previewXAxis = new Rickshaw.Graph.Axis.Time({
 });
 
 previewXAxis.render();
-
+*/
 var socket = io.connect(localStorage.getItem("nodejs"));
 
 socket.on('connect', function() {
@@ -385,21 +385,26 @@ socket.on('channel', function() {
 socket.on('message', function(message){
 		//console.log("Node.js - " + JSON.stringify(message));
 		type = message.split("|")[0];
+		source = message.split("|")[1];
+		graph = message.split("|")[2];
+		type2 = message.split("|")[3];
 		console.log(message);
-
-		if(type == "B")
+		if(type == "time_series" && graph == "Router-B")
 		{
-			ts = message.split("|")[1];
-			B = message.split("|")[2];
-			spb = message.split("|")[3];
-			hspa[ts] = B;
+			B = message.split("|")[4];
+			value = (B*1500)/1000000000;
+			var now = new Date;
+			var ts = now.getUTCFullYear()+"-"+now.getUTCMonth()+"-"+now.getUTCDate()+" "+ now.getUTCHours() + ":" + now.getUTCMinutes() +":" + now.getUTCSeconds();
+			console.log("plot: ",ts, value)
+			hspa[ts] = value;
 			addCPUData(throughput, ts);
 			throughput.render();
-			previewXAxis.render();
+			//previewXAxis.render();
 			xAxis.render();
 			yAxis.render();
 		}
 }) ;
+
 
 socket.on('disconnect', function() {
 		console.log('disconnected');

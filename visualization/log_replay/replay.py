@@ -11,6 +11,13 @@ import math
 from collections import namedtuple, defaultdict
 from threading import Thread
 
+def pretty(d, indent=0):
+   for key, value in d.iteritems():
+      print '\t' * indent + str(key)
+      if isinstance(value, dict):
+         pretty(value, indent+1)
+      else:
+         print '\t' * (indent+1) + str(value)
 
 name_mapping = {
     "MAIN": "Main",
@@ -55,12 +62,12 @@ name_mapping = {
 traffic_mapping = {
     "bgp": "bgp",
     "arp": "arp",
-    "arp_v": "arp_v",
+    "arp_v": "arp",
     "default": "default",
     "default_v": "default",
-    "b1_v": "b1",
-    "c1_v": "c1",
-    "c2_v": "c2",
+    "b1_v": "default",
+    "c1_v": "default",
+    "c2_v": "default",
 }
 
 messages = {
@@ -78,16 +85,16 @@ messages = {
                    ("Router-C1", "Main", []),
                    ("Main", "Router-C2", []),
                    ("Router-C2", "Main", []),
-                   ("Main", "ARP-Proxy", []),
-                   ("ARP-Proxy", "Main", []),
-                   ("Main", "BGP-Proxy", []),
-                   ("BGP-Proxy", "Main", []),
+                   ("Main", "ARP-Proxy", ["arp"]),
+                   ("ARP-Proxy", "Main", ["arp"]),
+                   ("Main", "BGP-Proxy", ["bgp"]),
+                   ("BGP-Proxy", "Main", ["bgp"]),
                    ("Outbound", "InBound", []),
                    ("InBound", "Outbound", []),
                    ],
     },
     "time_series": {
-        "type": "total",
+        "type": "difference",
         "values": [("Main", "Router-B", ["default"]),
                    ("Main", "Router-C1", ["default"]),
                    ("Main", "Router-C2", ["default"])],
@@ -116,9 +123,9 @@ class LogReplay(object):
 
             # publish data
             for d in data:
-                message = "|".join(d)
-                self.logger.debug(message)
-                #self.publisher.publish(message)
+        		message = "|".join(d)
+        		self.logger.debug(message)
+        		self.publisher.publish(message)
 
             sleep_time = self.time_step - time.time() + start_time
             if sleep_time < 0:
@@ -148,6 +155,9 @@ class LogHistory(object):
         self.parse_config(config)
         self.parse_logs(num_timesteps, flows_dir, ports_dir)
         self.info()
+
+        pretty(self.data)
+
 
     def parse_config(self, config):
         with open(config, 'r') as infile:
@@ -216,7 +226,7 @@ class LogHistory(object):
 
     def next_values(self, step=1):
         data = list()
-
+        self.logger.info("Current Step: "+ str(self.current_timestep))
         for message_type, settings in messages.iteritems():
             label = str(message_type)
 
@@ -287,8 +297,8 @@ class LogHistory(object):
 
 
 class Publisher(object):
-    def __init__(self, channel, address, port, db):
-        self.redis_client = redis.StrictRedis(host=address, port=port, db=db)
+    def __init__(self, channel, address, port):
+        self.redis_client = redis.StrictRedis(host=address, port=port)
         self.channel = channel
 
     def publish(self, message):
@@ -298,16 +308,16 @@ class Publisher(object):
 def main(argv):
     logging.basicConfig(level=logging.INFO)
 
-    log_history = LogHistory(argv.config, argv.flow_dir, argv.port_dir, int(argv.num_steps), debug=False)
+    log_history = LogHistory(argv.config, argv.flow_dir, argv.port_dir, int(argv.num_steps), debug=True)
 
     channel = "sdx_stats"
     address = "192.168.99.100"
     port = 6379
     db = 0
 
-    publisher = Publisher(channel, address, port, db)
+    publisher = Publisher(channel, address, port)
 
-    log_replay = LogReplay(log_history, publisher, int(argv.timestep), debug=False)
+    log_replay = LogReplay(log_history, publisher, int(argv.timestep), debug=True)
 
     # start replay
     replay_thread = Thread(target=log_replay.start)

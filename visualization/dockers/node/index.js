@@ -23,7 +23,7 @@ socket.on('connection', function(client) {
         var subscribe2 = redis.createClient('6379', 'redis');
 
         subscribe1.subscribe('stats'); //    listen to messages from channel pubsub
-        subscribe2.subscribe('bandwidth'); //    listen to messages from channel pubsub
+        subscribe2.subscribe('sdx_stats'); //    listen to messages from channel pubsub
 
         subscribe1.on("message", function(channel, message) {
             console.log(message);   // Debug output

@@ -22,10 +22,11 @@ var graph;
            update();
        };
 
-       this.removeLink = function (source, target) {
+       this.removeLink = function (source, target, type) {
+           console.log(links);
            for (var i = 0; i < links.length; i++) {
              console.log("removing: " , links[i].source.id , " ", links[i].target.id);
-               if (links[i].source.id == source && links[i].target.id == target) {
+               if (links[i].source.id == source && links[i].target.id == target && links[i].type == type) {
                    console.log("removing: " , links[i].source.id , " ", links[i].target.id);
                    links.splice(i, 1);
                    console.log(links, i);
@@ -44,9 +45,10 @@ var graph;
            update();
        };
 
-       this.addLink = function (source, target, value) {
-          var color_map = lookup(value);
-           links.push({"source": findNode(source), "target": findNode(target), "value": value, "color": color_map});
+       this.addLink = function (source, target, type, value) {
+          var color_map = lookup(type);
+          var size = lookupSize(parseInt(value));
+           links.push({"source": findNode(source), "target": findNode(target), "value": value, "color": color_map, "type": type, "size": size});
            update();
        };
 
@@ -78,7 +80,7 @@ var graph;
                .attr("height", h);
                // Per-type markers, as they don't inherit styles.
         vis.append("svg:defs").selectAll("marker")
-        .data(["suit", "licensing", "resolved"])
+        .data(["bgp", "arp", "default"])
           .enter().append("svg:marker")
             .attr("id", String)
             .attr("viewBox", "0 -5 10 10")
@@ -88,6 +90,7 @@ var graph;
             .attr("orient", "auto")
           .append("svg:path")
             .attr("d", "M0,-5L10,0L0,5");
+
 
        var vis = vis.append("svg:g");
 
@@ -110,12 +113,14 @@ var graph;
                        return d.source.id + "_" + d.target.id;
                    })
                    .attr("class", "link")
-                   .attr("stroke-width", function(d) { return Math.sqrt(d.value); })
-                   .attr("marker-end", function(d) { return "url(#licensing)"; })
+                   .attr("stroke-width", function(d) { return d.size; })
+                   .attr("marker-end", function(d) { return "url(#" + d.type + ")"; })
                    .attr("stroke", function(d) { return d.color;})
                    .attr("fill", "none");
 
            link.exit().remove();
+
+
 
            var node = vis.selectAll("g.node")
                    .data(nodes, function (d) {
@@ -126,22 +131,6 @@ var graph;
                    .attr("class", "node")
                    .call(force.drag);
 
-          /* nodeEnter.append("svg:circle")
-                   .attr("r", 12)
-                   .attr("id", function (d) {
-                       return "Node;" + d.id;
-                   })
-                   .attr("class", "nodeStrokeClass")
-                   .attr("fill", function(d) { return color(d.id); });
-
-           nodeEnter.append("svg:text")
-                   .attr("class", "textClass")
-                   .attr("x", 14)
-                   .attr("y", ".31em")
-                   .text(function (d) {
-                       return d.id;
-                   });
-                     */
            node.exit().remove();
 
            force.on("tick", function () {
@@ -163,36 +152,41 @@ var graph;
                });
            });
 
-          var buckets = 5,
-          colors = ['#1DBF22' ,'#036601','#054105','#EEA100','#B30001']; // alternatively colorbrewer.YlGnBu[9]
+           var width = 1095 ,
+           height = 850-250;
+           var color = d3.scale.ordinal()
+           .domain(["arp", "bgp", "default"])
+           .range(['#0063ff' ,'#B30001','#000000']);
 
-
-          var width = 1095 ,
-          height = 850-150,
-          gridSize = Math.floor(width / 24);
-           var legendElementWidth = gridSize*2;
-           var colorScale = d3.scale.quantile()
-          .domain([0, 20, 40, 60, 80, 100])
-          .range(colors);
-
+           var legendRectSize = 40;
+           var legendSpacing = 10;
            var legend = vis.selectAll(".legend")
-              .data([0].concat(colorScale.quantiles()), function(d) { return d; });
+               .data(color.domain())
 
-          legend.enter().append("g")
-              .attr("class", "legend");
 
-          legend.append("rect")
-            .attr("x", function(d, i) { return legendElementWidth * i; })
-            .attr("y", height)
-            .attr("width", legendElementWidth)
-            .attr("height", gridSize / 2)
-            .style("fill", function(d, i) { return colors[i]; });
 
-          legend.append("text")
-            .attr("class", "mono")
-            .text(function(d) { return "≥ " + Math.round(d); })
-            .attr("x", function(d, i) { return legendElementWidth * i; })
-            .attr("y", height + gridSize);
+              legend.enter()
+               .append('g')
+                 .attr('class', 'legend')
+                 .attr('transform', function(d, i) {
+                   var height = legendRectSize;
+                   var x = 0;
+                   var y = i * height;
+                   return 'translate(' + x + ',' + y + ')';
+               });
+
+          legend.append('rect')
+              .attr('width', legendRectSize)
+              .attr('height', legendRectSize)
+              .attr('y', function(d,i) { return height+legendRectSize;})
+              .style('fill', color)
+              .style('stroke', color);
+
+          legend.append('text')
+              .attr('x', legendRectSize + legendSpacing)
+              .attr('y', height+legendRectSize+20)
+              .attr("class", "mono")
+              .text(function(d) { return d; });
 
           legend.exit().remove();
 
@@ -209,28 +203,35 @@ var graph;
        var color_mapping = ['#1DBF22' ,'#036601','#054105','#EEA100','#B30001']; // alternatively colorbrewer.YlGnBu[9]
 
        // Compute the distinct nodes from the links.
-       var lookup = function(weight) {
-         if(weight === 105) {
-           return "#FFFF00";
-         }
-         if(weight < 0 )
+       var lookup = function(type) {
+
+         if(type == "bgp")
          {
-           return "#FFF"
+           return "#B30001";
          }
-         if(weight <= 20) {
-           return color_mapping[0];
+         if(type == "arp")
+         {
+           return "#0063ff";
          }
-         if(weight <= 40) {
-           return color_mapping[1];
+         if(type == "default")
+         {
+           return "#000000";
          }
-         if(weight <= 60) {
-           return color_mapping[2];
+       };
+
+       var lookupSize = function(value) {
+
+         if(value < 100)
+         {
+           return "3px";
          }
-         if(weight <= 80) {
-           return color_mapping[3];
+         if(value < 100000)
+         {
+           return "5px";
          }
-         if(weight <= 100) {
-           return color_mapping[4];
+         else
+         {
+           return "7px";
          }
        };
 
@@ -257,7 +258,7 @@ var graph;
       graph.addNode('Router-A', 169, 470);
       graph.addNode('Main', 555, 389);
       graph.addNode('Outbound', 327, 127);
-      graph.addNode('Inbound', 648, 142);
+      graph.addNode('InBound', 648, 142);
       graph.addNode('ARP-Proxy', 953, 141);
       graph.addNode('Router-C1', 847, 471);
       graph.addNode('Router-C2', 874, 676);
@@ -306,19 +307,30 @@ var graph;
       });
 
       socket.on('message', function(message){
-      		type = message.split("|")[0];
-      		console.log(message);
 
-      		if(type == "ng")
-      		{
+      		console.log(message);
+          type = message.split("|")[0];
+          if(type == "network_graph")
+          {
       			source = message.split("|")[1];
       			target = message.split("|")[2];
-            weight = message.split("|")[3];
-            console.log(source,target);
-            graph.removeLink(source, target);
-            graph.addLink(source, target, weight);
-            keepNodesOnTop();
-      		}
+            type = message.split("|")[3];
+            weight = message.split("|")[4];
+            if(weight == "0")
+            {
+              console.log("deleting stuff");
+              graph.removeLink(source, target,type);
+              keepNodesOnTop();
+            }
+            else {
+              console.log(source,target);
+              graph.removeLink(source, target,type);
+              graph.addLink(source, target, type, weight);
+              keepNodesOnTop();
+            }
+
+          }
+
       }) ;
 
       socket.on('disconnect', function() {

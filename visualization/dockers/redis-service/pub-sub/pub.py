@@ -27,4 +27,5 @@ if __name__ == '__main__':
     	r.publish(channel, message)
         t.sleep(1)
         message = "ng|ARP-Proxy|Inbound|" + str(cpuB);
+	message = "network_graph|Main|BGP-Proxy|bgp|20"
     	r.publish(channel, message)

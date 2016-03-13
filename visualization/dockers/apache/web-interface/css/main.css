@@ -109,7 +109,7 @@ box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
 .widget2 {
 width:750px;
 height:300px;
-background-color:#0C0C0C;
+background-color:#FFFFFF;
 font-family:"PT Sans", sans-serif;
 font-weight:250;
 text-rendering:optimizeLegibility;
@@ -136,7 +136,7 @@ box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
 .widget3 {
 width:1095px;
 height:850px;
-background-color:#0C0C0C;
+background-color:#FFFFFF;
 font-family:"PT Sans", sans-serif;
 font-size:35px;
 font-weight:250;
@@ -223,7 +223,7 @@ padding:0;
 }
 
 li {
-font:15px sans-serif;
+font:32px sans-serif;
 fill:#555;
 text-rendering:optimizeLegibility;
 overflow:auto;
