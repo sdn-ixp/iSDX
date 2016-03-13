@@ -159,7 +159,7 @@ var graph;
            .range(['#0063ff' ,'#B30001','#000000']);
 
            var legendRectSize = 40;
-           var legendSpacing = 10;
+           var legendSpacing = 20;
            var legend = vis.selectAll(".legend")
                .data(color.domain())
 
