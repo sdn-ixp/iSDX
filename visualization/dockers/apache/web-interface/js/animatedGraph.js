@@ -153,7 +153,7 @@ var graph;
            });
 
            var width = 1095 ,
-           height = 850-250;
+           height = 850-225;
            var color = d3.scale.ordinal()
            .domain(["arp", "bgp", "default"])
            .range(['#0063ff' ,'#B30001','#000000']);
