@@ -267,7 +267,7 @@ var throughput = new Rickshaw.Graph({
     stroke: true,
   	preserve: true,
     series: new Rickshaw.SeriesXDateTime.FixedDurationMovable([{
-        name: 'Router-C1', color: '#000000', scale: s1
+        name: 'Router-C1', color: '#cb513a', scale: s1
     }], undefined, {
         timeInterval: tv,
         maxDataPoints: 20,
@@ -389,7 +389,7 @@ socket.on('message', function(message){
 		graph = message.split("|")[2];
 		type2 = message.split("|")[3];
 		console.log(message);
-		
+
 		if(type == "time_series" && graph == "Router-C1")
 		{
 			B = message.split("|")[4];

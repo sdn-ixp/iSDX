@@ -267,7 +267,7 @@ var throughput = new Rickshaw.Graph({
     stroke: true,
   	preserve: true,
     series: new Rickshaw.SeriesXDateTime.FixedDurationMovable([{
-        name: 'Router-C2', color: '#000000', scale: s1
+        name: 'Router-C2', color: '#cb513a', scale: s1
     }], undefined, {
         timeInterval: tv,
         maxDataPoints: 20,
