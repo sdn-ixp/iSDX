@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 
+RYU_VERSION="v3.30"
+
 cd ~
 
 #  Dependencies for ryu
 sudo apt-get install -y python-routes python-dev
-# latest version does not allow use of latest oslo.config
-sudo pip install oslo.config
-sudo pip install msgpack-python
-sudo pip install eventlet
+
+sudo pip install -r ~/iSDX/setup/pip-ryu-requires
 
 #  Ryu install
 cd ~
-git clone git://github.com/osrg/ryu.git
+git clone -b $RYU_VERSION git://github.com/osrg/ryu.git
 sudo cp iSDX/setup/ryu-flags.py ryu/ryu/flags.py
 cd ryu
 
