@@ -149,7 +149,7 @@ class route_server(object):
 
         logger.info("Starting the announcement handler...")
 
-        self.listener_eh = Listener(self.ah_socket, authkey=None)
+        self.listener_eh = Listener(self.ah_socket, authkey=None, backlog=10)
         ps_thread = Thread(target=self.start_ah)
         ps_thread.daemon = True
         ps_thread.start()

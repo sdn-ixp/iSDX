@@ -96,7 +96,7 @@ class ParticipantController(object):
 
         # Start the event handler
         eh_socket = self.cfg.get_eh_info()
-        self.listener_eh = Listener(eh_socket, authkey=None)
+        self.listener_eh = Listener(eh_socket, authkey=None, backlog=10)
         self.start_eh()
         #ps_thread = Thread(target=self.start_eh)
         #ps_thread.daemon = True

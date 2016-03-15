@@ -137,7 +137,7 @@ class ArpProxy(object):
     def set_garp_listener(self):
         "Set listener for ARP replies from the participants' controller"
         logger.info("Starting the ARP  listener")
-        self.listener_garp = Listener(self.garp_socket, authkey=None)
+        self.listener_garp = Listener(self.garp_socket, authkey=None, backlog=10)
         ps_thread = Thread(target=self.start_garp_handler)
         ps_thread.daemon = True
         ps_thread.start()

@@ -93,7 +93,7 @@ class rib(object):
         rows = self.session.find()
         logger.debug(str(rows.count()))
         for row in rows:
-            logger.debug(str(tuple(k+'='+str(row[k]) for k in labels), row['_id']))
+            logger.debug(str(tuple(k+'='+str(row[k]) for k in labels)))
 
 
 ''' main '''

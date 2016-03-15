@@ -167,7 +167,8 @@ class BGPPeer(object):
                 current_best_route = self.get_route('local',prefix)
                 if current_best_route:
                     # Check if current_best_route and deleted_route are advertised by the same guy
-                    if deleted_route['neighbor'] == current_best_route['neighbor']:
+
+                    if deleted_route.neighbor == current_best_route.neighbor:
                         # TODO: Make sure this logic is sane.
                         '''Goal here is to get all the routes in participant's input
                         rib for this prefix. '''
@@ -208,7 +209,7 @@ class BGPPeer(object):
                 self.logger.debug('=============== best_route is None ====================')
                 self.logger.debug(str(prefix))
                 self.logger.debug('----')
-                self.rib['local'].dump(logger)
+                self.rib['local'].dump(self.logger)
                 self.logger.debug('----')
                 self.logger.debug(str(updates))
                 self.logger.debug('----')
@@ -216,7 +217,7 @@ class BGPPeer(object):
                 self.logger.debug('----')
                 self.logger.debug(str(self.get_route("local", prefix)))
                 self.logger.debug('----')
-                assert(best_route is not None)
+                assert(best_route is None)
             #self.logger.debug("**********best route for: "+str(prefix)+" route:: "+str(best_route))
 
             if ('announce' in update):
