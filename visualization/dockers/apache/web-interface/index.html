@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+
+<head>
+  <meta charset="utf-8">
+  <title>Dynamic Table</title>
+  <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+  <script src="js/socket.io.js"></script>
+
+
+  <style>
+
+    body {
+      font: 24px monospace
+    }
+
+    table {
+      margin: 10px;
+      font-size: 24px;
+    }
+
+    td {
+      padding: 5px;
+      border-bottom: 1px solid black;
+    }
+
+    td.update {
+      color: blue;
+    }
+
+    td.enter {
+      color: green;
+    }
+
+    td.exit, tr.exit td {
+      color: red;
+    }
+
+    td.row-header {
+      border-right: 1px solid black;
+      font-weight: bold;
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <table id='pathsF'>
+</table>
+<footer>
+<script src="js/dynamicTable.js"></script>
+
+</footer>
+
+</body>

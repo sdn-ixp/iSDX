@@ -1,0 +1,19 @@
+{
+  "name": "portalStatsFeed",
+  "version": "1.0.0",
+  "description": "hi",
+  "main": "index.js",
+  "engines": {
+     "node": "0.12.7"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.13.1",
+    "redis": "^0.12.1",
+    "socket.io": "^1.3.5"
+  }
+}

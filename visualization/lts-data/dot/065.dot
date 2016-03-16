@@ -1,0 +1,72 @@
+digraph {
+      size = "100,100";
+      main, outbound, inbound, arp [shape=box];
+      { rank=min; inbound outbound ARPPXY ExaBGP}
+      { rank=same; A1 B1 C1 C2 } 
+      { rank=same; main arp }
+      /*
+      edge [style=dashed, dir=none]
+      main -> outbound;
+      main -> inbound;
+      inbound -> outbound;
+      arp -> main;
+      ARPPXY -> arp;
+      ExaBGP -> main;
+      A1 -> main;
+      B1 -> main;
+      C1 -> main;
+      C2 -> main;
+      edge [dir=forward]
+      */
+
+	// BGP flows
+      main -> ExaBGP [color=red]
+      main -> A1 [color=red]
+      main -> B1 [style=invis]
+      main -> C1 [style=invis]
+      main -> C2 [style=invis]
+
+      // ARP flows
+      main -> ExaBGP [style=invis]
+      main -> A1 [style=invis]
+      main -> B1 [style=invis]
+      main -> C1 [style=invis]
+      main -> C2 [style=invis]
+
+      // VMAC ARP flows
+      main -> A1 [style=invis]
+      main -> B1 [style=invis]
+      main -> C1 [style=invis]
+      main -> C2 [style=invis]
+
+      main -> arp [style=invis]
+      
+      arp -> ARPPXY [style=invis]
+
+      arp -> main [style=invis]
+
+      main -> outbound [color=black,penwidth=2.0,penwidth=4.0]
+      main -> C1 [style=invis]
+      main -> C2 [style=invis]
+      main -> A1 [color=green,penwidth=2.0,penwidth=4.0]
+      main -> B1 [color=green,penwidth=2.0,penwidth=4.0]
+
+      main -> outbound [style=invis]
+
+      outbound -> inbound [style=invis]
+
+      inbound -> main [style=invis]
+      inbound -> main [color=green,penwidth=2.0,penwidth=4.0]
+      inbound -> main [style=invis]
+      inbound -> main [style=invis]
+
+      outbound -> inbound [color=cyan,penwidth=2.0,penwidth=4.0]
+      outbound -> inbound [style=invis]
+
+      A1 -> main [color=black,penwidth=2.0,penwidth=4.0]
+      B1 -> main [color=black,penwidth=2.0]
+      C1 -> main [style=invis]
+      C2 -> main [style=invis]
+      ExaBGP -> main [color=black]
+      ARPPXY -> arp [style=invis]
+}

@@ -1,0 +1,40 @@
+1  "match": {"dl_type": 2048, "tp_src": 179, "dl_dst": "08:00:27:89:3b:ff", "nw_proto": 6}, "actions": ["GROUP:65555"], "priority": 8, "packet_count": 1320
+2  "match": {"dl_type": 2048, "dl_dst": "08:00:27:89:3b:ff", "nw_proto": 6, "tp_dst": 179}, "actions": ["GROUP:65555"], "priority": 8, "packet_count": 4
+3  "match": {"dl_type": 2048, "tp_src": 179, "dl_dst": "08:00:27:89:3b:9f", "nw_proto": 6}, "actions": ["GROUP:65543"], "priority": 8, "packet_count": 1
+4  "match": {"dl_type": 2048, "dl_dst": "08:00:27:89:3b:9f", "nw_proto": 6, "tp_dst": 179}, "actions": ["GROUP:65543"], "priority": 8, "packet_count": 306
+5  "match": {"dl_type": 2048, "tp_src": 179, "dl_dst": "08:00:27:92:18:1f", "nw_proto": 6}, "actions": ["GROUP:65544"], "priority": 8, "packet_count": 1
+6  "match": {"dl_type": 2048, "dl_dst": "08:00:27:92:18:1f", "nw_proto": 6, "tp_dst": 179}, "actions": ["GROUP:65544"], "priority": 8, "packet_count": 291
+7  "match": {"dl_type": 2048, "tp_src": 179, "dl_dst": "08:00:27:54:56:ea", "nw_proto": 6}, "actions": ["GROUP:65547"], "priority": 8, "packet_count": 1
+8  "match": {"dl_type": 2048, "dl_dst": "08:00:27:54:56:ea", "nw_proto": 6, "tp_dst": 179}, "actions": ["GROUP:65547"], "priority": 8, "packet_count": 297
+9  "match": {"dl_type": 2048, "tp_src": 179, "dl_dst": "08:00:27:bd:f8:b2", "nw_proto": 6}, "actions": ["GROUP:65548"], "priority": 8, "packet_count": 1
+10  "match": {"dl_type": 2048, "dl_dst": "08:00:27:bd:f8:b2", "nw_proto": 6, "tp_dst": 179}, "actions": ["GROUP:65548"], "priority": 8, "packet_count": 293
+11  "match": {"dl_type": 2054, "dl_dst": "08:00:27:89:3b:ff"}, "actions": ["GROUP:65555"], "priority": 8, "packet_count": 620
+12  "match": {"dl_type": 2054, "dl_dst": "08:00:27:89:3b:9f"}, "actions": ["GROUP:65543"], "priority": 8, "packet_count": 156
+13  "match": {"dl_type": 2054, "dl_dst": "00:00:00:00:00:01/00:00:03:ff:ff:ff", "in_port": 20}, "actions": ["GROUP:268435456"], "priority": 8, "packet_count": 3
+14  "match": {"dl_type": 2054, "dl_dst": "08:00:27:92:18:1f"}, "actions": ["GROUP:65544"], "priority": 8, "packet_count": 163
+15  "match": {"dl_type": 2054, "dl_dst": "00:00:00:00:00:02/00:00:03:ff:ff:ff", "in_port": 20}, "actions": ["GROUP:268435457"], "priority": 8, "packet_count": 4
+16  "match": {"dl_type": 2054, "dl_dst": "08:00:27:54:56:ea"}, "actions": ["GROUP:65547"], "priority": 8, "packet_count": 163
+17  "match": {"dl_type": 2054, "dl_dst": "08:00:27:bd:f8:b2"}, "actions": ["GROUP:65548"], "priority": 8, "packet_count": 161
+18  "match": {"dl_type": 2054, "dl_dst": "00:00:00:00:00:03/00:00:03:ff:ff:ff", "in_port": 20}, "actions": ["GROUP:268435458"], "priority": 8, "packet_count": 4
+19  "match": {"dl_type": 2054, "dl_dst": "00:00:00:01:00:03/00:00:03:ff:ff:ff", "in_port": 20}, "actions": ["GROUP:268435459"], "priority": 8, "packet_count": 4
+20  "match": {"dl_type": 2054, "dl_dst": "ff:ff:ff:ff:ff:ff", "in_port": 20}, "actions": ["GROUP:805371904"], "priority": 7, "packet_count": 8
+21  "match": {"dl_type": 2054}, "actions": ["GROUP:65556"], "priority": 6, "packet_count": 84
+25  "match": {"in_port": 7}, "actions": ["GROUP:268435460"], "priority": 5, "packet_count": 237562656
+26  "match": {"dl_dst": "00:00:00:00:00:03/80:00:03:ff:ff:ff"}, "actions": ["GROUP:268435461"], "priority": 4, "packet_count": 90912619
+27  "match": {"dl_dst": "00:00:00:01:00:03/80:00:03:ff:ff:ff"}, "actions": ["GROUP:268435462"], "priority": 4, "packet_count": 54066174
+28  "match": {"dl_dst": "00:00:00:00:00:01/00:00:00:00:ff:ff"}, "actions": ["GROUP:268435463"], "priority": 4, "packet_count": 14983324
+29  "match": {"dl_dst": "00:00:00:00:00:02/00:00:00:00:ff:ff"}, "actions": ["GROUP:268435464"], "priority": 4, "packet_count": 92584072
+30  "match": {"in_port": 3}, "actions": [], "priority": 3, "packet_count": 307
+31  "match": {"dl_dst": "80:00:00:00:00:00/80:00:00:00:00:00"}, "actions": ["GROUP:65538"], "priority": 2, "packet_count": 0
+32  "match": {}, "actions": ["GROUP:65539"], "priority": 1, "packet_count": 308
+65537 (P_1/1) "match": {"dl_type": 2048, "dl_dst": "20:00:00:00:00:00/60:00:00:00:00:00", "tp_dst": 80, "dl_src": "08:00:27:89:3b:9f", "nw_proto": 6}, "actions": ["GROUP:268435456"], "priority": 2, "packet_count": 92584071
+65538 (P_1/2) "match": {"dl_type": 2048, "dl_dst": "10:00:00:00:00:00/50:00:00:00:00:00", "tp_dst": 4321, "dl_src": "08:00:27:89:3b:9f", "nw_proto": 6}, "actions": ["GROUP:268435457"], "priority": 2, "packet_count": 90912619
+65539 (P_1/3) "match": {"dl_type": 2048, "dl_dst": "10:00:00:00:00:00/50:00:00:00:00:00", "tp_dst": 4322, "dl_src": "08:00:27:89:3b:9f", "nw_proto": 6}, "actions": ["GROUP:268435457"], "priority": 2, "packet_count": 54146940
+33  "match": {"dl_dst": "00:00:00:00:00:03/00:00:00:00:ff:ff"}, "actions": ["GROUP:268435456"], "priority": 3, "packet_count": 0
+34  "match": {}, "actions": ["GROUP:65537"], "priority": 1, "packet_count": 92584379
+196609 (P_3/1) "match": {"dl_type": 2048, "dl_dst": "00:00:00:00:00:03/00:00:00:00:ff:ff", "nw_proto": 6, "tp_dst": 4321}, "actions": ["GROUP:268435456"], "priority": 4, "packet_count": 90912619
+196610 (P_3/2) "match": {"dl_type": 2048, "dl_dst": "00:00:00:00:00:03/00:00:00:00:ff:ff", "nw_proto": 6, "tp_dst": 4322}, "actions": ["GROUP:268435457"], "priority": 4, "packet_count": 54176462
+0  "match": {}, "actions": ["OUTPUT:CONTROLLER"], "priority": 0, "packet_count": 6
+22  "match": {"dl_type": 2054, "arp_tpa": "172.0.1.0/255.255.255.0", "in_port": 1}, "actions": ["OUTPUT:2"], "priority": 2, "packet_count": 19
+23  "match": {"dl_type": 2054, "in_port": 1}, "actions": ["OUTPUT:IN_PORT"], "priority": 1, "packet_count": 8
+24  "match": {"dl_type": 2054, "in_port": 2}, "actions": ["OUTPUT:1"], "priority": 1, "packet_count": 34

@@ -1,0 +1,17 @@
+apache:
+    build: ./apache
+    links:
+        - node
+    ports:
+        - "80:80"
+node:
+    build: ./node
+    links:
+        - redis:redis
+    ports:
+        - "8080:8080"
+
+redis:
+    build: ./redis-service
+    ports:
+        - "6379:6379"
