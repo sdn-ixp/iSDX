@@ -139,15 +139,15 @@ Using commands on the switch:
  -- inPort:mask = 7:0xffffffff srcMac:mask = 0000.0000.0000:0000.0000.0000 destMac:mask = 0000.0000.0000:0000.0000.0000 etherType = 0000 vlanId:mask = 1:0xfff srcIp4 = 0.0.0.0/0.0.0.0 dstIp4 = 0.0.0.0/0.0.0.0 srcIp6 = ::/:: dstIp6 = ::/:: DSCP = 0 VRF = 0 DEI = 0 ECN = 0 IP Protocol = 0x00 Source L4 Port = 0 Destination L4 Port = 0 ICMP Type = 0 ICMP Code = 0 | Set output group ID = 0x   10008 outPort = 0 | priority = 4 hard_time = 0 idle_time = 0 cookie = 1
  -- inPort:mask = 8:0xffffffff srcMac:mask = 0000.0000.0000:0000.0000.0000 destMac:mask = 0000.0000.0000:0000.0000.0000 etherType = 0000 vlanId:mask = 1:0xfff srcIp4 = 0.0.0.0/0.0.0.0 dstIp4 = 0.0.0.0/0.0.0.0 srcIp6 = ::/:: dstIp6 = ::/:: DSCP = 0 VRF = 0 DEI = 0 ECN = 0 IP Protocol = 0x00 Source L4 Port = 0 Destination L4 Port = 0 ICMP Type = 0 ICMP Code = 0 | Set output group ID = 0x   10007 outPort = 0 | priority = 4 hard_time = 0 idle_time = 0 cookie = 2
  ````
-Using scripts based on the OF interface:
+Using scripts based on the OF interface (in ~/iSDX/bin directory):
  ````
- $ ofdpa_show_groups 
+ $ of_show_groups 
 "group_id": 65544	    (0x10008)	    "actions": ["OUTPUT:8", "POP_VLAN"]
 "group_id": 268435464	(0x10000008)	"actions": ["GROUP:65544", "SET_FIELD: {eth_dst:44:a8:42:32:5d:5b}"]
 "group_id": 65543	    (0x10007)	    "actions": ["OUTPUT:7", "POP_VLAN"]
 "group_id": 268435463	(0x10000007)	"actions": ["GROUP:65543", "SET_FIELD: {eth_dst:44:a8:42:32:5d:59}"]
 
- $ ofdpa_show_flows 
+ $ of_show_flows 
 "match": {"dl_vlan": "1", "in_port": 7}, "actions": ["GROUP:65544"], "priority": 4, "packet_count": 300
 "match": {"dl_vlan": "1", "in_port": 8}, "actions": ["GROUP:65543"], "priority": 4, "packet_count": 299
  ````
