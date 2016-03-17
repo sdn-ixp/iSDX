@@ -93,27 +93,31 @@ class rib(object):
         rows = self.session.find()
         logger.debug(str(rows.count()))
         for row in rows:
-            logger.debug(str(tuple(k+'='+str(row[k]) for k in labels)))
+            logger.debug(str(tuple(k+'='+str(row[k]) for k in labels+tuple(['_id']))))
 
 
 ''' main '''
 if __name__ == '__main__':
-    #TODO Update test
+    import os, sys
+    np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    if np not in sys.path:
+        sys.path.append(np)
+    import util.log
+    logger = util.log.getLogger("Testing")
 
-    myrib = rib('ashello', 'test', False)
-    print type(myrib)
-    #(prefix, neighbor, next_hop, origin, as_path, communities, med,atomic_aggregate)
-    myrib['100.0.0.1/16'] = ('172.0.0.2','172.0.0.2', 'igp', '100, 200, 300', '0', 0,'false')
-    #myrib['100.0.0.1/16'] = ['172.0.0.2', 'igp', '100, 200, 300', '0', 'false']
-    #myrib['100.0.0.1/16'] = {'next_hop':'172.0.0.2', 'origin':'igp', 'as_path':'100, 200, 300',
-    #                          'med':'0', 'atomic_aggregate':'false'}
-    myrib.commit()
+    myrib = rib('ashello1', 'test')
+    logger.debug('At A')
+    myrib.dump(logger)
 
-    myrib.update('100.0.0.1/16', 'next_hop', '190.0.0.2')
-    myrib.commit()
+    #(prefix, neighbor, next_hop, origin, as_path, communities, med, atomic_aggregate)
+    myrib.add(RibTuple('171.0.0.0/24', '171.0.0.1', '171.0.0.2', 'igp', '100, 200, 300', '0', 0, 'false'))
+    myrib.add(RibTuple('172.0.0.0/24', '172.0.0.1', '172.0.0.2', 'igp', '100, 200, 300', '0', 0, 'false'))
+    logger.debug('At B')
+    myrib.dump(logger)
 
-    val = myrib.filter('prefix', '100.0.0.1/16')
-    print val
-    print val['next_hop']
-    val2 = myrib.get_prefix_neighbor('100.0.0.1/16', '172.0.0.2')
-    print val2
+    myrib.update(('prefix', 'neighbor'), RibTuple('172.0.0.0/24', '172.0.0.1', '173.0.0.2', 'igp', '100, 200, 300', '0', 0, 'false'))
+    logger.debug('At C')
+    myrib.dump(logger)
+
+    myrib.delete(prefix='172.0.0.0/24')
+    myrib.dump(logger)
