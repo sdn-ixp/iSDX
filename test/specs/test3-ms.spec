@@ -95,3 +95,18 @@ test regress {
 	verify j1_103 l2_140 4322
 	verify j1_103 l1_140 8888
 }
+
+test info {
+	local ovs-ofctl dump-flows s1
+	local ovs-ofctl dump-flows s2
+	local ovs-ofctl dump-flows s3
+	local ovs-ofctl dump-flows s4
+	exec a1 ip route
+	bgp a1
+	exec b1 ip route
+	bgp b1
+	exec c1 ip route
+	bgp c1
+	exec c2 ip route
+	bgp c2
+}

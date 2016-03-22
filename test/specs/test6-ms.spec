@@ -38,3 +38,10 @@ test regress {
 	verify b1_120 a1_140 88
 	verify c1_130 b1_150 88
 }
+
+test info {
+	local ovs-ofctl dump-flows s1
+	local ovs-ofctl dump-flows s2
+	local ovs-ofctl dump-flows s3
+	local ovs-ofctl dump-flows s4
+}

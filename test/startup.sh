@@ -143,6 +143,8 @@ do
 			echo "Test $TEST:$count succeeded.  All tests passed"
 			python $BASE/logmsg.py "Test $TEST:$count succeeded.  All tests passed"
 		else
+			python $BASE/logmsg.py "Test $TEST:$count failed."
+			python tmgr.py $EXAMPLES/$TEST/config/config.spec "test info"
 			if [ $PAUSEONERROR != '0' ]
 			then
 				echo; echo "************ ERROR OCCCURED - PAUSING ************"

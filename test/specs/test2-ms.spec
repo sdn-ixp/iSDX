@@ -55,4 +55,16 @@ test info {
 	local ovs-ofctl dump-flows s2
 	local ovs-ofctl dump-flows s3
 	local ovs-ofctl dump-flows s4
+	exec a1 ip route
+	bgp a1
+	exec b1 ip route
+	bgp b1
+	exec c1 ip route
+	bgp c1
+	exec d1 ip route
+	bgp d1
+	exec d2 ip route
+	bgp d2
+	exec e1 ip route
+	bgp e1
 }

@@ -112,9 +112,9 @@ To execute the tests from the example above, run:
 ```
 cd ~/iSDX/test
 sh buildall.sh
-sudo bash startup.sh test0-ms
+sudo bash startup.sh test1-ms
 ```
-This will run the iSDX software on the configuration *test0-ms* in the *examples* directory.
+This will run the iSDX software on the configuration *test1-ms* in the *examples* directory.
 Log output will be placed in the *regress* directory.
 
 Abridged output from this test will include:
