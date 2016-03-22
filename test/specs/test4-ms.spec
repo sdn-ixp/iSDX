@@ -16,7 +16,7 @@ participant 7 700 PORT MAC 172.0.0.61/16
 participant 8 800 PORT MAC 172.0.0.71/16
 participant 9 900 PORT MAC 172.0.0.81/16
 
-host AS ROUTER _ IP           # testnode names of form a1_100 a1_110
+host AS ROUTER _ IP           # host names of form a1_100 a1_110
 
 announce 1 100.0.0.0/24 
 announce 2 140.0.0.0/24 
@@ -37,15 +37,27 @@ flow a1 85 >> g
 flow a1 86 >> h
 flow a1 87 >> i
 
-node AUTOGEN 77 80 81 82 83 84 85 86 87
+listener AUTOGEN 77 80 81 82 83 84 85 86 87
 
-test a1_100 c1_140 77
-test a1_100 b1_140 80
-test a1_100 c1_140 81
-test a1_100 d1_140 82
-test a1_100 e1_140 83
-test a1_100 f1_140 84
-test a1_100 g1_140 85
-test a1_100 h1_140 86
-test a1_100 i1_140 87
+test init {
+	listener
+}
 
+test regress {
+	verify a1_100 c1_140 77
+	verify a1_100 b1_140 80
+	verify a1_100 c1_140 81
+	verify a1_100 d1_140 82
+	verify a1_100 e1_140 83
+	verify a1_100 f1_140 84
+	verify a1_100 g1_140 85
+	verify a1_100 h1_140 86
+	verify a1_100 i1_140 87
+}
+
+test info {
+	local ovs-ofctl dump-flows s1
+	local ovs-ofctl dump-flows s2
+	local ovs-ofctl dump-flows s3
+	local ovs-ofctl dump-flows s4
+}

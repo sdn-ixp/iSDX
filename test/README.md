@@ -1,27 +1,57 @@
-# Testing iSDX Behavior
+# Testing iSDX Behavior with Torch
 
-This directory includes tools for supporting the automated regression testing of the iSDX system.
-It consists of a constellation of traffic receivers and generators (tnodes) whose behavior can be orchestrated by a managing process (tmgr), which uses a JSON specification to define the testing actions to be performed.
-The tests are designed to generate traffic that will be influenced by the policies established in the switching fabric by the iSDX controller and to verify that the proper pathways are traversed.
-The role of the testing framework using the multi-table configuration (test1-mt) is shown below.
+This directory includes the **T**raffic **Orch**istrator (torch) tools for the construction, launching and automated regression testing of an iSDX system configuration.
+It is designed to work with both software defined environments based on mininet and on true hardware switch configurations.
+
+* Torch constructs and launches an iSDX configuration using a simplified network specification. The example below is equivalent to the test-ms configuration in the top-level examples directory. See the section on **Additional Examples** below for more sophisticated network configurations and policy variations.
+* Torch can run an automated set of tests to validate the policies established for the iSDX. These are used to send traffic to specific destinations, verify that the traffic has indeed been delivered, and search for traffic on other nodes if it is not found where expected.  Torch can be also used to announce and withdraw routes to change the BGP view of the world.
+* Torch can be run in an interactive mode for experimenting with dynamic routing changes and (TBD) policy updates.
+
+Torch consists of a constellation of traffic receivers and generators (tnodes) managed by a controlling process (tmgr), which uses a specification file to define the hosts, network and testing actions to be performed.
+A tnode is automatically started in each quagga host as part of mininet initialization.
+The tests are typically designed to generate traffic that will be influenced by the policies established in the switching fabric and the advertised BGP routes.
+For example, the tests in test0-mt (multi-table) verify that traffic on specific tcp ports are directed to different destinations based on a combination of outbound (A1) and inbound (C1 and C2) flow rules.
+The tests in tes1-ms (multi-switch) include the test-mt tests, but also include cases that withdraw a route from B1, and later restore it, causing dynamic changes in traffic flow.
 
 ## Example Configuration 
-![Experimental Setup](https://docs.google.com/drawings/d/1Hw2UdhdyfINE-BmS8xSCfEND3ZxkIzhgMoLKK9yb4Fc/pub?w=960&h=720)
+![Experimental Setup](https://docs.google.com/drawings/d/1LK9VEROcRoXWtfJXkBJ5guFLMEzu-PqZxLG4hCILtDI/pub?w=960&h=720)
 
-This test setup consists of 3 Participating Autonomous Systems, A, B and C, with routers A1, B1, C1 and C2 implemented using mininext.
-Routers B1, C1 and C2 have all advertised routes to 140.0.0.0/24.
-Specific inbound and outbound policies established by A and C will alter the default routes used for traffic.
+This test setup consists of 3 Participating Autonomous Systems, A, B and C, with routers A1, B1, C1 and C2 implemented using mininet.
+Routers B1, C1 and C2 have all advertised routes to 140.0.0.0/24 and 150.0.0.0/24.
+Router A1 has announced routes to 100.0.0.0/24 and 110.0.0.0/24.
+Specific outbound and inbound policies established by A and C will alter the default routes used for traffic.
 Participant A has outbound policies that steer port 80 traffic to B and port 4321 and 4322 traffic towards C.
 Participant C has inbound policies that steer port 4321 traffic towards router C1 and port 4322 traffic towards router C2.
 
-#### Note that although the test specification is rather verbose, both the iSDX configuration files and the test definition can be generated automatically from a simplified specification.
-For example, test1-ms (equivalent to test-ms) was generated from the specification found in specs/test1-ms.spec.
-See the README in the specs directory for more examples and instructions.
-The abridged specification was:
+### Testing Route Withdrawal with In-place iSDX Policies
+
+In this example we verify that traffic will be routed according to established policies, and that when a route is withdrawn, traffic will not be sent to an autonomous system even if it has an explicit policy to do so. For the latter case, we will withdraw the route to 140.0.0.0/24 for edge router B1. This should redirect A's traffic on port 80 to C1 instead of using the outbound rule to send it to B. The steps are:
+
+1. Tmgr instructs h1_a1 to send traffic to port 80 on the 140 network. The expectation is that this will be routed to B based on A's outbound rule.
+2. The tnode at h1_a1 binds a socket to the 100 network and connects to and sends data to the 140 network.
+3. Tmgr queries the tnode on the expected destination behind B (h1_b1) for evidence of the transfer.
+4. Tmgr instructs B1 to withdraw its route for the 140 network.
+5. Tmgr again instructs h1_a1 to send traffic to port 80 on the 140 network. Even though A still has an outbound rule for port 80, the traffic will be routed via C1 to h1_c1.
+6. As before, the tnode at h1_a1 binds a socket to the 100 network and connects to and sends data to the 140 network.
+7. As the test definition still defines h1_b1 as the recipient, tmgr will query for the traffic there. Failing to find it there, tmgr will interrogate all hosts to locate the transfer, in this case, on h1_c1
+
+The network specification is shown below. Only the **test name { commands }** sequences define tests that will be run by tmgr. The remaining information defines the configuration of the network.
+
 ```
-mode multi-switch
-participants 3
-peers 1 2 3
+mode multi-switch                         # iSDX mode - multi-table or multi-switch
+participants 3                            # number of participants
+peers 1 2 3                               # peering relationships
+
+participant 1 100 5 08:00:27:89:3b:9f 172.0.0.1/16    # participant id, ASN, switch port, MAC, IP
+participant 2 200 6 08:00:27:92:18:1f 172.0.0.11/16
+participant 3 300 7 08:00:27:54:56:ea 172.0.0.21/16 8 08:00:27:bd:f8:b2 172.0.0.22/16 # 2 border routers
+
+#host AS ROUTER _ IP                       # node names of form a1_100 a1_110
+host h NETNUMB _ AS ROUTER                 # node names of the form h1_a1 h2_a1
+
+announce 1 100.0.0.0/24 110.0.0.0/24       # routes advertised by A
+announce 2 140.0.0.0/24 -150.0.0.0/24      # routes advertised by B (minus => create host but don't announce)
+announce 3 140.0.0.0/24 150.0.0.0/24       # routes advertised by C
 
 flow a1 80 >> b
 flow a1 4321 >> c
@@ -29,210 +59,298 @@ flow a1 4322 >> c
 flow c1 << 4321
 flow c2 << 4322
 
-test a1 i0 80 b1 i0 80
-test a1 i0 4321 c1 i0 4321
-test a1 i0 4322 c2 i0 4322
-test a1 i0 8888 c1 i0 8888
-``` 
-Each mininext router host now includes a tnode process that accepts instructions to bind to and listen for traffic on a specified interface and port, as well as commands to generate traffic towards a specified port using a specified outbound interface.
-The tnodes contain no knowledge of the tests to be performed; they are dynamically driven by the tmgr controller and are subsequently interrogated by the tmgr to see if expected traffic has arrived.
-The tnodes and tmgr communicate over a separate management network to avoid the need to establish SDX paths for their traffic.  This is based on unix domain sockets for the mininext case, and an additional set of interfaces for HW implementations.
-
-A tnode executes a limited number of commands:
-- create a listener on a given port and interface
-- send traffic to a given destination using a specified port and interface
-- retrieve the result of a previously generated transmission based on its ID
-- execute a local command (e.g., route -n)
-
-A tmgr uses a JSON specification to describe listeners, tests and programs.
-Note that the tnodes on all hosts open the same set of ports.
-In this way, misdirected traffic will still find a home and can be interrogated with tmgr.
-Note also that a port (8888) that is not referenced in any of the flow rules is included to test default routing.
-
-```
-{
-    "hosts": {
-        "a1": {
-            "interfaces": {
-                "i0_0": { "bind": "100.0.0.1", "port": "80" },
-                "i0_1": { "bind": "100.0.0.1", "port": "4321" },
-                "i0_2": { "bind": "100.0.0.1", "port": "4322" },
-                "i0_3": { "bind": "100.0.0.1", "port": "8888" },
-                "i1_0": { "bind": "110.0.0.1", "port": "80" },
-                "i1_1": { "bind": "110.0.0.1", "port": "4321" },
-                "i1_2": { "bind": "110.0.0.1", "port": "4322" },
-                "i1_3": { "bind": "110.0.0.1", "port": "8888" }
-            }
-        },
-        "b1": {
-            "interfaces": {
-                "i0_0": { "bind": "140.0.0.1", "port": "80" },
-                "i0_1": { "bind": "140.0.0.1", "port": "4321" },
-                "i0_2": { "bind": "140.0.0.1", "port": "4322" },
-                "i0_3": { "bind": "140.0.0.1", "port": "8888" },
-                "i1_0": { "bind": "150.0.0.1", "port": "80" },
-                "i1_1": { "bind": "150.0.0.1", "port": "4321" },
-                "i1_2": { "bind": "150.0.0.1", "port": "4322" },
-                "i1_3": { "bind": "150.0.0.1", "port": "8888" }
-            }
-        },
-        "c1": {
-            "interfaces": {
-                "i0_0": { "bind": "140.0.0.1", "port": "80" },
-                "i0_1": { "bind": "140.0.0.1", "port": "4321" },
-                "i0_2": { "bind": "140.0.0.1", "port": "4322" },
-                "i0_3": { "bind": "140.0.0.1", "port": "8888" },
-                "i1_0": { "bind": "150.0.0.1", "port": "80" },
-                "i1_1": { "bind": "150.0.0.1", "port": "4321" },
-                "i1_2": { "bind": "150.0.0.1", "port": "4322" },
-                "i1_3": { "bind": "150.0.0.1", "port": "8888" }
-            }
-        },
-        "c2": {
-            "interfaces": {
-                "i0_0": { "bind": "140.0.0.1", "port": "80" },
-                "i0_1": { "bind": "140.0.0.1", "port": "4321" },
-                "i0_2": { "bind": "140.0.0.1", "port": "4322" },
-                "i0_3": { "bind": "140.0.0.1", "port": "8888" },
-                "i1_0": { "bind": "150.0.0.1", "port": "80" },
-                "i1_1": { "bind": "150.0.0.1", "port": "4321" },
-                "i1_2": { "bind": "150.0.0.1", "port": "4322" },
-                "i1_3": { "bind": "150.0.0.1", "port": "8888" }
-            }
-        }
-    },
-    "regressions": {
-        "terse": "l t",
-        "verbose": "l 'r x0 a1 b1 c1 c2' 'e x1 x2 x3 x4 x5 x6' t"
-    },
-    "tests": {
-        "t00": { "baddr": "100.0.0.1", "daddr": "140.0.0.1", "dport": "80", "src": "a1", "xdst": "b1", "xifc": "i0_0" },
-        "t01": { "baddr": "100.0.0.1", "daddr": "140.0.0.1", "dport": "4321", "src": "a1", "xdst": "c1", "xifc": "i0_1" },
-        "t02": { "baddr": "100.0.0.1", "daddr": "140.0.0.1", "dport": "4322", "src": "a1", "xdst": "c2", "xifc": "i0_2" },
-        "t03": { "baddr": "100.0.0.1", "daddr": "140.0.0.1", "dport": "8888", "src": "a1", "xdst": "c1", "xifc": "i0_3" }
-    },
-    "commands": {
-		"x0": "route -n",
-        "x1": "ps ax",
-        "x2": "sudo ovs-ofctl dump-flows s1",
-        "x3": "sudo ovs-ofctl dump-flows s2",
-        "x4": "sudo ovs-ofctl dump-flows s3",
-        "x5": "sudo ovs-ofctl dump-flows s4",
-        "x6": "sudo ovs-ofctl show s1"
-    }
+listener AUTOGEN 80 4321 4322 8888         # which tcp ports to listen to for data transfer connections
+	
+test init {                                # init - start the tcp listeners
+	listener
 }
-```
 
-In the figure shown above, tmgr executes test t0.  This sends a request (1) to source a1 instructing it to bind to 100,0.0.1 and send traffic (2) to 140.0.0.1 on port 80.
-A previously established listener i0 on host b1 port 80 receives the traffic.
-Also in the test definition is the expected host (b1) and listener (i0) for the traffic.
-The tmgr interrogates b1 (3) for any activity on that host to verify data delivery, and could potentially check other hosts for any misdirected traffic.
+test regress {                             # regression - transfers intermixed with withdraw / announce
+	test xfer                              # run the data transfers - traffic on 80 will go to B
+	withdraw b1 140.0.0.0/24               # withdraw B1 advertisement for route to 140
+	exec a1 ip -s -s neigh flush all       # flush a1 arp cache
+	delay 2
+	test xfer                              # run the data transfer - traffic on 80 will NOT go to B
+	announce b1 140.0.0.0/24               # restore the B1 announcement of the route to 140
+	exec a1 ip -s -s neigh flush all       # flush a1 arp cache
+	delay 2
+	test xfer                              # run the data transfers - traffic on 80 will go to B
+}
 
-A test script will automate the entire process of establishing the mininext configuration, starting all the ancillary processes and running the tests.
-A simple regression test would look like:
+test xfer {                                # common definition of data transfers
+	verify h1_a1 h1_b1 80
+	verify h1_a1 h1_c1 4321
+	verify h1_a1 h1_c2 4322
+	verify h1_a1 h1_c1 888
+}
+
+test info {                                # dump the world
+	local ovs-ofctl dump-flows s1          #   switches
+	local ovs-ofctl dump-flows s2
+	local ovs-ofctl dump-flows s3
+	local ovs-ofctl dump-flows s4
+	exec a1 ip route                       #   routes seen by this router
+	bgp a1                                 #   routes advertised by this router
+	exec b1 ip route
+	bgp b1
+	exec c1 ip route
+	bgp c1
+	exec c2 ip route
+	bgp c2
+}
+``` 
+When creating a software (mininet) configuration, each edge router (e.g., c2) and interior host (e.g., h1_c2) will include a tnode process to receive and act upon commands.
+The tnodes contain no knowledge of the tests to be performed; they are dynamically driven by the tmgr controller and are subsequently interrogated by tmgr to see if expected traffic has arrived.
+This includes establishing initial listeners on specified tcp and udp ports to receive traffic.
+The tnodes and tmgr communicate over a separate management network to avoid the need to establish SDX paths for their traffic.  This is based on unix domain sockets for the mininet case, and an additional set of interfaces for HW implementations.
+
+To run an end-to-end test, create a test.spec file as above and then use the *gen_test.py* script from the test directory to build the detailed iSDX configuration files. All configuration files will be places in *output/testname* where *testname* is the name of the specification file with the *.spec* suffix removed.
+Move this directory to the top-level *examples* directory. The *buildall.sh* script will construct and move all the examples below.
+
+To execute the tests from the example above, run:
+
 ```
 cd ~/iSDX/test
-sudo bash startup.sh -n 2 -t verbose test1-mt test1-ms
+sh buildall.sh
+sudo bash startup.sh test0-ms
 ```
-This will run tests test1-mt and test1-ms in the examples directory twice.
-Log output will be placed in the test directory.
-The tmgr test in the startup shell is:
-```
-python tmgr.py $BASE/examples/$TEST/config/test.cfg "regression verbose"
-```
-Where $BASE is ~/iSDX and $TEST is the test name (test1-ms or test1-mt as found in the examples directory).
-The commands to run as part of regression called verbose are defined in the configuration file.
-The specific operations are:
-- l: start all listeners on all hosts
-- 'r x0 a1 b1 c1 c2': remotely run command x0 (route -n) on hosts a1, b1, c1, and c2 
-- 'e x1 x2 x3 x4 x5': execute commands x1, x2, x3, and x4 locally (to dump flows)
-- t: run all tests
-Other options can be found by executing tmgr without arguments.
+This will run the iSDX software on the configuration *test0-ms* in the *examples* directory.
+Log output will be placed in the *regress* directory.
 
-Abridged output from a single test will contain:
-```
-b1:i0 OK: listener established for 140.0.0.1:80
-b1:i1 OK: listener established for 140.0.0.1:4321
-b1:i2 OK: listener established for 140.0.0.1:4322
-c1:i0 OK: listener established for 140.0.0.1:80
-c1:i1 OK: listener established for 140.0.0.1:4321
-c1:i2 OK: listener established for 140.0.0.1:4322
-c2:i0 OK: listener established for 140.0.0.1:80
-c2:i1 OK: listener established for 140.0.0.1:4321
-c2:i2 OK: listener established for 140.0.0.1:4322
+Abridged output from this test will include:
 
-MM:a1 REXEC x0: route -n
-Kernel IP routing table
-Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
-140.0.0.0       172.0.1.1       255.255.255.0   UG    0      0        0 a1-eth0
-150.0.0.0       172.0.1.2       255.255.255.0   UG    0      0        0 a1-eth0
-172.0.0.0       0.0.0.0         255.255.0.0     U     0      0        0 a1-eth0
-
-MM:b1 REXEC x0: route -n
-Kernel IP routing table
-Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
-100.0.0.0       172.0.1.2       255.255.255.0   UG    0      0        0 b1-eth0
-110.0.0.0       172.0.1.1       255.255.255.0   UG    0      0        0 b1-eth0
-172.0.0.0       0.0.0.0         255.255.0.0     U     0      0        0 b1-eth0
-
-MM:c1 REXEC x0: route -n
-Kernel IP routing table
-Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
-100.0.0.0       172.0.1.4       255.255.255.0   UG    0      0        0 c1-eth0
-110.0.0.0       172.0.1.2       255.255.255.0   UG    0      0        0 c1-eth0
-172.0.0.0       0.0.0.0         255.255.0.0     U     0      0        0 c1-eth0
-
-MM:c2 REXEC x0: route -n
-Kernel IP routing table
-Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
-100.0.0.0       172.0.1.4       255.255.255.0   UG    0      0        0 c2-eth0
-110.0.0.0       172.0.1.2       255.255.255.0   UG    0      0        0 c2-eth0
-172.0.0.0       0.0.0.0         255.255.0.0     U     0      0        0 c2-eth0
-
-MM:00 EXEC: x1: ps a
-  PID TTY      STAT   TIME COMMAND
-18821 pts/0    S+     0:00 sudo sh startup.sh 1 test-ms
-18822 pts/0    S+     0:00 sh startup.sh 1 test-ms
-18824 pts/0    R+     0:11 python /home/vagrant/iSDX/logServer.py SDXRegression.log.18822
+<pre>
+<b>MM:h1_a1 VERIFY: h1_a1:XX OK: TEST 2005119051 bind:100.0.0.1 dst:140.0.0.1:80 TRANSFER COMPLETE
+MM:h1_b1 TEST PASSED 2005119051 100.0.0.1:49703->140.0.0.1:80 9.2429986625 MBpS</b>
 ...
-
-MM:00 EXEC: x2: sudo ovs-ofctl dump-flows s1
-NXST_FLOW reply (xid=0x4):
- cookie=0x14, duration=15.059s, table=0, n_packets=4, n_bytes=168, idle_age=14, priority=6,arp,in_port=3,dl_dst=ff:ff:ff:ff:ff:ff actions=output:5,output:6,output:7,output:8,output:4
- cookie=0x8, duration=15.077s, table=0, n_packets=11, n_bytes=1089, idle_age=1, priority=7,tcp,dl_dst=08:00:27:54:56:ea,
-tp_dst=179 actions=output:7
- ...
-
-MM:00 EXEC: x3: sudo ovs-ofctl dump-flows s2
-NXST_FLOW reply (xid=0x4):
- cookie=0x21, duration=15.149s, table=0, n_packets=0, n_bytes=0, idle_age=15, priority=1 actions=output:1
- ...
-
-MM:00 EXEC: x4: sudo ovs-ofctl dump-flows s3
-NXST_FLOW reply (xid=0x4):
- cookie=0x10002, duration=2.172s, table=0, n_packets=0, n_bytes=0, idle_age=2, priority=2,tcp,dl_src=08:00:27:89:3b:9f,dl_dst=20:00:00:00:00:00/60:00:00:00:00:00,tp_dst=4321 actions=mod_dl_dst:80:00:00:00:00:03,output:2
- ...
-
-MM:00 EXEC: x5: sudo ovs-ofctl dump-flows s4
-NXST_FLOW reply (xid=0x4):
- cookie=0x16, duration=15.430s, table=0, n_packets=0, n_bytes=0, idle_age=15, priority=2,arp,in_port=1,arp_tpa=172.0.1.0
-/24 actions=output:2
- ...
-
-MM:a1 TEST t00: a1:XX OK: TEST 8888730373 bind:100.0.0.1 dst:140.0.0.1:80 TRANSFER COMPLETE
-MM:b1 OK: TEST t00 8888730373 TEST PASSED 20.7535469556 MBpS
-MM:a1 TEST t01: a1:XX OK: TEST 4833942259 bind:100.0.0.1 dst:140.0.0.1:4321 TRANSFER COMPLETE
-MM:c1 OK: TEST t01 4833942259 TEST PASSED 28.1713862854 MBpS
-MM:a1 TEST t02: a1:XX OK: TEST 8180375219 bind:100.0.0.1 dst:140.0.0.1:4322 TRANSFER COMPLETE
-MM:c2 OK: TEST t02 8180375219 TEST PASSED 61.0961442421 MBpS
-MM:a1 TEST t03: a1:XX OK: TEST 4935505892 bind:100.0.0.1 dst:140.0.0.1:8888 TRANSFER COMPLETE
-MM:c1 OK: TEST t03 4935505892 TEST PASSED 39.6531115327 MBpS
-MM:00 INFO: BYE
-
+MM:b1 WITHDRAW:  140.0.0.0/24
+MM:00: DELAY 5
+<b>MM:h1_a1 VERIFY: h1_a1:XX OK: TEST 5652012792 bind:100.0.0.1 dst:140.0.0.1:80 TRANSFER COMPLETE
+MM:h1_b1 TEST FAILED - DATA NOT FOUND ON EXPECTED HOST (h1_b1) - checking all hosts
+MM:h1_c1 TEST MISDIRECTED 5652012792 to h1_c1:00 COMPLETE 5652012792 100.0.0.1:37085->140.0.0.1:80 9.82659147608 MBpS</b>
+...
+MM:b1 ANNOUNCE:  140.0.0.0/24
+MM:a1 REXEC: ip -s -s neigh flush all 
+*** Flush is complete after 1 round ***
+MM:00: DELAY 2
+<b>MM:h1_a1 VERIFY: h1_a1:XX OK: TEST 2829810118 bind:100.0.0.1 dst:140.0.0.1:80 TRANSFER COMPLETE
+MM:h1_b1 TEST PASSED 2829810118 100.0.0.1:38560->140.0.0.1:80 8.68190197967 MBpS</b>
+...
+</pre>
+```
 ```
 
-If you need to debug a test, the simplest way is to edit the startup.sh script and change the environment variable INTERACTIVE to a non zero value
-This will leave the network intact and not start the cleanup script until you exit mininext with a control-D.
-You can then run tmgr interactively in another window, or use mininext commands to check routes.
-A useful tmgr command is 'pending' which will query all tnodes for any results that have not been claimed, which would likely be due to misdirected traffic.
+To pause a test so additional tmgr commands can be issued, use the *-i* option.
+This will run any supplied tests and then accept tmgr commands directly from the startup.sh window.
+
+
+# Creating Configurations and Tests
+
+
+## Specification File Format
+By convention, participants or autonomous systems (AS) are numbered from **1**.
+In a flow rule, the corresponding AS is lettered starting from **a**.
+Edge routers, which map to quagga hosts, are identified as the AS letter concatenated with the edge router ID, starting from 1 (although internally and for autogenerated MAC address (see below) the index runs from 0).
+If more than 26 AS'es are needed, doubling of letters is used, i.e., participant 27 is **aa**, participant 28 is **ab**.
+
+A specification file contains the following constructs in the order shown.
+- __mode__ 
+defines the switch configuration to be used.
+Values are either 'multi-switch' or 'multi-table'
+- __participants__
+declares the number of participating autonomous systems in the configuration.
+- __peers__
+declares the peering relationships between participating autonomous systems.
+Multiple peerings can be defined.
+- __participant__
+defines the configuration for each AS.
+The additional arguments are:
+  * participant number - starts with 1
+  * autonomous system number
+  * switch port number - starts at 3 for mode multi-table and at 5 for mode multi-switch.  The special argument 'PORT' will automatically use the next available port number regardless of mode.
+  * mac address for this edge router.
+  The special argument 'MAC' will generate a unique MAC address with a known pattern to simplify debugging.
+  Currently the format is 08:00:bb:bb:PP:RR where PP is the participant number and RR is the router index.
+  * IP address for this interface
+  * Additional triplets of port, mac and IP for the other edge routers in this AS
+- __host__ defines the format for labeling hosts (not routers).
+Host names are constructed automatically and implied in the *verify* tests described below.
+A host name is constructed by concatenating one or more of the following sequences:
+  * *characters*  -    a sequence of characters that will be used in the host name as is
+  * NETNUMB - the index of the AS networks reachable from this AS starting with 1 
+  * IP - the first 8 bits of the network address reachable from this AS
+  * ROUTER - the index of the border router for this AS
+  * AS - the letter(s) coresponding to the participant number
+  
+  Two example formats are shown below.
+  The firsrt format is convenient when there are large numbers of participants or participant border routers as the route prefix is incorporated into the host name.
+  The second format is the convention used in the *test-ms* and *test-mt* examples.
+  ```
+  host AS ROUTER _ IP                    # host names of form a1_100 a1_110
+  host h NETNUMB _ AS ROUTER             # host names of the form h1_a1 h2_a1
+  ```
+- __announce__ declares the networks that this AS can reach.
+The additional arguments are:
+  * participant number for these announcements
+  * one or more CIDR format network descriptions of the form a.b.c.d/prefix-bits. An interface on the corresponding quagga host will be created with the default address a.b.c.1.
+  **NOTE:** If an announced network begins with a minus sign, a host will be created to represent that network, but a route to that network will not be announced to the world.
+- __flow__ defines an inbound or outbound flow rule.
+  * outbound rule: `flow source-AS-edge-router tcp_port >> destination_AS`
+  * inbound rule: `flow AS-edge-router << tcp_port`
+- __listener__ defines the listeners that will be created on each quagga host to receive data routed through the switching fabric.
+The additional arguments are:
+  * host for this listener
+  * binding address to use on that host
+  * one or more tcp ports on which to listen
+- __test name { commands }__ defines a labeled group of torch commands that can be invoked as a whole. See the next section for a description of the command set.
+
+## Torch Commands
+```
+    listener anyhost bind port      # start a listener on the host to receive data
+    test test_name ...              # run a multi-command test
+    verify src_host dst_host port   # verify a data transfer - see below for details
+    announce bgprouter network ...  # advertise a BGP route
+    withdraw bgprouter network ...  # withdraw a BGP route
+    bgp bgprouter                   # show advertised bgp routes
+    delay seconds                   # pause for things to settle
+    exec anynode cmd arg arg        # execute cmd on node
+    local cmd arg arg               # execute cmd on local machine
+    pending anyhost                 # check if any pending or unclaimed data transfers are on host
+    send host bind daddr port       # send data xmit request to source node
+    comment commentary ...          # log a comment
+    reset anynode                   # reset (close) listeners - takes a few seconds to take effect
+    kill anynode                    # terminate a node, non recoverable
+    dump anynode                    # dump any messages from a node - mainly to see if nodes are on-line
+    config                          # print result of spec file parsing
+    help                            # print this message
+    quit                            # exit this manager; leaves nodes intact
+    
+    Where:
+    host = a single specified host or bgprouter
+    bgprouter = only a single bgp router node
+    anynode = host | "hosts" | bgprouter | "bgprouters"
+    anyhost = host | "hosts"
+```        
+##### verify command
+  The traffic manager will coordinate with the traffic node on the source host to bind a socket to the appropriate interface and send data to the address implied by the destination host.
+  Since in general there will be multiple edge routers that advertise the same network, it is up to the switching fabric to determine the ultimate destination based on flow rules and possibly default routing (if no flow rules match).
+  
+  The use of the destination host name in the verify command is only a convenience to specify that address.
+  Tmgr will look up that host and get the corresponding network address as described by the *announce* configuration line in the spec file.
+  However, the destination edge router name will be used by the traffic manager to confirm that the data transfer did indeed terminate on that edge router, and therefore that the switching fabric properly routed the traffic.
+  If it is not found there, the traffic manager will search all hosts for the transfer results.
+
+## Additional Examples
+The specification files can be found in the *test/specs* directory.
+To generate the configuration files, run the buildall.sh script from the test directory.
+This will create all necessary data files and move them to the top-level *examples* directory.
+(Currently, these configuration files must be placed in that directory for the iSDX software to find them, but the tests can be run from the *test* directory.)
+
+In the following diagrams, the black dashed lines indicate an Autonomous System (AS).
+The colored dash-dot-dash lines indicate a peering relationship among AS'es (except for test6-ms, which uses colors to distinguish the multiple outbound rules).
+
+### Configurations test0-ms and test0-mt
+These configurations are equivalent to the test-ms and test-mt examples in the top level examples directory and are defined here as placeholders for the data transfer tests.
+
+### Configurations test1-ms and test1-mt
+These configurations are equivalent to test-ms and test-mt in the examples directory with the exception that the host names used follow the torch naming convention of **AS_NAME | ROUTER_NUMBER | UNDERSCORE _ NETWORK_PREFIX**.
+For example c1_140 is the name of the host attached to the 140 network interface on the c1 edge router.
+These examples also withdraw and announce the B1 route for 140.0.0.0/24.
+ 
+AS A directs its port 80 traffic to AS B, and its port 4321 and 4322 traffic to AS C.
+AS C has inbound rules that further refine flows to routers C1 for port 4321 and C2 for port 4322.
+```
+flow a1 80 >> b
+flow a1 4321 >> c
+flow a1 4322 >> c
+flow c1 << 4321
+flow c2 << 4322
+```
+![Experimental Setup](https://docs.google.com/drawings/d/1mOw8i23mZYNSj1eH4wwXECLwx6SViR0NaI4bgnAnaHs/pub?w=960&h=720)
+
+### Configuration test2-ms 
+This configuration is patterned on test1-ms, but adds 2 AS'es. It is intended to replicate a hardware test-bed configuration. A, C and D are patterned after A, B and C in test 1. An additional source, B, has its port 80 traffic sent to E. B also sends port 4321 and 4322 traffic to D.
+```
+flow a1 80 >> c
+flow a1 4321 >> d
+flow a1 4322 >> d
+flow d1 << 4321
+flow d2 << 4322
+flow b1 80 >> e
+flow b1 4321 >> e
+flow b1 4322 >> e
+```
+![Experimental Setup](https://docs.google.com/drawings/d/1H8d_kWxee9txHfZx2k479A8NXjQHuHR3qnuTrcf3sBc/pub?w=960&h=720)
+
+### Configuration test3-ms
+This configuration replicates test1-ms four times, with each set of 3 AS'es restricted to its own peering group.
+```
+flow a1 80 >> b
+flow a1 4321 >> c
+flow a1 4322 >> c
+flow c1 << 4321
+flow c2 << 4322
+
+flow d1 80 >> e
+flow d1 4321 >> f
+flow d1 4322 >> f
+flow f1 << 4321
+flow f2 << 4322
+
+flow g1 80 >> h
+flow g1 4321 >> i
+flow g1 4322 >> i
+flow i1 << 4321
+flow i2 << 4322
+
+flow j1 80 >> k
+flow j1 4321 >> l
+flow j1 4322 >> l
+flow l1 << 4321
+flow l2 << 4322
+```
+![Experimental Setup](https://docs.google.com/drawings/d/1LHTyuZR8qbzq7wp1HgpiprpMGeQ2XY2sUvlu6XwgcNM/pub?w=960&h=720)
+
+### Configuration test4-ms
+This configuration includes only outbound flow rules. AS A sends traffic to 8 other AS'es based on port number.
+```
+flow a1 80 >> b
+flow a1 81 >> c
+flow a1 82 >> d
+flow a1 83 >> e
+flow a1 84 >> f
+flow a1 85 >> g
+flow a1 86 >> h
+flow a1 87 >> i
+```
+![Experimental Setup](https://docs.google.com/drawings/d/17XaTGOoCNJ8LDa5q_1Gh1-fpz64S7uRoY_m74mWXpRE/pub?w=960&h=720)
+
+### Configuration test5-ms
+This configuration includes only inbound flow rules. Inbound traffic is routed to 1 of 8 edge routers based on port number.
+```
+flow b1 << 80
+flow b2 << 81
+flow b3 << 82
+flow b4 << 83
+flow b5 << 84
+flow b6 << 85
+flow b7 << 86
+flow b8 << 87
+flow b9 << 88
+```
+![Experimental Setup](https://docs.google.com/drawings/d/1VTqNpCAfSlrvFzB8uM2bflbTBSGsMwV1AnWoc2IBwsc/pub?w=960&h=720)
+
+### Configuration test6-ms
+This configuration includes outbound flows across all AS'es. Each AS sources traffic to its 2 neighbors. Port 80 traffic moves clockwise.  Port 81 traffic moves counter clockwise.
+```
+flow a1 80 >> b
+flow b1 80 >> c
+flow c1 80 >> a
+flow a1 81 >> c
+flow b1 81 >> a
+flow c1 81 >> b
+```
+
+![Experimental Setup](https://docs.google.com/drawings/d/1BjwMis_0_1QpmcmBonSbojuwbHC64L6YdB61zrJUl64/pub?w=960&h=720)
+
 

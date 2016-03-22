@@ -281,6 +281,79 @@ def cmd_thread(conn):
         conn.close()
         return
     
+    if cmd == 'announce' or cmd == 'withdraw' and n > 1:
+        if cmd == 'withdraw':
+            no = 'no '
+        else:
+            no = ''
+        
+        try:
+            # first find the BGP ASN
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect(('127.0.0.1', 2605))
+            s.sendall('sdnip\nenable\nshow ip bgp summary\nquit\nquit\nquit\n')
+            data = ''
+            while True:
+                chunk = s.recv(4096)
+                if chunk is None or len(chunk) == 0:
+                    break
+                data += chunk
+            s.close()            
+            asn = 'UNKNOWN'
+            for l in data.split('\n'):
+                if 'local AS number' in l:
+                    asn = l.split()[-1]
+                    break
+            #conn.sendall('\n*****   ' + asn + '   *****\n')
+                   
+            # now send the command to announce the route
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect(('127.0.0.1', 2605))
+            nets = 'sdnip\n'  # password in sdnip.py
+            nets += 'enable\n'  # reach privileged bgp commands
+            nets += 'configure terminal\n' # beginning of config
+            nets += 'router bgp ' + asn + '\n' # bgp config
+            for i in range(1, n):
+                nets += no + 'network ' + tokens[i] + '\n' # "no" for withdraw
+            nets += 'quit\nquit\nquit\n' # unwind the commands (or connection won't terminate
+            s.sendall(nets)
+            
+            while True:
+                data = s.recv(4096)
+                if data is None or len(data) == 0:
+                    break
+                conn.sendall(data)
+            s.close()
+            conn.close()
+        except Exception, e:
+            conn.sendall(host + ':XX ERROR: ' + 'ANNOUNCE/WITHDRAW ' + repr(e) + '\n')
+            conn.close()
+            return
+        return
+    
+    if cmd == 'bgp' and n == 1:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect(('127.0.0.1', 2605))
+            seq = 'sdnip\n'  # password in sdnip.py
+            seq += 'enable\n'  # reach privileged bgp commands
+            seq += 'show ip bgp\n' # dump bgp routes
+            seq += 'quit\nquit\n' # unwind the commands (or connection won't terminate
+            s.sendall(seq)
+            
+            while True:
+                data = s.recv(4096)
+                if data is None or len(data) == 0:
+                    break
+                conn.sendall(data)
+            s.close()
+            conn.close()
+        except Exception, e:
+            conn.sendall(host + ':XX ERROR: ' + 'BGP ' + repr(e) + '\n')
+            conn.close()
+            return
+        return
+    
     conn.sendall(host + ':XX ERROR: Bad command: ' + data)
     conn.close()
 

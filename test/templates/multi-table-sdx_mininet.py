@@ -40,7 +40,6 @@ class SDXTopo( Topo ):
         # host  details are now in config 
         config = args[0][0]      
         for host in sorted(config):
-            print host
             self.addParticipant(fabric=main_switch,
                             name=host,
                             port=config[host]['port'],
@@ -48,10 +47,12 @@ class SDXTopo( Topo ):
                             ip=config[host]['ip'],
                             networks=config[host]['networks'],
                             asn=config[host]['asn'],
-                            netnames=config[host]['netnames'])
+                            netnames=config[host]['netnames'],
+                            announcements=config[host]['announcements'])
             
            
-    def addParticipant(self,fabric,name,port,mac,ip,networks,asn,netnames):
+    def addParticipant(self,fabric,name,port,mac,ip,networks,asn,netnames, announcements):
+        print 'name=' + name + ' ip=' + ip + ' networks=' + str(networks)
         # Adds the interface to connect the router to the Route server
         peereth0 = [{'mac': mac, 'ipAddrs': [ip]}]
         intfs = {name+'-eth0': peereth0}
@@ -68,7 +69,7 @@ class SDXTopo( Topo ):
                             intfDict=intfs,
                             asNum=asn,
                             neighbors=neighbors,
-                            routes=networks,
+                            routes=announcements,
                             cls=BgpRouter)
         self.addLink(fabric, peer, port)
         

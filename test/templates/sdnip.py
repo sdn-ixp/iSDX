@@ -126,6 +126,7 @@ class BgpRouter(Router):
                 s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) # @UndefinedVariable
                 s.connect(self.socket)
                 #print 'connected - breaking'
+                s.close()
                 break
             except Exception, e:
                 #print' ERROR: ' + repr(e)
@@ -185,6 +186,7 @@ class BgpRouter(Router):
         configFile = open(self.zebraConfFile, 'w+')
         configFile.write('hostname %s\n' % self.name)
         configFile.write('password %s\n' % 'sdnip')
+        configFile.write('enable password %s\n' % 'sdnip')
         configFile.write('log file /var/run/quagga/z_%s debugging\n' % self.asNum)
         configFile.close()
 

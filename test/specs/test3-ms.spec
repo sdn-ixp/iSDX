@@ -5,11 +5,11 @@
 mode multi-switch
 participants 12
 
-peers 1 2 3 4 5 6 7 8 9 10 11 12
-#peers 1 2 3
-#peers 4 5 6
-#peers 7 8 9
-#peers 10 11 12
+#peers 1 2 3 4 5 6 7 8 9 10 11 12
+peers 1 2 3
+peers 4 5 6
+peers 7 8 9
+peers 10 11 12
 
 #participant ID ASN PORT MAC IP PORT MAC IP
 participant 1 100 PORT MAC 172.0.0.1/16
@@ -18,14 +18,14 @@ participant 3 300 PORT MAC 172.0.0.21/16 PORT MAC 172.0.0.22/16
 participant 4 400 PORT MAC 172.0.0.31/16
 participant 5 500 PORT MAC 172.0.0.41/16
 participant 6 600 PORT MAC 172.0.0.51/16 PORT MAC 172.0.0.52/16
-participant 7 400 PORT MAC 172.0.0.61/16
-participant 8 500 PORT MAC 172.0.0.71/16
-participant 9 600 PORT MAC 172.0.0.81/16 PORT MAC 172.0.0.82/16
-participant 10 400 PORT MAC 172.0.0.91/16
-participant 11 500 PORT MAC 172.0.0.101/16
-participant 12 600 PORT MAC 172.0.0.111/16 PORT MAC 172.0.0.112/16
+participant 7 700 PORT MAC 172.0.0.61/16
+participant 8 800 PORT MAC 172.0.0.71/16
+participant 9 900 PORT MAC 172.0.0.81/16 PORT MAC 172.0.0.82/16
+participant 10 1000 PORT MAC 172.0.0.91/16
+participant 11 1100 PORT MAC 172.0.0.101/16
+participant 12 1200 PORT MAC 172.0.0.111/16 PORT MAC 172.0.0.112/16
 
-host AS ROUTER _ IP           # testnode names of form a1_100 a1_110
+host AS ROUTER _ IP           # host names of form a1_100 a1_110
 
 announce 1 100.0.0.0/24
 announce 2 140.0.0.0/24 
@@ -64,29 +64,34 @@ flow j1 4322 >> l
 flow l1 << 4321
 flow l2 << 4322
 
-# node host interface_name interface_address ports
-
-node AUTOGEN 80 4321 4322 8888
+listener AUTOGEN 80 4321 4322 8888
 
 # test src_host dst_host dst_port
 # binding addresses are taken from the corresponding node definition
 # destination is an expected destination
-test a1_100 b1_140 80
-test a1_100 c1_140 4321
-test a1_100 c2_140 4322
-test a1_100 c1_140 8888
 
-test d1_101 e1_140 80
-test d1_101 f1_140 4321
-test d1_101 f2_140 4322
-test d1_101 f1_140 8888
+test init {
+	listener
+}
 
-test g1_102 h1_140 80
-test g1_102 i1_140 4321
-test g1_102 i2_140 4322
-test g1_102 i1_140 8888
-
-test j1_103 k1_140 80
-test j1_103 l1_140 4321
-test j1_103 l2_140 4322
-test j1_103 l1_140 8888
+test regress {
+	verify a1_100 b1_140 80
+	verify a1_100 c1_140 4321
+	verify a1_100 c2_140 4322
+	verify a1_100 c1_140 8888
+	
+	verify d1_101 e1_140 80
+	verify d1_101 f1_140 4321
+	verify d1_101 f2_140 4322
+	verify d1_101 f1_140 8888
+	
+	verify g1_102 h1_140 80
+	verify g1_102 i1_140 4321
+	verify g1_102 i2_140 4322
+	verify g1_102 i1_140 8888
+	
+	verify j1_103 k1_140 80
+	verify j1_103 l1_140 4321
+	verify j1_103 l2_140 4322
+	verify j1_103 l1_140 8888
+}

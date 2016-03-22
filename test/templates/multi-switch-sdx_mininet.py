@@ -56,9 +56,10 @@ class SDXTopo(Topo):
                             ip=config[host]['ip'],
                             networks=config[host]['networks'],
                             asn=config[host]['asn'],
-                            netnames=config[host]['netnames'])
+                            netnames=config[host]['netnames'],
+                            announcements=config[host]['announcements'])
            
-    def addParticipant(self, fabric, name, port, mac, ip, networks, asn, netnames):
+    def addParticipant(self, fabric, name, port, mac, ip, networks, asn, netnames, announcements):
         print 'name=' + name + ' ip=' + ip + ' networks=' + str(networks)
         # Adds the interface to connect the router to the Route server
         peereth0 = [{'mac': mac, 'ipAddrs': [ip]}]
@@ -73,7 +74,7 @@ class SDXTopo(Topo):
         # Set up the peer router
         neighbors = [{'address': ROUTE_SERVER_IP, 'as': ROUTE_SERVER_ASN}]
         peer = self.addHost(name, intfDict=intfs, asNum=asn,
-                            neighbors=neighbors, routes=networks, cls=BgpRouter)
+                            neighbors=neighbors, routes=announcements, cls=BgpRouter)
         self.addLink(fabric, peer, port)
         
         # Adds a host connected to the router via the gateway interface

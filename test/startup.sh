@@ -14,8 +14,8 @@ INTERACTIVE=0
 STOPONERROR=0
 PAUSEONERROR=0
 
-# name of regression test to use by default
-RTEST=terse
+
+
 #number of tests to run
 LOOPCOUNT=1
 
@@ -26,10 +26,6 @@ do
   case $key in
   -n|--loopcount)
      LOOPCOUNT="$2"
-     shift
-     ;;
-  -t|--traffic_test_name)
-     RTEST="$2"
      shift
      ;;
    -i)
@@ -52,20 +48,18 @@ do
   shift
 done
 
-echo running regression $RTEST
-
 if [ "$#" -lt 1 ] ; then
   echo "Usage: $0 -i -p -s -n number_of_loops -t traffic_test_group_name test_name test_name ..." >&2
-  echo "    -i is for interactive commands to mininet after running tests" >&2
-  echo "    -p is for pause after any errors.  Type return to continue" >&2
+  echo "    -i runs interactive torch commands after tests" >&2
+  echo "    -p pauses after any errors.  Implies -i if error" >&2
   echo "    -s is for stopping after any errors. Can be used with -p" >&2
   exit 1
 fi
 
-for i in $@
+for TEST in $@
 do
-	if [ ! -e $EXAMPLES/$i ] ; then
-        echo $0 ERROR: Test $i is not defined
+	if [ ! -e $EXAMPLES/$TEST/config/config.spec ] ; then
+        echo $0 ERROR: Test $TEST is not defined
         exit 1
     fi
 done
@@ -80,7 +74,7 @@ do
 		echo running test: $TEST:$count
 		if [ $INTERACTIVE != '0' ]
 		then
-			echo "****** RUNNING MININET IN INTERACTVE MODE - type control-D at end of test to continue **********"
+			echo "****** RUNNING IN INTERACTVE MODE - type control-D when finished to continue **********"
 		fi
 		echo -------------------------------
 		
@@ -99,14 +93,14 @@ do
 		
 		rm /var/run/quagga/*
 		cd $EXAMPLES/$TEST/mininet
-		cat <$M0 | python ./sdx_mininet.py mininet.cfg $BASE/test/tnode.py $SYNC &
+		cat $M0 | python ./sdx_mininet.py mininet.cfg $BASE/test/tnode.py $SYNC &
 		M_PID=$!
 		cat $SYNC
 		
 		echo starting ryu
 		cd $BASE/flanc
 		ryu-manager ryu.app.ofctl_rest refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg >/dev/null 2>&1 &
-		sleep 2
+		#sleep 2
 
 		echo starting xctrl
 		cd $BASE/xctrl/
@@ -115,12 +109,12 @@ do
 		echo starting arp proxy
 		cd $BASE/arproxy/
 		python arproxy.py $TEST &
-		sleep 3
+		#sleep 3
 
 		echo starting route server
 		cd $BASE/xrs/
 		python route_server.py $TEST &
-		sleep 3
+		#sleep 3
 
 		cd $BASE/pctrl/
 		while read -r part other
@@ -130,18 +124,18 @@ do
 				part=`echo $part | tr -d :\"`
 				echo starting participant $part
 				sudo python participant_controller.py $TEST $part &
-				sleep 1
+				#sleep 1
 			fi
 		done < $EXAMPLES/$TEST/config/sdx_policies.cfg
 		sleep 5
 
 		echo starting exabgp
 		exabgp $EXAMPLES/$TEST/config/bgp.conf >/dev/null 2>&1 &
-		sleep 10
+		sleep 5
 
 		echo starting $TEST
 		cd $BASE/test
-		python tmgr.py $EXAMPLES/$TEST/config/test.cfg "regression $RTEST"
+		python tmgr.py $EXAMPLES/$TEST/config/config.spec "test init regress"
 		
 		FAIL=`grep -c FAILED $LOG_DIR/$TEST.$count.log`
 		if [ $FAIL = '0' ]
@@ -149,20 +143,12 @@ do
 			echo "Test $TEST:$count succeeded.  All tests passed"
 			python $BASE/logmsg.py "Test $TEST:$count succeeded.  All tests passed"
 		else
-			python $BASE/logmsg.py "Test $TEST:$count failed.  Retrying"
-			echo TEST FAILED - SLEEPING AND RETRYING
-			sleep 3 # 60
-			python tmgr.py $EXAMPLES/$TEST/config/test.cfg "regression verbose-retry"
-			NFAIL=`grep -c FAILED $LOG_DIR/$TEST.$count.log`
-			if [ $NFAIL = $FAIL ]
-			then
-				echo "Test $TEST:$count succeeded on retry."
-				python $BASE/logmsg.py "Test $TEST:$count succeeded on retry."
-			fi
 			if [ $PAUSEONERROR != '0' ]
 			then
-				echo "******************************* pausing until carriage return *************************"
-				read </dev/tty
+				echo; echo "************ ERROR OCCCURED - PAUSING ************"
+				echo enter TORCH commands followed by control-d to exit
+				echo; echo "**************************************************"
+				python tmgr.py $EXAMPLES/$TEST/config/config.spec
 			fi
 			if [ $STOPONERROR != '0' ]
 			then
@@ -173,12 +159,9 @@ do
 		if [ $INTERACTIVE != '0' ]
 		then
 			echo; echo "************************"
-			echo enter mininet commands followed by control-d to exit
+			echo enter TORCH commands followed by control-d to exit
 			echo; echo "************************"
-			while read in
-			do
-				echo $in 
-			done >$M0
+			python tmgr.py $EXAMPLES/$TEST/config/config.spec
 		fi
 
 		echo cleaning up processes and files
@@ -190,11 +173,9 @@ do
 		sudo rm -f ~/iSDX/xrs/ribs/*.db
 		) >/dev/null 2>&1
 		
-		if [ $INTERACTIVE = '0' ]
-		then
-			echo telling mininet to shutdown
-			echo quit >$M0
-		fi
+		echo telling mininet to shutdown
+		echo quit >$M0
+
 		wait $M_PID
 		rm -f $M0 $SYNC
 
