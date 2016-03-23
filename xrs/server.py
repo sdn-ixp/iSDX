@@ -12,7 +12,7 @@ class server(object):
     def __init__(self, logger):
         self.logger = logger
 
-        self.listener = Listener(('localhost', 6000), authkey='xrs', backlog=10)
+        self.listener = Listener(('localhost', 6000), authkey='xrs', backlog=100)
 
         self.sender_queue = Queue()
         self.receiver_queue = Queue()
