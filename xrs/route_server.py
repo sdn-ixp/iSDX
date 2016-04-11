@@ -135,7 +135,7 @@ class route_server(object):
             # TODO: Make sure this is not an insane assumption
             peers_in = peers_out
 
-            addr, port = participant["EH_SOCKET"]
+            addr, port = participant["EH_SOCKET_XRS"]
             eh_socket = (str(addr), int(port))
 
             # create peer and add it to the route server environment

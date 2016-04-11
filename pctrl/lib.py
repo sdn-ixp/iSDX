@@ -101,10 +101,18 @@ class PConfig(object):
         return GenericClient(conn_info["GARP_SOCKET"][0], conn_info["GARP_SOCKET"][1], '', logger, 'arp')
 
 
-    def get_eh_info(self):
+    def get_eh_arp_info(self):
         config = self.config
 
-        conn_info = config["Participants"][self.id]["EH_SOCKET"]
+        conn_info = config["Participants"][self.id]["EH_SOCKET_ARP"]
+
+        return tuple(conn_info)
+
+
+    def get_eh_xrs_info(self):
+        config = self.config
+
+        conn_info = config["Participants"][self.id]["EH_SOCKET_XRS"]
 
         return tuple(conn_info)
 

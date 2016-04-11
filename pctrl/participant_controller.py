@@ -6,9 +6,9 @@
 import argparse
 #import atexit
 import json
-from multiprocessing.connection import Listener
+from multiprocessing.connection import Listener, Client
 import os
-#from signal import signal, SIGTERM
+from signal import signal, SIGTERM
 #from sys import exit
 from threading import RLock, Thread
 import time
@@ -75,7 +75,7 @@ class ParticipantController(object):
         self.dp_queued = []
 
 
-    def start(self):
+    def xstart(self):
         # Start all clients/listeners/whatevs
         self.logger.info("Starting controller for participant")
 
@@ -94,13 +94,18 @@ class ParticipantController(object):
         self.initialize_dataplane()
         self.push_dp()
 
-        # Start the event handler
-        eh_socket = self.cfg.get_eh_info()
-        self.listener_eh = Listener(eh_socket, authkey=None, backlog=100)
-        self.start_eh()
-        #ps_thread = Thread(target=self.start_eh)
-        #ps_thread.daemon = True
-        #ps_thread.start()
+        # Start the event handlers
+        ps_thread_arp = Thread(target=self.start_eh_arp)
+        ps_thread_arp.daemon = True
+        ps_thread_arp.start()
+
+        ps_thread_xrs = Thread(target=self.start_eh_xrs)
+        ps_thread_xrs.daemon = True
+        ps_thread_xrs.start()
+
+        ps_thread_arp.join()
+        ps_thread_xrs.join()
+        self.logger.debug("Return from ps_thread.join()")
 
 
     def load_policies(self, policy_file):
@@ -170,39 +175,41 @@ class ParticipantController(object):
 
     def stop(self):
         "Stop the Participants' SDN Controller"
-        self.logger.info("Stopping Controller. "+str(self.logger_info))
+        self.logger.info("Stopping Controller.")
 
         # Signal Termination and close blocking listener
         self.run = False
-        conn = Client(self.cfg.get_eh_info(), authkey=None)
+        conn = Client(self.cfg.get_eh_arp_info(), authkey=None)
+        conn.send("terminate")
+        conn.close()
+        conn = Client(self.cfg.get_eh_xrs_info(), authkey=None)
         conn.send("terminate")
         conn.close()
 
         # TODO: confirm that this isn't silly
-        self.xrs_client = None
-        self.refmon_client = None
-        self.arp_client = None
-
-        # TODO: Think of better way of terminating this listener
-        self.listener_eh.close()
+        #self.xrs_client = None
+        #self.refmon_client = None
+        #self.arp_client = None
 
 
-    def start_eh(self):
+    def start_eh_arp(self):
         '''Socket listener for network events '''
-        self.logger.info("Event Handler started.")
+        self.logger.info("ARP Event Handler started.")
+        sock = self.cfg.get_eh_arp_info()
+        listener_eh = Listener(sock, authkey=None, backlog=100)
 
         while self.run:
-            self.logger.debug("EH waiting for connection...")
-            conn_eh = self.listener_eh.accept()
+            self.logger.debug("ARP EH waiting for connection...")
+            conn_eh = listener_eh.accept()
 
             tmp = conn_eh.recv()
 
             if tmp != "terminate":
-                self.logger.debug("EH established connection...")
+                self.logger.debug("ARP EH established connection...")
 
                 data = json.loads(tmp)
 
-                self.logger.debug("Event received of type "+str(data.keys()))
+                self.logger.debug("ARP Event received of type "+str(data.keys()))
 
                 # Starting a thread for independently processing each incoming network event
                 event_processor_thread = Thread(target = self.process_event, args = [data])
@@ -212,7 +219,52 @@ class ParticipantController(object):
                 # Send a message back to the sender.
                 reply = "Event Received"
                 conn_eh.send(reply)
+            else:
+                self.logger.debug("ARP Got terminate. self.run: %s", self.run)
+
             conn_eh.close()
+
+        self.logger.debug("ARP Just before listen close")
+        listener_eh.close()
+        self.logger.debug("Exiting start_eh_arp")
+
+
+    def start_eh_xrs(self):
+        '''Socket listener for network events '''
+        self.logger.info("XRS Event Handler started.")
+        sock = self.cfg.get_eh_xrs_info()
+        listener_eh = Listener(sock, authkey=None, backlog=100)
+
+        while self.run:
+            self.logger.debug("XRS EH waiting for connection...")
+            conn_eh = listener_eh.accept()
+
+            tmp = conn_eh.recv()
+
+            if tmp != "terminate":
+                self.logger.debug("XRS EH established connection...")
+
+                data = json.loads(tmp)
+
+                self.logger.debug("XRS Event received of type "+str(data.keys()))
+
+                # Starting a thread for independently processing each incoming network event
+                event_processor_thread = Thread(target = self.process_event, args = [data])
+                event_processor_thread.daemon = True
+                event_processor_thread.start()
+
+                # Send a message back to the sender.
+                reply = "Event Received"
+                conn_eh.send(reply)
+            else:
+                self.logger.debug("XRS Got terminate. self.run: %s", self.run)
+
+            conn_eh.close()
+
+        self.logger.debug("XRS Just before listen close")
+        listener_eh.close()
+        self.logger.debug("Exiting start_eh_xrs")
+
 
     def process_event(self, data):
         "Locally process each incoming network event"
@@ -509,7 +561,11 @@ def get_prefixes_from_announcements(route):
     return prefixes
 
 
+ctrlr = None
+
 def main():
+    global ctrlr
+
     parser = argparse.ArgumentParser()
     parser.add_argument('dir', help='the directory of the example')
     parser.add_argument('id', type=int,
@@ -540,18 +596,24 @@ def main():
 
     # start controller
     ctrlr = ParticipantController(args.id, config_file, policy_file, logger)
-    ctrlr_thread = Thread(target=ctrlr.start)
+    ctrlr_thread = Thread(target=ctrlr.xstart)
     ctrlr_thread.daemon = True
     ctrlr_thread.start()
 
     #atexit.register(ctrlr.stop)
     #signal(SIGTERM, lambda signum, stack_frame: exit(1))
+    signal(SIGTERM, on_sigterm)
 
     while ctrlr_thread.is_alive():
         try:
             ctrlr_thread.join(1)
         except KeyboardInterrupt:
             ctrlr.stop()
+
+    logger.info("Pctrl exiting")
+
+def on_sigterm(signum, stack_frame):
+    ctrlr.stop()
 
 
 if __name__ == '__main__':

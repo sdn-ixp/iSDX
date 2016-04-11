@@ -76,7 +76,7 @@ class ArpProxy(object):
 
                 self.participants[participant_id] = {}
                 # Create Persistent Client Object
-                addr, port = participant["EH_SOCKET"]
+                addr, port = participant["EH_SOCKET_ARP"]
                 self.participants[participant_id]["eh_socket"] = (addr, int(port))
                 for port in participant["Ports"]:
                     self.portmac_2_participant[port['MAC']] = participant_id
