@@ -167,20 +167,13 @@ do
 		fi
 
 		echo cleaning up processes and files
-		# kill pctrl before everything else
-		# only needed for testing changes to pctrl
 		(
-		for pid in $(ps -ef | grep participant_controller | grep -v grep | grep -v sudo | awk '{print $2}')
-		do
-			sudo kill $pid
-		done
-		sleep 3
 		sudo killall python /usr/bin/python /usr/lib/quagga/bgpd /usr/lib/quagga/zebra
 		sudo killall exabgp
 		sudo fuser -k 6633/tcp
 		python ~/iSDX/pctrl/clean_mongo.py
 		sudo rm -f ~/iSDX/xrs/ribs/*.db
-		) #>/dev/null 2>&1
+		) >/dev/null 2>&1
 		
 		echo telling mininet to shutdown
 		echo quit >$M0

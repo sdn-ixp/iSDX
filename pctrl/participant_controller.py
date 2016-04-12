@@ -4,12 +4,12 @@
 
 
 import argparse
-#import atexit
+import atexit
 import json
 from multiprocessing.connection import Listener, Client
 import os
 from signal import signal, SIGTERM
-#from sys import exit
+from sys import exit
 from threading import RLock, Thread
 import time
 
@@ -81,11 +81,13 @@ class ParticipantController(object):
 
         # ExaBGP Peering Instance
         self.bgp_instance = self.cfg.get_bgp_instance()
-        self.logger.debug("Trace: Started controller for participant")
 
         # Route server client, Reference monitor client, Arp Proxy client
         self.xrs_client = self.cfg.get_xrs_client(self.logger)
+
         self.arp_client = self.cfg.get_arp_client(self.logger)
+        self.arp_client.send({'msgType': 'hello', 'macs': self.cfg.get_macs()})
+
         self.refmon_client = self.cfg.get_refmon_client(self.logger)
          # class for building flow mod msgs to the reference monitor
         self.fm_builder = FlowModMsgBuilder(self.id, self.refmon_client.key)
@@ -175,13 +177,11 @@ class ParticipantController(object):
 
     def stop(self):
         "Stop the Participants' SDN Controller"
+
         self.logger.info("Stopping Controller.")
 
         # Signal Termination and close blocking listener
         self.run = False
-        conn = Client(self.cfg.get_eh_arp_info(), authkey=None)
-        conn.send("terminate")
-        conn.close()
         conn = Client(self.cfg.get_eh_xrs_info(), authkey=None)
         conn.send("terminate")
         conn.close()
@@ -189,43 +189,31 @@ class ParticipantController(object):
         # TODO: confirm that this isn't silly
         #self.xrs_client = None
         #self.refmon_client = None
-        #self.arp_client = None
 
 
     def start_eh_arp(self):
         '''Socket listener for network events '''
         self.logger.info("ARP Event Handler started.")
-        sock = self.cfg.get_eh_arp_info()
-        listener_eh = Listener(sock, authkey=None, backlog=100)
 
         while self.run:
-            self.logger.debug("ARP EH waiting for connection...")
-            conn_eh = listener_eh.accept()
+            # need to poll since recv() will not detect close from this end
+            # and need some way to shutdown gracefully.
+            if not self.arp_client.poll(1):
+                continue
+            try:
+                tmp = self.arp_client.recv()
+            except EOFError:
+                break
 
-            tmp = conn_eh.recv()
+            data = json.loads(tmp)
+            self.logger.debug("ARP Event received: %s", data)
 
-            if tmp != "terminate":
-                self.logger.debug("ARP EH established connection...")
+            # Starting a thread for independently processing each incoming network event
+            event_processor_thread = Thread(target=self.process_event, args=(data,))
+            event_processor_thread.daemon = True
+            event_processor_thread.start()
 
-                data = json.loads(tmp)
-
-                self.logger.debug("ARP Event received of type "+str(data.keys()))
-
-                # Starting a thread for independently processing each incoming network event
-                event_processor_thread = Thread(target = self.process_event, args = [data])
-                event_processor_thread.daemon = True
-                event_processor_thread.start()
-
-                # Send a message back to the sender.
-                reply = "Event Received"
-                conn_eh.send(reply)
-            else:
-                self.logger.debug("ARP Got terminate. self.run: %s", self.run)
-
-            conn_eh.close()
-
-        self.logger.debug("ARP Just before listen close")
-        listener_eh.close()
+        self.arp_client.close()
         self.logger.debug("Exiting start_eh_arp")
 
 
@@ -249,7 +237,7 @@ class ParticipantController(object):
                 self.logger.debug("XRS Event received of type "+str(data.keys()))
 
                 # Starting a thread for independently processing each incoming network event
-                event_processor_thread = Thread(target = self.process_event, args = [data])
+                event_processor_thread = Thread(target=self.process_event, args=(data,))
                 event_processor_thread.daemon = True
                 event_processor_thread.start()
 
@@ -376,7 +364,9 @@ class ParticipantController(object):
             self.logger.debug("Sending ARP Response: "+str(arp_responses))
 
         for arp_response in arp_responses:
-            self.arp_client.send(json.dumps(arp_response))
+            arp_response['msgType'] = 'garp'
+            self.arp_client.send(arp_response)
+
 
     def getlock(self, prefixes):
         prefixes.sort()
@@ -561,11 +551,7 @@ def get_prefixes_from_announcements(route):
     return prefixes
 
 
-ctrlr = None
-
 def main():
-    global ctrlr
-
     parser = argparse.ArgumentParser()
     parser.add_argument('dir', help='the directory of the example')
     parser.add_argument('id', type=int,
@@ -600,9 +586,8 @@ def main():
     ctrlr_thread.daemon = True
     ctrlr_thread.start()
 
-    #atexit.register(ctrlr.stop)
-    #signal(SIGTERM, lambda signum, stack_frame: exit(1))
-    signal(SIGTERM, on_sigterm)
+    atexit.register(ctrlr.stop)
+    signal(SIGTERM, lambda signum, stack_frame: exit(1))
 
     while ctrlr_thread.is_alive():
         try:
@@ -611,9 +596,6 @@ def main():
             ctrlr.stop()
 
     logger.info("Pctrl exiting")
-
-def on_sigterm(signum, stack_frame):
-    ctrlr.stop()
 
 
 if __name__ == '__main__':

@@ -85,6 +85,8 @@ class PConfig(object):
 
         self.VNHs = IPNetwork(config["VNHs"])
 
+    def get_macs(self):
+        return [port['MAC'] for port in self.ports]
 
 
 
@@ -98,15 +100,7 @@ class PConfig(object):
 
         conn_info = config["ARP Proxy"]
 
-        return GenericClient(conn_info["GARP_SOCKET"][0], conn_info["GARP_SOCKET"][1], '', logger, 'arp')
-
-
-    def get_eh_arp_info(self):
-        config = self.config
-
-        conn_info = config["Participants"][self.id]["EH_SOCKET_ARP"]
-
-        return tuple(conn_info)
+        return GenericClient2(conn_info["GARP_SOCKET"][0], conn_info["GARP_SOCKET"][1], '', logger, 'arp')
 
 
     def get_eh_xrs_info(self):
@@ -181,3 +175,41 @@ class GenericClient(object):
         conn.send(msg)
 
         conn.close()
+
+
+class GenericClient2(object):
+    def __init__(self, address, port, key, logger, sname):
+        self.address = address
+        self.port = int(port)
+        self.key = key
+        self.logger = logger
+        self.serverName = sname
+
+        while True: # keep going until we break out inside the loop
+            try:
+                self.logger.debug('Attempting to connect to '+self.serverName+' server at '+str(self.address)+' port '+str(self.port))
+                self.conn = Client((self.address, self.port))
+                self.logger.debug('Connect to '+self.serverName+' successful.')
+                break
+            except SocketError as serr:
+                if serr.errno == errno.ECONNREFUSED:
+                    self.logger.debug('Connect to '+self.serverName+' failed because connection was refused (the server is down). Trying again.')
+                else:
+                    # Not a recognized error. Treat as fatal.
+                    self.logger.debug('Connect to '+self.serverName+' gave socket error '+str(serr.errno))
+                    raise serr
+            except:
+                self.logger.exception('Connect to '+self.serverName+' threw unknown exception')
+                raise
+
+    def send(self, msg):
+        self.conn.send(json.dumps(msg))
+
+    def poll(self, t):
+        return self.conn.poll(t)
+
+    def recv(self):
+        return self.conn.recv()
+
+    def close(self):
+        self.conn.close()
