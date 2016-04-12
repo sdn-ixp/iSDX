@@ -22,7 +22,7 @@ case $2 in
     (2)
         # the following gets around issues with vagrant direct mount
         cd ~
-        sudo python $RUN_DIR/examples/$TEST_DIR/mininet/simple_sdx.py
+        sudo python $RUN_DIR/examples/$TEST_DIR/mininet/sdx_mininet.py $RUN_DIR/examples/$TEST_DIR/mininet/mininet.cfg
 
         #cd $RUN_DIR/examples/$TEST_DIR/mininext
         #sudo ./sdx_mininext.py
