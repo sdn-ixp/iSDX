@@ -165,7 +165,6 @@ def main (argv):
     ehport = 5001
     for p in sorted(participants):
         part = participants[p]
-        part['EH_SOCKET_ARP'] = ['localhost', ehport]
         part['EH_SOCKET_XRS'] = ['localhost', ehport+1]
         part['Flanc Key'] = 'Part' + p + 'Key'
         ehport += 2
