@@ -11,9 +11,10 @@ import json
 from multiprocessing.connection import Listener, Client
 import os
 import Queue
-from threading import Thread
-
 import sys
+from threading import Thread
+import time
+
 np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if np not in sys.path:
     sys.path.append(np)
@@ -32,19 +33,50 @@ config = None
 participants = {}
 portip_2_participant = {}
 
-class route_server(object):
-    def __init__(self, config_file):
-        logger.info("Initializing the Route Server.")
 
-        # Initialize a XRS Server
-        self.server = Server(logger)
+class PctrlListener(object):
+    def __init__(self):
+        logger.info("Initializing the BGP PctrlListener")
+
+        self.listener = Listener(config.ah_socket, authkey=None, backlog=100)
         self.run = True
 
-        """
-        Start the announcement Listener which will receive announcements
-        from participants's controller and put them in XRS's sender queue.
-        """
-        self.set_announcement_handler()
+
+    def start(self):
+        logger.info("Announcement Handler started.")
+
+        while self.run:
+            conn = self.listener.accept()
+            announcement = conn.recv()
+
+            logger.debug("Received an announcement.")
+
+            bgpListener.send(announcement)
+            reply = "Announcement processed"
+            conn.send(reply)
+            conn.close()
+
+
+    def send(self, id, route):
+        logger.debug('Sending a route update to participant %d', id)
+        conn = Client(tuple(participants[id].eh_socket), authkey = None)
+        conn.send(json.dumps({'bgp': route}))
+        conn.recv()
+        conn.close()
+
+
+    def stop(self):
+        logger.info("Stopping PctrlListener.")
+        self.run = False
+
+
+class BGPListener(object):
+    def __init__(self):
+        logger.info("Initializing the BGP BGPListener")
+
+        # Initialize XRS Server
+        self.server = Server(logger)
+        self.run = True
 
 
     def start(self):
@@ -52,9 +84,10 @@ class route_server(object):
         self.server.start()
 
         waiting = 0
-
         while self.run:
-            # get BGP messages from ExaBGP via stdin
+            # get BGP messages from ExaBGP via stdin in client.py,
+            # which is routed to server.py via port 6000,
+            # which is routed to here via receiver_queue.
             try:
                 route = self.server.receiver_queue.get(True, 1)
             except Queue.Empty:
@@ -79,51 +112,15 @@ class route_server(object):
                 # Apply the filtering logic
                 if id in peers_out and advertise_id in peer.peers_in:
                     # Now send this route to participant `id`'s controller'
-                    self.send_update(id, route)
+                    pctrlListener.send(id, route)
 
-
-    def set_announcement_handler(self):
-        '''Start the listener socket for BGP Announcements'''
-
-        logger.info("Starting the announcement handler...")
-
-        self.listener_eh = Listener(config.ah_socket, authkey=None, backlog=100)
-        ps_thread = Thread(target=self.start_ah)
-        ps_thread.daemon = True
-        ps_thread.start()
-
-
-    def start_ah(self):
-        '''Announcement Handler '''
-
-        logger.info("Announcement Handler started.")
-
-        while self.run:
-            conn_ah = self.listener_eh.accept()
-            tmp = conn_ah.recv()
-
-            logger.debug("Received an announcement.")
-
-            announcement = json.loads(tmp)
-            self.server.sender_queue.put(announcement)
-            reply = "Announcement processed"
-            conn_ah.send(reply)
-            conn_ah.close()
-
-
-    def send_update(self, id, route):
-        # TODO: Explore what is better, persistent client sockets or
-        # new socket for each BGP update
-        "Send this BGP route to participant id's controller"
-        logger.debug("Sending a route update to participant "+str(id))
-        conn = Client(tuple(participants[id].eh_socket), authkey = None)
-        conn.send(json.dumps({'bgp': route}))
-        conn.recv()
-        conn.close()
+    def send(self, announcement):
+        announcement = json.loads(announcement)
+        self.server.sender_queue.put(announcement)
 
 
     def stop(self):
-        logger.info("Stopping.")
+        logger.info("Stopping BGPListener.")
         self.run = False
 
 
@@ -164,7 +161,7 @@ def parse_config(config_file):
 
 
 def main():
-    global config
+    global bgpListener, pctrlListener, config
 
     parser = argparse.ArgumentParser()
     parser.add_argument('dir', help='the directory of the example')
@@ -176,17 +173,23 @@ def main():
     logger.info("Reading config file %s", config_file)
     config = parse_config(config_file)
 
-    # start route server
-    sdx_rs = route_server(config_file)
-    rs_thread = Thread(target=sdx_rs.start)
-    rs_thread.daemon = True
-    rs_thread.start()
+    bgpListener = BGPListener()
+    bp_thread = Thread(target=bgpListener.start)
+    bp_thread.start()
 
-    while rs_thread.is_alive():
+    pctrlListener = PctrlListener()
+    pp_thread = Thread(target=pctrlListener.start)
+    pp_thread.start()
+
+    while bp_thread.is_alive():
         try:
-            rs_thread.join(1)
+            time.sleep(5)
         except KeyboardInterrupt:
-            sdx_rs.stop()
+            bgpListener.stop()
+
+    bp_thread.join()
+    pctrlListener.stop()
+    pp_thread.join()
 
 
 if __name__ == '__main__':
