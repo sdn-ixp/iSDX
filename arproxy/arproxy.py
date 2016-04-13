@@ -47,13 +47,12 @@ class PctrlClient(object):
         self.addr = addr
 
     def start(self):
-        logger.info("ARP Response Handler started")
+        logger.info('ARP Pctrl Client started for client ip %s.', self.addr)
         while True:
-            rv = None
             try:
                 rv = self.conn.recv()
             except EOFError as ee:
-                pass
+                rv = None
 
             if not (rv and self.process_message(**json.loads(rv))):
                 self.close()
@@ -220,7 +219,7 @@ class ArpListener(object):
         self.sock.send(data)
 
 
-def parse_arpconfig(config_file):
+def parse_config(config_file):
     "Parse the config file"
 
     with open(config_file, 'r') as f:
@@ -247,7 +246,7 @@ def main():
     config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"config","sdx_global.cfg")
 
     logger.info("Reading config file %s", config_file)
-    config = parse_arpconfig(config_file)
+    config = parse_config(config_file)
 
     logger.info("Starting ARP Listener")
     arpListener = ArpListener()
