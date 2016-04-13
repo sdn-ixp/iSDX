@@ -64,12 +64,9 @@ class route_server(object):
             except Queue.Empty:
                 if waiting == 0:
                     logger.debug("Waiting for BGP update...")
-                    waiting = 1
-                else:
-                    waiting = (waiting % 30) + 1
-                    if waiting == 30:
-                        logger.debug("Waiting for BGP update...")
+                waiting = (waiting+1) % 30
                 continue
+
             waiting = 0
             route = json.loads(route)
 
