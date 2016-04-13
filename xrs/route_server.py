@@ -6,6 +6,7 @@
 
 
 import argparse
+from collections import namedtuple
 import json
 from multiprocessing.connection import Listener, Client
 import os
@@ -18,8 +19,9 @@ if np not in sys.path:
     sys.path.append(np)
 import util.log
 
-from core import XRSPeer
 from server import server as Server
+
+XRSPeer = namedtuple('XRSPeer', 'peers_in peers_out eh_socket')
 
 
 logger = util.log.getLogger('XRS')
@@ -33,16 +35,7 @@ class route_server(object):
         self.server = None
         self.ah_socket = None
         self.participants = {}
-
-        # Several useful mappings
-        self.port_2_participant = {}
-        self.participant_2_port = {}
         self.portip_2_participant = {}
-        self.participant_2_portip = {}
-        self.portmac_2_participant = {}
-        self.participant_2_portmac = {}
-        self.asn_2_participant = {}
-        self.participant_2_asn = {}
 
         ## Parse Config
         self.parse_config(config_file)
@@ -68,22 +61,6 @@ class route_server(object):
             # get BGP messages from ExaBGP via stdin
             try:
                 route = self.server.receiver_queue.get(True, 1)
-                route = json.loads(route)
-
-                waiting = 0
-
-                logger.debug("Got route from ExaBGP. "+str(route)+' '+str(type(route)))
-
-                # Received BGP route advertisement from ExaBGP
-                for id, peer in self.participants.iteritems():
-                    # Apply the filtering logic
-                    advertiser_ip = route['neighbor']['ip']
-                    if advertiser_ip in self.portip_2_participant:
-                        advertise_id = self.portip_2_participant[advertiser_ip]
-                        if id in self.participants[advertise_id].peers_out and advertise_id in self.participants[id].peers_in:
-                            # Now send this route to participant `id`'s controller'
-                            self.send_update(id, route)
-
             except Queue.Empty:
                 if waiting == 0:
                     logger.debug("Waiting for BGP update...")
@@ -92,6 +69,23 @@ class route_server(object):
                     waiting = (waiting % 30) + 1
                     if waiting == 30:
                         logger.debug("Waiting for BGP update...")
+                continue
+            waiting = 0
+            route = json.loads(route)
+
+            logger.debug("Got route from ExaBGP: %s", route)
+
+            # Received BGP route advertisement from ExaBGP
+            try:
+                advertise_id = self.portip_2_participant[route['neighbor']['ip']]
+            except KeyError:
+                continue
+
+            for id, peer in self.participants.iteritems():
+                # Apply the filtering logic
+                if id in self.participants[advertise_id].peers_out and advertise_id in self.participants[id].peers_in:
+                    # Now send this route to participant `id`'s controller'
+                    self.send_update(id, route)
 
 
     def parse_config(self, config_file):
@@ -103,33 +97,13 @@ class route_server(object):
 
         self.ah_socket = tuple(config["Route Server"]["AH_SOCKET"])
 
-        for participant_name in config["Participants"]:
-            participant = config["Participants"][participant_name]
+        for pname,participant in config["Participants"].items():
+            iname = int(pname)
 
-            iname = int(participant_name)
-
-            # adding asn and mappings
             asn = participant["ASN"]
-            self.asn_2_participant[participant["ASN"]] = iname
-            self.participant_2_asn[iname] = participant["ASN"]
-
-            self.participant_2_port[iname] = []
-            self.participant_2_portip[iname] = []
-            self.participant_2_portmac[iname] = []
 
             for port in participant["Ports"]:
-                self.port_2_participant[port['Id']] = iname
                 self.portip_2_participant[port['IP']] = iname
-                self.portmac_2_participant[port['MAC']] = iname
-                self.participant_2_port[iname].append(port['Id'])
-                self.participant_2_portip[iname].append(port['IP'])
-                self.participant_2_portmac[iname].append(port['MAC'])
-
-            # adding ports and mappings
-            ports = [{"ID": port['Id'],
-                         "MAC": port['MAC'],
-                         "IP": port['IP']}
-                         for port in participant["Ports"]]
 
             peers_out = [peer for peer in participant["Peers"]]
             # TODO: Make sure this is not an insane assumption
@@ -139,8 +113,12 @@ class route_server(object):
             eh_socket = (str(addr), int(port))
 
             # create peer and add it to the route server environment
-            self.participants[iname] = XRSPeer(asn, ports, peers_in, peers_out, eh_socket)
+            self.participants[iname] = XRSPeer(peers_in, peers_out, eh_socket)
 
+        for i,p in self.participants.items():
+            logger.debug('Trace: participants[%d] = %s', i, p)
+        for i,p in self.portip_2_participant.items():
+            logger.debug('Trace: portip_2_participant[%s] = %s', i, p)
         logger.debug("Done parsing config")
 
 
@@ -195,8 +173,7 @@ def main():
     args = parser.parse_args()
 
     # locate config file
-    base_path = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"config"))
-    config_file = os.path.join(base_path, "sdx_global.cfg")
+    config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),"..","examples",args.dir,"config","sdx_global.cfg")
 
     # start route server
     sdx_rs = route_server(config_file)
