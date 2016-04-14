@@ -84,6 +84,7 @@ class ParticipantController(object):
 
         # Route server client, Reference monitor client, Arp Proxy client
         self.xrs_client = self.cfg.get_xrs_client(self.logger)
+	self.xrs_client.send({'msgType': 'hello', 'id': self.cfg.id, 'peers_in': self.cfg.peers_in, 'peers_out': self.cfg.peers_out, 'ports': self.cfg.get_ports()})
 
         self.arp_client = self.cfg.get_arp_client(self.logger)
         self.arp_client.send({'msgType': 'hello', 'macs': self.cfg.get_macs()})
@@ -182,17 +183,12 @@ class ParticipantController(object):
 
         # Signal Termination and close blocking listener
         self.run = False
-        conn = Client(self.cfg.get_eh_xrs_info(), authkey=None)
-        conn.send("terminate")
-        conn.close()
 
         # TODO: confirm that this isn't silly
-        #self.xrs_client = None
         #self.refmon_client = None
 
 
     def start_eh_arp(self):
-        '''Socket listener for network events '''
         self.logger.info("ARP Event Handler started.")
 
         while self.run:
@@ -218,35 +214,28 @@ class ParticipantController(object):
 
 
     def start_eh_xrs(self):
-        '''Socket listener for network events '''
         self.logger.info("XRS Event Handler started.")
-        sock = self.cfg.get_eh_xrs_info()
-        listener_eh = Listener(sock, authkey=None, backlog=100)
 
         while self.run:
-            self.logger.debug("XRS EH waiting for connection...")
-            conn_eh = listener_eh.accept()
+            # need to poll since recv() will not detect close from this end
+            # and need some way to shutdown gracefully.
+            if not self.xrs_client.poll(1):
+                continue
+            try:
+                tmp = self.xrs_client.recv()
+            except EOFError:
+                break
 
-            tmp = conn_eh.recv()
+            data = json.loads(tmp)
+            self.logger.debug("ARP Event received: %s", data)
 
-            if tmp != "terminate":
-                self.logger.debug("XRS EH established connection...")
+            # Starting a thread for independently processing each incoming network event
+	    # XXX: need to join() these at some point
+            event_processor_thread = Thread(target=self.process_event, args=(data,))
+            event_processor_thread.daemon = True
+            event_processor_thread.start()
 
-                data = json.loads(tmp)
-
-                self.logger.debug("XRS Event received of type "+str(data.keys()))
-
-                # Starting a thread for independently processing each incoming network event
-                event_processor_thread = Thread(target=self.process_event, args=(data,))
-                event_processor_thread.daemon = True
-                event_processor_thread.start()
-            else:
-                self.logger.debug("XRS Got terminate. self.run: %s", self.run)
-
-            conn_eh.close()
-
-        self.logger.debug("XRS Just before listen close")
-        listener_eh.close()
+        self.xrs_client.close()
         self.logger.debug("Exiting start_eh_xrs")
 
 
@@ -480,9 +469,8 @@ class ParticipantController(object):
 
     def send_announcement(self, announcement):
         "Send the announcements to XRS"
-        self.logger.debug("Sending announcements to XRS. "+str(type(announcement)))
-
-        self.xrs_client.send(json.dumps(announcement))
+	self.logger.debug("Sending announcements to XRS: %s", announcement)
+	self.xrs_client.send({'msgType': 'bgp', 'announcement': announcement})
 
 
     def vnh_assignment(self, update):

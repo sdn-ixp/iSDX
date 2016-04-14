@@ -39,8 +39,6 @@ clientActivePool = dict()
 clientDeadPool = set()
 
 
-XRSPeer = namedtuple('XRSPeer', 'peers_in peers_out eh_socket')
-
 class PctrlClient(object):
     def __init__(self, conn, addr):
         self.conn = conn
@@ -58,10 +56,9 @@ class PctrlClient(object):
             except EOFError as ee:
                 break
 
-            rv = json.dumps({'msgType': 'bgp', 'announcement': rv})
+            logger.debug('Trace: Got rv: %s', rv)
             if not (rv and self.process_message(**json.loads(rv))):
                 break
-            break
 
         self.conn.close()
 
@@ -75,8 +72,9 @@ class PctrlClient(object):
             logger.debug('Trace: PctrlClient.start: clientActivePool after: %s', clientActivePool)
             logger.debug('Trace: PctrlClient.start: clientDeadPool after: %s', clientDeadPool)
 
-        return
         with participantsLock:
+            logger.debug('Trace: PctrlClient.start: portip2participant before: %s', portip2participant)
+            logger.debug('Trace: PctrlClient.start: participants before: %s', participants)
             found = [k for k,v in portip2participant.items() if v == self.id]
             for k in found:
                 del portip2participant[k]
@@ -84,6 +82,8 @@ class PctrlClient(object):
             found = [k for k,v in participants.items() if v == self]
             for k in found:
                 del participants[k]
+            logger.debug('Trace: PctrlClient.start: portip2participant after: %s', portip2participant)
+            logger.debug('Trace: PctrlClient.start: participants after: %s', participants)
 
 
     def process_message(self, msgType=None, **data):
@@ -99,19 +99,23 @@ class PctrlClient(object):
 
 
     def process_hello_message(self, id=None, peers_in=None, peers_out=None, ports=None, **data):
-        if not (isinstance(id, int) and isinstance(ports, list) and
+        if not (id is not None and isinstance(ports, list) and
                 isinstance(peers_in, list) and isinstance(peers_out, list)):
             logger.warn("hello message from %s is missing something: id: %s, ports: %s, peers_in: %s, peers_out: %s. Closing connection.", self.addr, id, ports, peers_in, peers_out)
             return False
 
-        self.id = id
+        self.id = id = int(id)
         self.peers_in = set(peers_in)
         self.peers_out = set(peers_out)
 
         with participantsLock:
+            logger.debug('Trace: PctrlClient.hello: portip2participant before: %s', portip2participant)
+            logger.debug('Trace: PctrlClient.hello: participants before: %s', participants)
             for port in ports:
                 portip2participant[port] = id
             participants[id] = self
+            logger.debug('Trace: PctrlClient.hello: portip2participant after: %s', portip2participant)
+            logger.debug('Trace: PctrlClient.hello: participants after: %s', participants)
 
         return True
 
@@ -155,13 +159,6 @@ class PctrlListener(object):
                 logger.debug('Trace: PctrlListener.start: clientDeadPool after: %s', clientDeadPool)
 
             t.start()
-
-
-    # XXX: Moves to Client
-    def send(self, id, route):
-        logger.debug('Sending a route update to participant %d', id)
-        conn = Client(participants[id].eh_socket, authkey = None)
-        conn.send(json.dumps({'bgp': route}))
 
 
     def stop(self):
@@ -217,16 +214,14 @@ class BGPListener(object):
                 for id, peer in participants.iteritems():
                     # Apply the filtering logic
                     if id in peers_out and advertise_id in peer.peers_in:
-                        found.append(id)
-                        #found.append(peer)
+                        found.append(peer)
 
             for peer in found:
                 # Now send this route to participant `id`'s controller'
-                pctrlListener.send(peer, route)
-                #peer.send(route)
+                peer.send(route)
+
 
     def send(self, announcement):
-        announcement = json.loads(announcement)
         self.server.sender_queue.put(announcement)
 
 
@@ -245,26 +240,6 @@ def parse_config(config_file):
         config = json.load(f)
 
     ah_socket = tuple(config["Route Server"]["AH_SOCKET"])
-
-    for pname,participant in config["Participants"].items():
-        iname = int(pname)
-
-        for port in participant["Ports"]:
-            portip2participant[port['IP']] = iname
-
-        peers_out = set([peer for peer in participant["Peers"]])
-        peers_in = peers_out
-
-        addr, port = participant["EH_SOCKET_XRS"]
-        eh_socket = (str(addr), int(port))
-
-        # create peer and add it to the route server environment
-        participants[iname] = XRSPeer(peers_in, peers_out, eh_socket)
-
-    for i,p in participants.items():
-        logger.debug('Trace: participants[%d] = %s', i, p)
-    for i,p in portip2participant.items():
-        logger.debug('Trace: portip2participant[%s] = %s', i, p)
 
     logger.debug("Done parsing config")
     return Config(ah_socket)

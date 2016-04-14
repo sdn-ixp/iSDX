@@ -88,18 +88,23 @@ class PConfig(object):
     def get_macs(self):
         return [port['MAC'] for port in self.ports]
 
+    def get_ports(self):
+        return [port['IP'] for port in self.ports]
+
 
 
     def get_bgp_instance(self):
         return BGPPeer(self.id, self.asn, self.ports, self.peers_in, self.peers_out)
 
 
+    def get_xrs_client(self, logger):
+        config = self.config
+        conn_info = config["Route Server"]
+        return GenericClient2(conn_info["AH_SOCKET"][0], conn_info["AH_SOCKET"][1], '', logger, 'xrs')
 
     def get_arp_client(self, logger):
         config = self.config
-
         conn_info = config["ARP Proxy"]
-
         return GenericClient2(conn_info["GARP_SOCKET"][0], conn_info["GARP_SOCKET"][1], '', logger, 'arp')
 
 
@@ -122,13 +127,6 @@ class PConfig(object):
         key = config["Participants"][self.id]["Flanc Key"]
 
         return GenericClient(address, port, key, logger, 'refmon')
-
-    def get_xrs_client(self, logger):
-        config = self.config
-
-        conn_info = config["Route Server"]
-
-        return GenericClient(conn_info["AH_SOCKET"][0], conn_info["AH_SOCKET"][1], '', logger, 'xrs')
 
     def isMultiSwitchMode(self):
         return self.dp_mode == self.MULTISWITCH
