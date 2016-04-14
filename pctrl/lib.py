@@ -107,15 +107,6 @@ class PConfig(object):
         conn_info = config["ARP Proxy"]
         return GenericClient2(conn_info["GARP_SOCKET"][0], conn_info["GARP_SOCKET"][1], '', logger, 'arp')
 
-
-    def get_eh_xrs_info(self):
-        config = self.config
-
-        conn_info = config["Participants"][self.id]["EH_SOCKET_XRS"]
-
-        return tuple(conn_info)
-
-
     def get_refmon_client(self, logger):
         config = self.config
 

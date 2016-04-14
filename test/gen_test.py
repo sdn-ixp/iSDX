@@ -162,12 +162,9 @@ def main (argv):
         json.dump(sdx_policies, f, indent=4, sort_keys=True)
         
     # Fine Tune Participants
-    ehport = 5001
     for p in sorted(participants):
         part = participants[p]
-        part['EH_SOCKET_XRS'] = ['localhost', ehport+1]
         part['Flanc Key'] = 'Part' + p + 'Key'
-        ehport += 2
         part['ASN'] = int(part['ASN'])
         
     print 'participants'
