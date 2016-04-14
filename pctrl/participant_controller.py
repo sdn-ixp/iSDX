@@ -240,10 +240,6 @@ class ParticipantController(object):
                 event_processor_thread = Thread(target=self.process_event, args=(data,))
                 event_processor_thread.daemon = True
                 event_processor_thread.start()
-
-                # Send a message back to the sender.
-                reply = "Event Received"
-                conn_eh.send(reply)
             else:
                 self.logger.debug("XRS Got terminate. self.run: %s", self.run)
 

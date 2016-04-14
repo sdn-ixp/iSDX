@@ -12,7 +12,7 @@ from multiprocessing.connection import Listener, Client
 import os
 import Queue
 import sys
-from threading import Thread
+from threading import Thread, Lock
 import time
 
 np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -26,43 +26,142 @@ from server import server as Server
 logger = util.log.getLogger('XRS')
 
 Config = namedtuple('Config', 'ah_socket')
-XRSPeer = namedtuple('XRSPeer', 'peers_in peers_out eh_socket')
 
+bgpListener = None
 config = None
 
-participants = {}
-portip_2_participant = {}
+participantsLock = Lock()
+participants = dict()
+portip2participant = dict()
+
+clientPoolLock = Lock()
+clientActivePool = dict()
+clientDeadPool = set()
+
+
+XRSPeer = namedtuple('XRSPeer', 'peers_in peers_out eh_socket')
+
+class PctrlClient(object):
+    def __init__(self, conn, addr):
+        self.conn = conn
+        self.addr = addr
+
+        self.id = None
+        self.peers_in = []
+        self.peers_out = []
+
+    def start(self):
+        logger.info('BGP PctrlClient started for client ip %s.', self.addr)
+        while True:
+            try:
+                rv = self.conn.recv()
+            except EOFError as ee:
+                break
+
+            rv = json.dumps({'msgType': 'bgp', 'announcement': rv})
+            if not (rv and self.process_message(**json.loads(rv))):
+                break
+            break
+
+        self.conn.close()
+
+        # remove self
+        with clientPoolLock:
+            logger.debug('Trace: PctrlClient.start: clientActivePool before: %s', clientActivePool)
+            logger.debug('Trace: PctrlClient.start: clientDeadPool before: %s', clientDeadPool)
+            t = clientActivePool[self]
+            del clientActivePool[self]
+            clientDeadPool.add(t)
+            logger.debug('Trace: PctrlClient.start: clientActivePool after: %s', clientActivePool)
+            logger.debug('Trace: PctrlClient.start: clientDeadPool after: %s', clientDeadPool)
+
+        return
+        with participantsLock:
+            found = [k for k,v in portip2participant.items() if v == self.id]
+            for k in found:
+                del portip2participant[k]
+
+            found = [k for k,v in participants.items() if v == self]
+            for k in found:
+                del participants[k]
+
+
+    def process_message(self, msgType=None, **data):
+        if msgType == 'hello':
+            rv = self.process_hello_message(**data)
+        elif msgType == 'bgp':
+            rv = self.process_bgp_message(**data)
+        else:
+            logger.warn("Unrecognized or absent msgType: %s. Message ignored.", msgType)
+            rv = True
+
+        return rv
+
+
+    def process_hello_message(self, id=None, peers_in=None, peers_out=None, ports=None, **data):
+        if not (isinstance(id, int) and isinstance(ports, list) and
+                isinstance(peers_in, list) and isinstance(peers_out, list)):
+            logger.warn("hello message from %s is missing something: id: %s, ports: %s, peers_in: %s, peers_out: %s. Closing connection.", self.addr, id, ports, peers_in, peers_out)
+            return False
+
+        self.id = id
+        self.peers_in = set(peers_in)
+        self.peers_out = set(peers_out)
+
+        with participantsLock:
+            for port in ports:
+                portip2participant[port] = id
+            participants[id] = self
+
+        return True
+
+
+    def process_bgp_message(self, announcement=None, **data):
+        if announcement:
+            bgpListener.send(announcement)
+        return True
+
+
+    def send(self, route):
+        logger.debug('Sending a route update to participant %d', self.id)
+        self.conn.send(json.dumps({'bgp': route}))
 
 
 class PctrlListener(object):
     def __init__(self):
         logger.info("Initializing the BGP PctrlListener")
-
         self.listener = Listener(config.ah_socket, authkey=None, backlog=100)
         self.run = True
 
 
     def start(self):
-        logger.info("Announcement Handler started.")
+        logger.info("Starting the BGP PctrlListener")
 
         while self.run:
             conn = self.listener.accept()
-            announcement = conn.recv()
 
-            logger.debug("Received an announcement.")
+            pc = PctrlClient(conn, self.listener.last_accepted)
+            t = Thread(target=pc.start)
 
-            bgpListener.send(announcement)
-            reply = "Announcement processed"
-            conn.send(reply)
-            conn.close()
+            with clientPoolLock:
+                logger.debug('Trace: PctrlListener.start: clientActivePool before: %s', clientActivePool)
+                logger.debug('Trace: PctrlListener.start: clientDeadPool before: %s', clientDeadPool)
+                clientActivePool[pc] = t
+
+                # while here, join dead threads.
+                while clientDeadPool:
+                    clientDeadPool.pop().join()
+                logger.debug('Trace: PctrlListener.start: clientActivePool after: %s', clientActivePool)
+                logger.debug('Trace: PctrlListener.start: clientDeadPool after: %s', clientDeadPool)
+
+            t.start()
 
 
+    # XXX: Moves to Client
     def send(self, id, route):
         logger.debug('Sending a route update to participant %d', id)
-        conn = Client(tuple(participants[id].eh_socket), authkey = None)
+        conn = Client(participants[id].eh_socket, authkey = None)
         conn.send(json.dumps({'bgp': route}))
-        conn.recv()
-        conn.close()
 
 
     def stop(self):
@@ -72,7 +171,7 @@ class PctrlListener(object):
 
 class BGPListener(object):
     def __init__(self):
-        logger.info("Initializing the BGP BGPListener")
+        logger.info('Initializing the BGPListener')
 
         # Initialize XRS Server
         self.server = Server(logger)
@@ -103,16 +202,28 @@ class BGPListener(object):
 
             # Received BGP route advertisement from ExaBGP
             try:
-                advertise_id = portip_2_participant[route['neighbor']['ip']]
-                peers_out = participants[advertise_id].peers_out
+                advertise_ip = route['neighbor']['ip']
             except KeyError:
                 continue
 
-            for id, peer in participants.iteritems():
-                # Apply the filtering logic
-                if id in peers_out and advertise_id in peer.peers_in:
-                    # Now send this route to participant `id`'s controller'
-                    pctrlListener.send(id, route)
+            found = []
+            with participantsLock:
+                try:
+                    advertise_id = portip2participant[advertise_ip]
+                    peers_out = participants[advertise_id].peers_out
+                except KeyError:
+                    continue
+
+                for id, peer in participants.iteritems():
+                    # Apply the filtering logic
+                    if id in peers_out and advertise_id in peer.peers_in:
+                        found.append(id)
+                        #found.append(peer)
+
+            for peer in found:
+                # Now send this route to participant `id`'s controller'
+                pctrlListener.send(peer, route)
+                #peer.send(route)
 
     def send(self, announcement):
         announcement = json.loads(announcement)
@@ -139,10 +250,9 @@ def parse_config(config_file):
         iname = int(pname)
 
         for port in participant["Ports"]:
-            portip_2_participant[port['IP']] = iname
+            portip2participant[port['IP']] = iname
 
-        peers_out = [peer for peer in participant["Peers"]]
-        # TODO: Make sure this is not an insane assumption
+        peers_out = set([peer for peer in participant["Peers"]])
         peers_in = peers_out
 
         addr, port = participant["EH_SOCKET_XRS"]
@@ -153,8 +263,8 @@ def parse_config(config_file):
 
     for i,p in participants.items():
         logger.debug('Trace: participants[%d] = %s', i, p)
-    for i,p in portip_2_participant.items():
-        logger.debug('Trace: portip_2_participant[%s] = %s', i, p)
+    for i,p in portip2participant.items():
+        logger.debug('Trace: portip2participant[%s] = %s', i, p)
 
     logger.debug("Done parsing config")
     return Config(ah_socket)
