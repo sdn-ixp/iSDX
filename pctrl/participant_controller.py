@@ -227,7 +227,7 @@ class ParticipantController(object):
                 break
 
             data = json.loads(tmp)
-            self.logger.debug("ARP Event received: %s", data)
+            self.logger.debug("XRS Event received: %s", data)
 
             # Starting a thread for independently processing each incoming network event
 	    # XXX: need to join() these at some point
