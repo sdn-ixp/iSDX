@@ -270,7 +270,7 @@ class MultiSwitchController(object):
             else:
                 flow_mod = fm.get_flow_mod(self.config)
             if (not dp.id in self.last_command_type or (self.last_command_type[dp.id] != flow_mod.command)):
-                self.logger.info('refmon: sending barrier')
+                self.logger.info('ms_ctrlr: sending barrier')
                 self.last_command_type[dp.id] = flow_mod.command
                 dp.send_msg(self.config.parser.OFPBarrierRequest(dp))
             dp.send_msg(flow_mod)
@@ -305,6 +305,7 @@ class OneSwitchController(object):
         self.logger.info('os_ctrlr: creating an instance of OneSwitchController')
 
         self.fm_queue = Queue()
+        self.last_command_type = {}
 
     def init_fabric(self):
         # install table-miss flow entry
@@ -366,14 +367,27 @@ class OneSwitchController(object):
         if not self.is_ready():
             self.fm_queue.put(fm)
         else:
-            mod = fm.get_flow_mod(self.config)
-            self.config.datapaths[fm.get_dst_dp()].send_msg(mod)
+            dp = self.config.datapaths[fm.get_dst_dp()]
+            if self.config.dpid_2_name[dp.id] in self.config.ofdpa:
+                ofdpa = OFDPA20(self.config)
+                flow_mod, group_mods = fm.get_flow_and_group_mods(self.config)
+                for gm in group_mods:
+                    if not ofdpa.is_group_mod_installed_in_switch(dp, gm):
+                        dp.send_msg(gm)
+                        ofdpa.mark_group_mod_as_installed(dp, gm)
+            else:
+                flow_mod = fm.get_flow_mod(self.config)
+            if (not dp.id in self.last_command_type or (self.last_command_type[dp.id] != flow_mod.command)):
+                self.logger.info('os_ctrlr: sending barrier')
+                self.last_command_type[dp.id] = flow_mod.command
+                dp.send_msg(self.config.parser.OFPBarrierRequest(dp))
+            dp.send_msg(flow_mod)
 
     def packet_in(self, ev):
         self.logger.info("os_ctrlr: packet in")
 
     def is_ready(self):
-        if len(self.config.datapaths) == len(self.config.dpids):
+        if len(self.config.datapaths) == len(self.config.dpids) or self.config.always_ready:
             return True
         return False
 
