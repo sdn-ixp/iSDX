@@ -22,12 +22,14 @@ $ echo "http://$(docker-machine ip <your_base_machine>/profile.html)"
 
 #### Step 4: Run your services
 
-Run your services so that they generate data or run the example `dockers/redis-service/pub-sub/pub.py`. Also refer `pub.py` for syntax of accepted messages.
+Run your services so that they generate data.
 
 ```bash
-$ cd dockers/redis-service/pub-sub
-$ python pub.py haha #channel name is currently hardcoded in dockers/node/index.js
+$ cd ../log_replay
+$ python replay.py ../test-ms.cfg ../lts-data/flows ../lts-data/ports 84 1
 ```
+
+With the current data it takes few seconds before it starts projecting the data between different network components. 
 
 ## Building individual docker containers:
 
