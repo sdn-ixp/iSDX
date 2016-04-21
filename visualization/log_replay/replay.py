@@ -216,7 +216,7 @@ class LogHistory(object):
 
                 dpid = int(''.join(c for c in data[1] if c.isdigit()))
                 port = int(data[3]) if data[3].isdigit() else -1
-                byte_count = int(data[-1])
+                byte_count = int(data[-3])
 
                 if (dpid, port) in self.ports:
                     entry_labels = self.ports[(dpid, port)]
