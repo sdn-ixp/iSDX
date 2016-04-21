@@ -78,11 +78,12 @@ class RefMon(app_manager.RyuApp):
         elif self.config.isMultiTableMode():
             self.controller = MultiTableController(self.config)
 
+	# this must be set before Server, which uses it.
+        self.flow_mod_times = Queue()
+
         # start server receiving flowmod requests
         self.server = Server(self, self.config.server["IP"], self.config.server["Port"], self.config.server["key"])
         self.server.start()
-
-        self.flow_mod_times = Queue()
 
     def close(self):
         self.logger.info('refmon: stop')
