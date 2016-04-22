@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
+use Time::HiRes qw (sleep);
 
 my(%styles) = (
     bgp => "red",
@@ -41,7 +42,7 @@ while (1) {
     system("ln $cur_png_file $out_dir/tmp");
     system("mv $out_dir/tmp $out_dir/cur.png");
     ++$count; $count %= 1000;
-    sleep(1);
+    sleep(1.7);
 }
 
 sub usage {
