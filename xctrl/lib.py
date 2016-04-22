@@ -18,6 +18,7 @@ class Config(object):
 
     def __init__(self, config_file):
         self.mode = None
+        self.tables = None
 
         self.vmac_mode = None
         self.vmac_options = None
@@ -46,6 +47,7 @@ class Config(object):
                 self.mode = self.MULTISWITCH
             elif config["Mode"] == "Multi-Table":
                 self.mode = self.MULTITABLE
+                self.tables = config["RefMon Settings"]["fabric options"]["tables"]
             elif config["Mode"] == "One-Switch":
                 self.mode = self.ONESWITCH
         if "VMAC" in config:

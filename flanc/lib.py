@@ -119,7 +119,7 @@ class MultiTableController(object):
         self.logger = util.log.getLogger('MultiTableController')
         self.logger.info('mt_ctrlr: creating an instance of MultiTableController')
 
-        self.fm_queue = Queue()
+        self.message_queue = Queue()
 
     def init_fabric(self):
         # install table-miss flow entry
@@ -128,7 +128,9 @@ class MultiTableController(object):
         actions = [self.config.parser.OFPActionOutput(self.config.ofproto.OFPP_CONTROLLER, self.config.ofproto.OFPCML_NO_BUFFER)]
         instructions = [self.config.parser.OFPInstructionActions(self.config.ofproto.OFPIT_APPLY_ACTIONS, actions)]
 
-        for name, table_id in self.config.tables.iteritems():
+        for name, table_properties in self.config.tables.iteritems():
+            table_id = table_properties["id"]
+
             mod = self.config.parser.OFPFlowMod(datapath=self.config.datapaths["main"],
                                                 cookie=NO_COOKIE, cookie_mask=1,
                                                 table_id=table_id,
@@ -159,8 +161,8 @@ class MultiTableController(object):
         if self.is_ready():
             self.init_fabric()
 
-            while not self.fm_queue.empty():
-                self.process_flow_mod(self.fm_queue.get())
+            while not self.message_queue.empty():
+                self.process_ofp_message(self.message_queue.get())
 
     def switch_disconnect(self, dp):
         if dp.id in self.config.dpid_2_name:
@@ -168,13 +170,16 @@ class MultiTableController(object):
             self.logger.info('mt_ctrlr: switch disconnect: ' + dp_name)
             del self.config.datapaths[dp_name]
 
-
-    def process_flow_mod(self, fm):
+    def process_ofp_message(self, ofp_message, queue=True):
         if not self.is_ready():
-            self.fm_queue.put(fm)
+            if queue:
+                self.message_queue.put(ofp_message)
         else:
-            mod = fm.get_flow_mod(self.config)
-            self.config.datapaths[fm.get_dst_dp()].send_msg(mod)
+            mod = ofp_message.get_ofp_message()
+
+            print str(mod)
+
+            self.config.datapaths[ofp_message.get_dst_dp()].send_msg(mod)
 
     def packet_in(self, ev):
         self.logger.info("mt_ctrlr: packet in")
@@ -202,7 +207,7 @@ class MultiSwitchController(object):
         self.datapaths = {}
         self.config = config
 
-        self.fm_queue = Queue()
+        self.message_queue = Queue()
         self.last_command_type = {}
 
     def switch_connect(self, dp):
@@ -220,8 +225,8 @@ class MultiSwitchController(object):
         if self.is_ready():
             self.init_fabric()
 
-            while not self.fm_queue.empty():
-                self.process_flow_mod(self.fm_queue.get())
+            while not self.message_queue.empty():
+                self.process_ofp_message(self.message_queue.get())
 
     def switch_disconnect(self, dp):
         if dp.id in self.config.dpid_2_name:
@@ -241,7 +246,7 @@ class MultiSwitchController(object):
             actions = [self.config.parser.OFPActionOutput(self.config.ofproto.OFPP_CONTROLLER)]
 
         for name, datapath in self.config.datapaths.iteritems():
-            if self.config.ofv  == "1.3":
+            if self.config.ofv == "1.3":
                 mod = self.config.parser.OFPFlowMod(datapath=datapath,
                                                     cookie=NO_COOKIE, cookie_mask=3,
                                                     command=self.config.ofproto.OFPFC_ADD,
@@ -255,25 +260,26 @@ class MultiSwitchController(object):
                                                     match=match, actions=actions)
             datapath.send_msg(mod)
 
-    def process_flow_mod(self, fm):
+    def process_ofp_message(self, ofp_message, queue=True):
         if not self.is_ready():
-            self.fm_queue.put(fm)
+            if queue:
+                self.message_queue.put(ofp_message)
         else:
-            dp = self.config.datapaths[fm.get_dst_dp()]
+            dp = self.config.datapaths[ofp_message.get_dst_dp()]
             if self.config.dpid_2_name[dp.id] in self.config.ofdpa:
                 ofdpa = OFDPA20(self.config)
-                flow_mod, group_mods = fm.get_flow_and_group_mods(self.config)
+                message, group_mods = ofp_message.get_flow_and_group_mods(self.config)
                 for gm in group_mods:
                     if not ofdpa.is_group_mod_installed_in_switch(dp, gm):
                         dp.send_msg(gm)
                         ofdpa.mark_group_mod_as_installed(dp, gm)
             else:
-                flow_mod = fm.get_flow_mod(self.config)
-            if (not dp.id in self.last_command_type or (self.last_command_type[dp.id] != flow_mod.command)):
+                message = ofp_message.get_ofp_message()
+            if (not dp.id in self.last_command_type or (self.last_command_type[dp.id] != message.command)):
                 self.logger.info('refmon: sending barrier')
-                self.last_command_type[dp.id] = flow_mod.command
+                self.last_command_type[dp.id] = message.command
                 dp.send_msg(self.config.parser.OFPBarrierRequest(dp))
-            dp.send_msg(flow_mod)
+            dp.send_msg(message)
 
     def packet_in(self, ev):
         pass
@@ -304,7 +310,7 @@ class OneSwitchController(object):
         self.logger = util.log.getLogger('OneSwitchController')
         self.logger.info('os_ctrlr: creating an instance of OneSwitchController')
 
-        self.fm_queue = Queue()
+        self.message_queue = Queue()
 
     def init_fabric(self):
         # install table-miss flow entry
@@ -353,8 +359,8 @@ class OneSwitchController(object):
         if self.is_ready():
             self.init_fabric()
 
-            while not self.fm_queue.empty():
-                self.process_flow_mod(self.fm_queue.get())
+            while not self.message_queue.empty():
+                self.process_ofp_message(self.message_queue.get())
 
     def switch_disconnect(self, dp):
         if dp.id in self.config.dpid_2_name:
@@ -362,12 +368,13 @@ class OneSwitchController(object):
             self.logger.info('os_ctrlr: switch disconnect: ' + dp_name)
             del self.config.datapaths[dp_name]
 
-    def process_flow_mod(self, fm):
+    def process_ofp_message(self, ofp_message, queue=True):
         if not self.is_ready():
-            self.fm_queue.put(fm)
+            if queue:
+                self.message_queue.put(ofp_message)
         else:
-            mod = fm.get_flow_mod(self.config)
-            self.config.datapaths[fm.get_dst_dp()].send_msg(mod)
+            mod = ofp_message.get_ofp_message()
+            self.config.datapaths[ofp_message.get_dst_dp()].send_msg(mod)
 
     def packet_in(self, ev):
         self.logger.info("os_ctrlr: packet in")

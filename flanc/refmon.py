@@ -22,7 +22,7 @@ import util.log
 
 from lib import MultiSwitchController, MultiTableController, OneSwitchController, Config, InvalidConfigError
 from ofp10 import FlowMod as OFP10FlowMod
-from ofp13 import FlowMod as OFP13FlowMod
+from ofp13 import FlowMod as OFP13FlowMod, GroupMod as OFP13GroupMod, PortStatsRequest as OFP13PortStatsRequest
 from server import Server
 
 
@@ -86,6 +86,8 @@ class RefMon(app_manager.RyuApp):
 
         self.flow_mod_times = Queue()
 
+        self.port_stats_requests = list()
+
     def close(self):
         self.logger.info('refmon: stop')
 
@@ -123,7 +125,33 @@ class RefMon(app_manager.RyuApp):
             if self.log:
                 self.log.write(str(start_time) + " " + str(end_time) + " " + str(end_time - start_time) + "\n")
 
-    def process_flow_mods(self, msg):
+    @set_ev_cls(ofp_event.EventOFPPortStatsReply, MAIN_DISPATCHER)
+    def port_stats_reply_handler(self, ev):
+        body = ev.msg.body
+        stats = list()
+        for stat in body:
+            stats.append(
+                {
+                    "port_no": stat.port_no,
+                    "rx_packets": stat.rx_packets,
+                    "tx_packets": stat.tx_packets,
+                    "rx_bytes": stat.rx_bytes,
+                    "tx_bytes": stat.tx_bytes,
+                    "rx_dropped": stat.rx_dropped,
+                    "tx_dropped": stat.tx_dropped,
+                    "rx_errors": stat.rx_errors,
+                    "tx_errors": stat.tx_errors,
+                }
+            )
+
+        self.logger.info('refmon: received port stats reply' + str(stats))
+
+        if len(self.port_stats_requests) > 0:
+            participant, address, port = self.port_stats_requests.pop()
+            msg = {"port_stats_reply": stats}
+            self.server.sender(address, port, msg)
+
+    def process_ofp_messages(self, msg):
         self.flow_mod_times.put(time())
 
         self.logger.info('refmon: received flowmod request')
@@ -131,13 +159,12 @@ class RefMon(app_manager.RyuApp):
         # authorization
         if "auth_info" in msg:
             auth_info = msg["auth_info"]
-
-            # TODO: FLANC authorization here
            
             origin = auth_info["participant"]
 
-            if "flow_mods" in msg:
+            print str(msg)
 
+            if "flow_mods" in msg:
                 # flow mod logging
                 if self.flow_mod_log:
                     self.flow_mod_log.write('BURST: ' + str(time()) + '\n')
@@ -146,15 +173,37 @@ class RefMon(app_manager.RyuApp):
                         self.flow_mod_log.write(json.dumps(flow_mod) + '\n')
                     self.flow_mod_log.write('\n')
 
-                self.logger.debug('BURST: ' + str(time()))
-                self.logger.debug('PARTICIPANT: ' + str(msg['auth_info']['participant']))
+                    self.logger.debug('BURST: ' + str(time()))
+                    self.logger.debug('PARTICIPANT: ' + str(msg['auth_info']['participant']))
+
                 for flow_mod in msg["flow_mods"]:
                     self.logger.debug('FLOWMOD from ' + str(origin) + ': ' + json.dumps(flow_mod))
 
                 # push flow mods to the data plane
                 for flow_mod in msg["flow_mods"]:
                     if self.config.ofv == "1.0":
-                        fm = OFP10FlowMod(self.config, origin, flow_mod)
+                        ofp_msg = OFP10FlowMod(self.config, origin, flow_mod)
                     elif self.config.ofv == "1.3":
-                        fm = OFP13FlowMod(self.config, origin, flow_mod)
-                    self.controller.process_flow_mod(fm)
+                        ofp_msg = OFP13FlowMod(self.config, origin, flow_mod)
+
+                    if ofp_msg:
+                        self.controller.process_ofp_message(ofp_msg)
+
+            elif "group_mods" in msg:
+                for group_mod in msg["group_mods"]:
+                    if self.config.ofv == "1.3":
+                        ofp_msg = OFP13GroupMod(self.config, origin, group_mod)
+
+                    if ofp_msg:
+                        self.controller.process_ofp_message(ofp_msg)
+
+            elif "port_stats_requests" in msg:
+                address = msg["address"]
+                port = msg["port"]
+                for port_stats_request in msg["port_stats_requests"]:
+                    if self.config.ofv == "1.3":
+                        ofp_msg = OFP13PortStatsRequest(self.config, origin, port_stats_request)
+
+                    if ofp_msg:
+                        self.controller.process_ofp_message(ofp_msg, False)
+                        self.port_stats_requests.append((origin, address, port))

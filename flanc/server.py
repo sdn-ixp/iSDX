@@ -5,7 +5,7 @@
 
 
 import json
-from multiprocessing.connection import Listener
+from multiprocessing.connection import Listener, Client
 from threading import Thread
 
 import os
@@ -45,10 +45,16 @@ class Server(object):
                 except:
                     pass
             self.logger.info('server: received message')
-            self.refmon.process_flow_mods(json.loads(msg))
+            self.refmon.process_ofp_messages(json.loads(msg))
 
             conn.close()
             self.logger.info('server: closed connection')
+
+    ''' sender '''
+    def sender(self, address, port, msg):
+        conn = Client((address, port))
+        conn.send(json.dumps(msg))
+        conn.close()
 
     def stop(self):
         self.receive = False

@@ -6,10 +6,11 @@ from ryu.ofproto import inet
 
 from ofdpa20 import OFDPA20
 
+
 class FlowMod(object):
     def __init__(self, config, origin, flow_mod):
         self.mod_types = ["insert", "remove"]
-        self.rule_types = ["inbound", "outbound", "main", "main-in", "main-out", "arp"]
+        self.rule_types = ["monitor", "inbound", "outbound", "main", "main-in", "main-out", "arp"]
         
         self.config = config
         self.parser = None
@@ -87,7 +88,7 @@ class FlowMod(object):
                 if "eth_type" not in validated_matches:
                     validated_matches["eth_type"] = ether.ETH_TYPE_ARP
             elif match == "in_port":
-                if isinstance( value, int ) or value.isdigit():
+                if isinstance(value, int) or value.isdigit():
                     validated_matches["in_port"] = value
                 else:
                     if self.config.isMultiTableMode():
@@ -158,7 +159,7 @@ class FlowMod(object):
                         if isinstance( port, int ) or port.isdigit():
                             temp_fwd_actions.append(self.parser.OFPActionOutput(int(port)))
                         elif port in self.config.tables:
-                            temp_goto_instructions.append(self.parser.OFPInstructionGotoTable(self.config.tables[port]))
+                            temp_goto_instructions.append(self.parser.OFPInstructionGotoTable(self.config.tables[port]["id"]))
                         elif port in self.config.datapath_ports["main"]:
                             temp_fwd_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["main"][port]))
                         elif port in self.config.datapath_ports["arp"]:
@@ -185,6 +186,8 @@ class FlowMod(object):
                 temp_actions.append(self.parser.OFPActionSetField(eth_src=value))
             elif action == "set_eth_dst":
                 temp_actions.append(self.parser.OFPActionSetField(eth_dst=value))
+            elif action == "group":
+                temp_actions.append(self.parser.OFPActionGroup(group_id=value))
 
         if temp_fwd_actions:
             temp_actions.extend(temp_fwd_actions)
@@ -213,10 +216,13 @@ class FlowMod(object):
                 validated_actions[action] = value
             elif action == "set_eth_dst":
                 validated_actions[action] = value
+            elif action == "group":
+                if isinstance(value, int) or value.isdigit():
+                    validated_actions[action] = int('{0:016b}'.format(int(self.origin))+'{0:016b}'.format(value), 2)
         return validated_actions
 
-    def get_flow_mod(self, config):
-        flow_mod, _ = self.get_flow_and_group_mods(config)
+    def get_ofp_message(self):
+        flow_mod, _ = self.get_flow_and_group_mods(self.config)
         return flow_mod
 
     def get_flow_and_group_mods(self, config):
@@ -231,7 +237,7 @@ class FlowMod(object):
                 table_id = 0
                 datapath = self.config.datapaths["arp"]
             else:
-                table_id = self.config.tables[self.rule_type]
+                table_id = self.config.tables[self.rule_type]["id"]
                 datapath = self.config.datapaths["main"]
         elif self.config.loops:
             if self.rule_type == "arp":
@@ -248,19 +254,19 @@ class FlowMod(object):
                 instructions, group_mods = self.ofdpa.make_instructions_and_group_mods(self, datapath)
             else:
                 instructions = self.make_instructions()
-            flow_mod = self.parser.OFPFlowMod(datapath=datapath, 
-                                          cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], 
-                                          table_id=table_id, 
+            flow_mod = self.parser.OFPFlowMod(datapath=datapath,
+                                          cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"],
+                                          table_id=table_id,
                                           command=self.config.ofproto.OFPFC_ADD,
-                                          priority=self.priority, 
+                                          priority=self.priority,
                                           match=match, instructions=instructions)
         else:
-            flow_mod = self.parser.OFPFlowMod(datapath=datapath, 
-                                          cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"], 
-                                          table_id=table_id, 
-                                          command=self.config.ofproto.OFPFC_DELETE, 
-                                          out_group=self.config.ofproto.OFPG_ANY, 
-                                          out_port=self.config.ofproto.OFPP_ANY, 
+            flow_mod = self.parser.OFPFlowMod(datapath=datapath,
+                                          cookie=self.cookie["cookie"], cookie_mask=self.cookie["mask"],
+                                          table_id=table_id,
+                                          command=self.config.ofproto.OFPFC_DELETE,
+                                          out_group=self.config.ofproto.OFPG_ANY,
+                                          out_port=self.config.ofproto.OFPP_ANY,
                                           match=match)
         return flow_mod, group_mods
 
@@ -271,3 +277,120 @@ class FlowMod(object):
 
     def is_ofdpa_datapath(self, datapath):
         return self.config.ofdpa and self.config.dpid_2_name[datapath.id] in self.config.ofdpa
+
+
+class GroupMod(object):
+    def __init__(self, config, origin, group_mod):
+        self.config = config
+        self.parser = config.parser
+        self.origin = origin
+        self.group_mod = group_mod
+
+        self.buckets = None
+        self.group_id = None
+
+    def validate_action(self, actions):
+        validated_actions = {}
+
+        for action, value in actions.iteritems():
+            if action == "fwd":
+                temp_fwds = []
+                for val in value:
+                    if isinstance( val, int ) or val.isdigit():
+                        temp_fwds.append(int(val))
+                validated_actions[action] = temp_fwds
+            elif action == "set_eth_src":
+                validated_actions[action] = value
+            elif action == "set_eth_dst":
+                validated_actions[action] = value
+            elif action == "group":
+                if isinstance(value, int) or value.isdigit():
+                    validated_actions[action] = int('{0:016b}'.format(int(self.origin))+'{0:016b}'.format(value), 2)
+        return validated_actions
+
+    def make_actions(self, actions):
+        temp_fwd_actions = []
+        temp_actions = []
+
+        for action, value in actions.iteritems():
+            if action == "fwd":
+                for port in value:
+                    temp_fwd_actions.append(self.parser.OFPActionOutput(port))
+            elif action == "set_eth_src":
+                temp_actions.append(self.parser.OFPActionSetField(eth_src=value))
+            elif action == "set_eth_dst":
+                temp_actions.append(self.parser.OFPActionSetField(eth_dst=value))
+            elif action == "packet_in":
+                temp_fwd_actions.append(self.parser.OFPActionOutput(self.config.ofproto.OFPP_CONTROLLER,
+                                                                    self.config.ofproto.OFPCML_NO_BUFFER))
+            elif action == "group":
+                print "forward to group " + str(value)
+                temp_actions.append(self.parser.OFPActionGroup(group_id=value))
+
+        if temp_fwd_actions:
+            temp_actions.extend(temp_fwd_actions)
+
+        return temp_actions
+
+    def validate_buckets(self):
+        if self.group_mod["group_id"] > 0:
+            self.group_id = int('{0:016b}'.format(int(self.origin))+'{0:016b}'.format(self.group_mod["group_id"]),2)
+        else:
+            self.group_id = int('{0:016b}'.format(int(self.origin))+'{0:016b}'.format(0),2)
+
+        print "VB: " + str(self.group_mod["group_id"]) + " | " + str(self.group_id)
+
+        temp_buckets = []
+        for bucket in self.group_mod["buckets"]:
+            weight = bucket["weight"]
+
+            validated_actions = self.validate_action(bucket["action"])
+            actions = self.make_actions(validated_actions)
+
+            temp_buckets.append(self.parser.OFPBucket(weight=weight, actions=actions))
+        self.buckets = temp_buckets
+
+    def validate_command(self):
+        if self.group_mod["command"] == "modify":
+            self.command = self.config.ofproto.OFPGC_MODIFY
+        elif self.group_mod["command"] == "add":
+            self.command = self.config.ofproto.OFPGC_ADD
+        elif self.group_mod["command"] == "delete":
+            self.command = self.config.ofproto.OFPGC_DELETE
+        else:
+            self.command = self.config.ofproto.OFPGC_ADD
+
+    def get_ofp_message(self):
+        datapath = self.config.datapaths["main"]
+        self.validate_buckets()
+        self.validate_command()
+
+        group_mod = self.parser.OFPGroupMod(datapath,
+                                            self.command,
+                                            self.config.ofproto.OFPGT_SELECT,
+                                            self.group_id,
+                                            self.buckets)
+        return group_mod
+
+    def get_dst_dp(self):
+        return "main"
+
+
+class PortStatsRequest(object):
+    def __init__(self, config, origin, port_stats_request):
+        self.config = config
+        self.parser = config.parser
+        self.origin = origin
+        self.request = port_stats_request
+
+    def get_ofp_message(self):
+        datapath = self.config.datapaths["main"]
+        port_no = self.request["port_no"]
+        port_stats_request = self.parser.OFPPortStatsRequest(datapath,
+                                                             0,
+                                                             port_no)
+        return port_stats_request
+
+    def get_dst_dp(self):
+        return "main"
+

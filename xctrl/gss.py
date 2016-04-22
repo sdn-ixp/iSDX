@@ -258,6 +258,11 @@ class GSSmT(GSS):
     def init_fabric(self):
         self.logger.info('init fabric')
 
+        # install default rules
+        for table_name, properties in self.config.tables.iteritems():
+            if "default" in properties and properties["default"]:
+                self.match_any_fwd(table_name, properties["default"])
+
         # MAIN-IN TABLE
         ## handle BGP traffic
         self.logger.info('create flow mods to handle BGP traffic')
@@ -275,18 +280,10 @@ class GSSmT(GSS):
         self.handle_participant_with_outbound("main-in")
         ## direct packets with inbound bit set to the inbound switch
         self.handle_inbound("main-in")
-        ## whatever doesn't match on any other rule, send to inbound switch
-        self.match_any_fwd("main-in", "main-out")
-
-        # OUTBOUND SWITCH
-        ## whatever doesn't match on any other rule, send to inbound switch
-        self.match_any_fwd("outbound", "inbound")
 
         # INBOUND SWITCH
         ## set the inbound bit to zero
         self.default_forwarding_inbound("inbound", "main-out")
-        ## send all other packets to main
-        self.match_any_fwd("inbound", "main-out")
 
         # MAIN-OUT TABLE
         ### inbound policies specified
