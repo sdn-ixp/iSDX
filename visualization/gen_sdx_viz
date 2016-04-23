@@ -2,6 +2,7 @@
 
 use strict;
 use Time::HiRes qw (sleep);
+use Getopt::Long;
 
 my(%styles) = (
     bgp => "red",
@@ -19,10 +20,27 @@ my(%tag2style, %tag2cookies);
 
 my $count = 0;
 my ($cur_flow_file, $cur_port_file, $cur_dot_file, $cur_png_file);
+my ($src_dir, $regenerate_output);
+
+GetOptions("src_dir=s" => \$src_dir
+    ) or die("Bad option argument");
 
 usage() if scalar(@ARGV) != 3;
 
 my ($config_file, $dot_template, $out_dir) = (@ARGV);
+
+if ($src_dir) {
+    if (! -d $src_dir) {
+	die("Not a directory: $src_dir");
+    }
+    if (-d $out_dir) {
+	print STDERR "When using --src_dir, out_dir must not exist\n";
+	exit(1);
+    }
+    $regenerate_output = 1;
+} else {
+    $src_dir = $out_dir;
+}
 
 load_config();
 
@@ -30,23 +48,26 @@ system("mkdir -p $out_dir/flows $out_dir/ports $out_dir/dot $out_dir/png") == 0 
 system("rm -f $out_dir/flows/* $out_dir/ports/* $out_dir/dot/* $out_dir/png/*");
 
 while (1) {
-    $cur_flow_file = sprintf("$out_dir/flows/%03d.flow", $count);
-    $cur_port_file = sprintf("$out_dir/ports/%03d.ports", $count);
+    
+    $cur_flow_file = sprintf("$src_dir/flows/%03d.flow", $count);
+    $cur_port_file = sprintf("$src_dir/ports/%03d.ports", $count);
     $cur_dot_file = sprintf("$out_dir/dot/%03d.dot", $count);
     $cur_png_file = sprintf("$out_dir/png/%03d.png", $count);
 
-    load_stats_into_files();
+    if (! $regenerate_output) {
+	sleep(1.7);
+	load_stats_into_files();
+    }
     load_stats();
     gen_dot_file();
     system("dot -Tpng $cur_dot_file > $cur_png_file");
     system("ln $cur_png_file $out_dir/tmp");
     system("mv $out_dir/tmp $out_dir/cur.png");
     ++$count; $count %= 1000;
-    sleep(1.7);
 }
 
 sub usage {
-    print "usage: genSDXviz <config_file> <dot_template> <out_dir>\n";
+    print "usage: genSDXviz [--src_dir <dir>] <config_file> <dot_template> <out_dir>\n";
     exit 1;
 }
 
@@ -102,8 +123,6 @@ sub load_stats {
 	    next if $cookie == 0;
 	    $cookie2cnt{$cookie} = $count;
 	    $prev_cnt{$cookie} = 0 if !defined($prev_cnt{$cookie});
-#	    my $diff = cookie_diff($cookie);
-#	    print "cookie $cookie, count $count, diff $diff\n";
 	}
     }
     close(FLOW_STATS);
