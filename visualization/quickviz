@@ -1,0 +1,67 @@
+#!/usr/bin/perl -w
+
+
+use strict;
+
+# Port assignments
+my ($A,$B,$C1,$C2) = ('PORT_1_7','PORT_1_8','PORT_1_11','PORT_1_12');
+# Cookie assignments
+my ($Aout,$Bout,$C1out,$C2out) = (28,29,26,27);
+
+sub usage {
+    print "Usage: quickviz <data_directory>\n";
+    exit 1;
+}
+
+usage() if scalar(@ARGV) != 1;
+
+my $dir = $ARGV[0];
+
+my $count = 0;
+my (%cookie2cnt, %prev_cnt);
+
+printf "    %8s%8s%8s%8s%8s%8s%8s%8s\n", 'A','B','C1','C2','Aout','Bout','C1out','C2out';
+
+while (1) {
+    my $cur_port_file = sprintf("$dir/ports/%03d.ports", $count);
+    open(PORT_STATS,"<$cur_port_file") or die "Can't open $cur_port_file";
+    while (<PORT_STATS>) {
+	if (/dpid: (\d+).*port_no.: (\d+).*rx_packets.: (\d+)/) {
+	    my ($dpid,$cookie,$count) = ($1,$2,$3);
+	    $cookie = "PORT_${dpid}_$cookie";
+	    $cookie2cnt{$cookie} = $count;
+	    $prev_cnt{$cookie} = 0 if !defined($prev_cnt{$cookie});
+	}
+    }
+    close(PORT_STATS);
+
+    my $cur_flow_file = sprintf("$dir/flows/%03d.flow", $count);
+    open(FLOW_STATS,"<$cur_flow_file") or die "Can't open $cur_flow_file";
+    while (<FLOW_STATS>) {
+	if (/(\d+).*packet_count\":\s+(\d+)/) {
+	    my ($cookie,$count) = ($1,$2);
+	    next if $cookie == 0;
+	    $cookie2cnt{$cookie} = $count;
+	    $prev_cnt{$cookie} = 0 if !defined($prev_cnt{$cookie});
+	}
+    }
+    close(FLOW_STATS);
+
+    
+    printf "%3d:%8d%8d%8d%8d%8d%8d%8d%8d\n", $count+1,
+     cookie_diff($A), cookie_diff($B),
+     cookie_diff($C1), cookie_diff($C2),
+     cookie_diff($Aout), cookie_diff($Bout),
+     cookie_diff($C1out), cookie_diff($C2out);
+    %prev_cnt = %cookie2cnt;
+    $count += 1;
+}
+
+
+sub cookie_diff {
+    my($cookie) = (@_);
+    return 0 if !defined($prev_cnt{$cookie});
+    return $cookie2cnt{$cookie} - $prev_cnt{$cookie};
+}
+
+	
