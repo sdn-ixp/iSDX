@@ -34,9 +34,9 @@ test regress {
 	verify b1_120 a1_140 81
 	verify c1_130 b1_150 81
 	
-	verify a1_110 c1_160 88
+	verify a1_110 b1_160 88
 	verify b1_120 a1_140 88
-	verify c1_130 b1_150 88
+	verify c1_130 a1_150 88
 }
 
 test info {

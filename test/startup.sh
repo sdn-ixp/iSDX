@@ -79,29 +79,29 @@ do
 			echo "****** RUNNING IN INTERACTVE MODE - type control-D when finished to continue **********"
 		fi
 		echo -------------------------------
-		
+
 		# the cleanup script will kill this each test, so we have to restart it on same file - new version puts each test in its own log
 		#tcpdump -i lo -w $LOG_DIR/lo.$pcount.pcap &
 
 		python $BASE/logServer.py $LOG_DIR/$TEST.$pcount.log >/dev/null 2>&1 &
 		sleep 1
 		python $BASE/logmsg.py "running test: $TEST:$count"
-		
+
 		echo starting mininet
-		
+
 		M0=/tmp/sdxm0.$$
 		mkfifo $M0
-		
+
 		SYNC=/tmp/sdxsync.$$
 		mkfifo $SYNC
-		
+
 		rm /var/run/quagga/*
 		cd $EXAMPLES/$TEST/mininet
 		cat $M0 | python ./sdx_mininet.py mininet.cfg $BASE/test/tnode.py $SYNC &
 		M_PID=$!
 		cat $SYNC
 
-                #sleep 10
+		#sleep 2
 		#tcpdump -i x1-eth0 -w $BASE/test/$LOG_DIR/x1-eth0.$pcount.pcap &
 		#tcpdump -i x2-eth0 -w $BASE/test/$LOG_DIR/x2-eth0.$pcount.pcap &
 		#tcpdump -i s1-eth1 -w $BASE/test/$LOG_DIR/s1-eth1.$pcount.pcap &
@@ -112,7 +112,8 @@ do
 		#tcpdump -i s1-eth6 -w $BASE/test/$LOG_DIR/s1-eth6.$pcount.pcap &
 		#tcpdump -i s1-eth7 -w $BASE/test/$LOG_DIR/s1-eth7.$pcount.pcap &
 		#tcpdump -i s1-eth8 -w $BASE/test/$LOG_DIR/s1-eth8.$pcount.pcap &
-		
+		#sleep 2
+
 		echo starting ryu
 		cd $BASE/flanc
 		ryu-manager ryu.app.ofctl_rest refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg >/dev/null 2>&1 &
@@ -152,7 +153,7 @@ do
 		echo starting $TEST
 		cd $BASE/test
 		python tmgr.py $EXAMPLES/$TEST/config/config.spec "test init regress"
-		
+
 		FAIL=`grep -c FAILED $LOG_DIR/$TEST.$pcount.log`
 		if [ $FAIL = '0' ]
 		then
@@ -173,7 +174,7 @@ do
 				count=9999999		# terminates loop
 			fi
 		fi
-		
+
 		if [ $INTERACTIVE != '0' ]
 		then
 			echo; echo "************************"
@@ -200,7 +201,7 @@ do
 		python ~/iSDX/pctrl/clean_mongo.py
 		sudo rm -f ~/iSDX/xrs/ribs/*.db
 		) >/dev/null 2>&1
-		
+
 		echo telling mininet to shutdown
 		echo quit >$M0
 
@@ -210,7 +211,7 @@ do
 		echo cleaning up mininet
 		sudo mn -c >/dev/null 2>&1
 		echo test done
-	
+
 	done
 	(( count += 1 ))
 done

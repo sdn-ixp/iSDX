@@ -45,7 +45,7 @@ test xfer {
 	verify a1_100 b1_140 80
 	verify a1_100 c1_140 4321
 	verify a1_100 c2_140 4322
-	verify a1_100 c1_140 8888
+	verify a1_100 b1_140 8888
 }
 
 test info {

@@ -78,22 +78,22 @@ test regress {
 	verify a1_100 b1_140 80
 	verify a1_100 c1_140 4321
 	verify a1_100 c2_140 4322
-	verify a1_100 c1_140 8888
+	verify a1_100 b1_140 8888
 	
 	verify d1_101 e1_140 80
 	verify d1_101 f1_140 4321
 	verify d1_101 f2_140 4322
-	verify d1_101 f1_140 8888
+	verify d1_101 e1_140 8888
 	
 	verify g1_102 h1_140 80
 	verify g1_102 i1_140 4321
 	verify g1_102 i2_140 4322
-	verify g1_102 i1_140 8888
+	verify g1_102 h1_140 8888
 	
 	verify j1_103 k1_140 80
 	verify j1_103 l1_140 4321
 	verify j1_103 l2_140 4322
-	verify j1_103 l1_140 8888
+	verify j1_103 k1_140 8888
 }
 
 test info {

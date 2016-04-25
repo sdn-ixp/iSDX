@@ -44,7 +44,7 @@ test init {
 }
 
 test regress {
-	verify a1_100 c1_140 77
+	verify a1_100 b1_140 77
 	verify a1_100 b1_140 80
 	verify a1_100 c1_140 81
 	verify a1_100 d1_140 82
