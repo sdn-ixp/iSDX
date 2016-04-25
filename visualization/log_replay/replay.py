@@ -125,6 +125,10 @@ class LogReplay(object):
             # publish data
             for d in data:
         		message = "|".join(d)
+                        if (message.find('InBound') > 0 or
+                            message.find('Outbound') > 0):
+        	              self.logger.debug('Skipping: ' + message)
+                              continue;
         		self.logger.debug(message)
         		self.publisher.publish(message)
 
