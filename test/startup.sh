@@ -65,8 +65,10 @@ do
 done
 
 count=1
-while [ $count -le $LOOPCOUNT ]
+(( pad = $(echo $LOOPCOUNT | wc -c) - 1 ))
+while (( count <= LOOPCOUNT ))
 do
+	pcount=$(printf %0${pad}d $count)
 	for TEST in $@
 	do
 
@@ -79,7 +81,9 @@ do
 		echo -------------------------------
 		
 		# the cleanup script will kill this each test, so we have to restart it on same file - new version puts each test in its own log
-		python $BASE/logServer.py $LOG_DIR/$TEST.$count.log >/dev/null 2>&1 &
+		#tcpdump -i lo -w $LOG_DIR/lo.$pcount.pcap &
+
+		python $BASE/logServer.py $LOG_DIR/$TEST.$pcount.log >/dev/null 2>&1 &
 		sleep 1
 		python $BASE/logmsg.py "running test: $TEST:$count"
 		
@@ -96,6 +100,18 @@ do
 		cat $M0 | python ./sdx_mininet.py mininet.cfg $BASE/test/tnode.py $SYNC &
 		M_PID=$!
 		cat $SYNC
+
+                #sleep 10
+		#tcpdump -i x1-eth0 -w $BASE/test/$LOG_DIR/x1-eth0.$pcount.pcap &
+		#tcpdump -i x2-eth0 -w $BASE/test/$LOG_DIR/x2-eth0.$pcount.pcap &
+		#tcpdump -i s1-eth1 -w $BASE/test/$LOG_DIR/s1-eth1.$pcount.pcap &
+		#tcpdump -i s1-eth2 -w $BASE/test/$LOG_DIR/s1-eth2.$pcount.pcap &
+		#tcpdump -i s1-eth3 -w $BASE/test/$LOG_DIR/s1-eth3.$pcount.pcap &
+		#tcpdump -i s1-eth4 -w $BASE/test/$LOG_DIR/s1-eth4.$pcount.pcap &
+		#tcpdump -i s1-eth5 -w $BASE/test/$LOG_DIR/s1-eth5.$pcount.pcap &
+		#tcpdump -i s1-eth6 -w $BASE/test/$LOG_DIR/s1-eth6.$pcount.pcap &
+		#tcpdump -i s1-eth7 -w $BASE/test/$LOG_DIR/s1-eth7.$pcount.pcap &
+		#tcpdump -i s1-eth8 -w $BASE/test/$LOG_DIR/s1-eth8.$pcount.pcap &
 		
 		echo starting ryu
 		cd $BASE/flanc
@@ -131,13 +147,13 @@ do
 
 		echo starting exabgp
 		exabgp $EXAMPLES/$TEST/config/bgp.conf >/dev/null 2>&1 &
-		sleep 5
+		sleep 10
 
 		echo starting $TEST
 		cd $BASE/test
 		python tmgr.py $EXAMPLES/$TEST/config/config.spec "test init regress"
 		
-		FAIL=`grep -c FAILED $LOG_DIR/$TEST.$count.log`
+		FAIL=`grep -c FAILED $LOG_DIR/$TEST.$pcount.log`
 		if [ $FAIL = '0' ]
 		then
 			echo "Test $TEST:$count succeeded.  All tests passed"
@@ -166,8 +182,18 @@ do
 			python tmgr.py $EXAMPLES/$TEST/config/config.spec
 		fi
 
+		#for port in 179 4444 5555 6000 6633 6666 9020 27017
+		#do
+		#	echo ============ PORT $port
+		#	lsof -i:$port
+		#	echo ------------
+		#	ps -fp $(lsof -i:$port -t)
+		#done | python $BASE/loglines.py
+		#sleep 2
+
 		echo cleaning up processes and files
 		(
+		#sudo killall tcpdump
 		sudo killall python /usr/bin/python /usr/lib/quagga/bgpd /usr/lib/quagga/zebra
 		sudo killall exabgp
 		sudo fuser -k 6633/tcp
@@ -186,6 +212,6 @@ do
 		echo test done
 	
 	done
-	count=`expr $count + 1`
+	(( count += 1 ))
 done
 exit

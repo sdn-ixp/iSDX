@@ -38,7 +38,7 @@ test xfer {
 	verify h1_a1 h1_b1 80
 	verify h1_a1 h1_c1 4321
 	verify h1_a1 h1_c2 4322
-	verify h1_a1 h1_c1 8888
+	verify h1_a1 h1_b1 8888
 }
 
 test info {

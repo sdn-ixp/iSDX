@@ -240,7 +240,7 @@ class SuperSets(object):
             set_bitstring += '0' * pad_len
 
 
-        #self.logger.debug("****DEBUG: Next Hop part "+str(type(nexthop_part))+' '+str(self.best_path_size)+' '+str(type(ss_id))+' '+str(self.id_size))
+        #self.logger.debug("****DEBUG: nexthop_part: %d, best_path_size: %d, ss_id: %d, id_size: %d", nexthop_part, self.best_path_size, ss_id, self.id_size)
 
         id_bitstring = '{num:0{width}b}'.format(num=ss_id, width=self.id_size)
 

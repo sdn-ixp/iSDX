@@ -332,7 +332,7 @@ class BGPPeer(object):
 
     def update_route(self,rib_name,attributes):
         with self.getlock(attributes.prefix):
-            self.rib[rib_name].update(('prefix', 'neighbor'), attributes)
+            self.rib[rib_name].update(('prefix'), attributes)
 
 
 def bgp_routes_are_equal(route1, route2):
