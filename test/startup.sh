@@ -183,7 +183,8 @@ do
 			python tmgr.py $EXAMPLES/$TEST/config/config.spec
 		fi
 
-		#for port in 179 4444 5555 6000 6633 6666 9020 27017
+		#echo capturing what processes are using what ports
+		#for port in 4444 5555 6000 6633 6666 # 179 9020 27017
 		#do
 		#	echo ============ PORT $port
 		#	lsof -i:$port

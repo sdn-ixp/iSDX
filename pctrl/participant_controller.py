@@ -229,11 +229,7 @@ class ParticipantController(object):
             data = json.loads(tmp)
             self.logger.debug("XRS Event received: %s", data)
 
-            # Starting a thread for independently processing each incoming network event
-	    # XXX: need to join() these at some point
-            event_processor_thread = Thread(target=self.process_event, args=(data,))
-            event_processor_thread.daemon = True
-            event_processor_thread.start()
+            self.process_event(data)
 
         self.xrs_client.close()
         self.logger.debug("Exiting start_eh_xrs")
@@ -367,104 +363,99 @@ class ParticipantController(object):
         "Process each incoming BGP advertisement"
         tstart = time.time()
 
-        prefixes = get_prefixes_from_announcements(route)
-        with self.getlock(prefixes):
-            reply = ''
-            # Map to update for each prefix in the route advertisement.
-            updates = self.bgp_instance.update(route)
-            #self.logger.debug("process_bgp_route:: "+str(updates))
-            # TODO: This step should be parallelized
-            # TODO: The decision process for these prefixes is going to be same, we
-            # should think about getting rid of such redundant computations.
-            for update in updates:
-                self.bgp_instance.decision_process_local(update)
-                self.vnh_assignment(update)
+        # Map to update for each prefix in the route advertisement.
+        updates = self.bgp_instance.update(route)
+        #self.logger.debug("process_bgp_route:: "+str(updates))
+        # TODO: This step should be parallelized
+        # TODO: The decision process for these prefixes is going to be same, we
+        # should think about getting rid of such redundant computations.
+        for update in updates:
+            self.bgp_instance.decision_process_local(update)
+            self.vnh_assignment(update)
 
-            if TIMING:
-                elapsed = time.time() - tstart
-                self.logger.debug("Time taken for decision process: "+str(elapsed))
-                tstart = time.time()
+        if TIMING:
+            elapsed = time.time() - tstart
+            self.logger.debug("Time taken for decision process: "+str(elapsed))
+            tstart = time.time()
 
-            if self.cfg.isSupersetsMode():
+        if self.cfg.isSupersetsMode():
             ################## SUPERSET RESPONSE TO BGP ##################
-                # update supersets
-                "Map the set of BGP updates to a list of superset expansions."
-                ss_changes, ss_changed_prefs = self.supersets.update_supersets(self, updates)
-
-                if TIMING:
-                    elapsed = time.time() - tstart
-                    self.logger.debug("Time taken to update supersets: "+str(elapsed))
-                    tstart = time.time()
-
-                # ss_changed_prefs are prefixes for which the VMAC bits have changed
-                # these prefixes must have gratuitous arps sent
-                garp_required_vnhs = [self.prefix_2_VNH[prefix] for prefix in ss_changed_prefs]
-
-                "If a recomputation event was needed, wipe out the flow rules."
-                if ss_changes["type"] == "new":
-                    self.logger.debug("Wiping outbound rules.")
-                    wipe_msgs = msg_clear_all_outbound(self.policies, self.port0_mac)
-                    self.dp_queued.extend(wipe_msgs)
-
-                    #if a recomputation was needed, all VMACs must be reARPed
-                    # TODO: confirm reARPed is a word
-                    garp_required_vnhs = self.VNH_2_prefix.keys()
-
-                if len(ss_changes['changes']) > 0:
-
-                    self.logger.debug("Supersets have changed: "+str(ss_changes))
-
-                    "Map the superset changes to a list of new flow rules."
-                    flow_msgs = update_outbound_rules(ss_changes, self.policies,
-                            self.supersets, self.port0_mac)
-
-                    self.logger.debug("Flow msgs: "+str(flow_msgs))
-                    "Dump the new rules into the dataplane queue."
-                    self.dp_queued.extend(flow_msgs)
-
-                if TIMING:
-                    elapsed = time.time() - tstart
-                    self.logger.debug("Time taken to deal with ss_changes: "+str(elapsed))
-                    tstart = time.time()
-
-            ################## END SUPERSET RESPONSE ##################
-
-            else:
-                # TODO: similar logic for MDS
-                self.logger.debug("Creating ctrlr messages for MDS scheme")
-
-            self.push_dp()
+            # update supersets
+            "Map the set of BGP updates to a list of superset expansions."
+            ss_changes, ss_changed_prefs = self.supersets.update_supersets(self, updates)
 
             if TIMING:
                 elapsed = time.time() - tstart
-                self.logger.debug("Time taken to push dp msgs: "+str(elapsed))
+                self.logger.debug("Time taken to update supersets: "+str(elapsed))
                 tstart = time.time()
 
-            changed_vnhs, announcements = self.bgp_instance.bgp_update_peers(updates,
-                    self.prefix_2_VNH, self.cfg.ports)
+            # ss_changed_prefs are prefixes for which the VMAC bits have changed
+            # these prefixes must have gratuitous arps sent
+            garp_required_vnhs = [self.prefix_2_VNH[prefix] for prefix in ss_changed_prefs]
 
-            """ Combine the VNHs which have changed BGP default routes with the
-                VNHs which have changed supersets.
-            """
+            "If a recomputation event was needed, wipe out the flow rules."
+            if ss_changes["type"] == "new":
+                self.logger.debug("Wiping outbound rules.")
+                wipe_msgs = msg_clear_all_outbound(self.policies, self.port0_mac)
+                self.dp_queued.extend(wipe_msgs)
 
-            changed_vnhs = set(changed_vnhs)
-            changed_vnhs.update(garp_required_vnhs)
+                #if a recomputation was needed, all VMACs must be reARPed
+                # TODO: confirm reARPed is a word
+                garp_required_vnhs = self.VNH_2_prefix.keys()
 
-            # Send gratuitous ARP responses for all them
-            for vnh in changed_vnhs:
-                self.process_arp_request(None, vnh)
+            if len(ss_changes['changes']) > 0:
 
-            # Tell Route Server that it needs to announce these routes
-            for announcement in announcements:
-                # TODO: Complete the logic for this function
-                self.send_announcement(announcement)
+                self.logger.debug("Supersets have changed: "+str(ss_changes))
+
+                "Map the superset changes to a list of new flow rules."
+                flow_msgs = update_outbound_rules(ss_changes, self.policies,
+                        self.supersets, self.port0_mac)
+
+                self.logger.debug("Flow msgs: "+str(flow_msgs))
+                "Dump the new rules into the dataplane queue."
+                self.dp_queued.extend(flow_msgs)
 
             if TIMING:
                 elapsed = time.time() - tstart
-                self.logger.debug("Time taken to send garps/announcements: "+str(elapsed))
+                self.logger.debug("Time taken to deal with ss_changes: "+str(elapsed))
                 tstart = time.time()
 
-            return reply
+        ################## END SUPERSET RESPONSE ##################
+
+        else:
+            # TODO: similar logic for MDS
+            self.logger.debug("Creating ctrlr messages for MDS scheme")
+
+        self.push_dp()
+
+        if TIMING:
+            elapsed = time.time() - tstart
+            self.logger.debug("Time taken to push dp msgs: "+str(elapsed))
+            tstart = time.time()
+
+        changed_vnhs, announcements = self.bgp_instance.bgp_update_peers(updates,
+                self.prefix_2_VNH, self.cfg.ports)
+
+        """ Combine the VNHs which have changed BGP default routes with the
+            VNHs which have changed supersets.
+        """
+
+        changed_vnhs = set(changed_vnhs)
+        changed_vnhs.update(garp_required_vnhs)
+
+        # Send gratuitous ARP responses for all them
+        for vnh in changed_vnhs:
+            self.process_arp_request(None, vnh)
+
+        # Tell Route Server that it needs to announce these routes
+        for announcement in announcements:
+            # TODO: Complete the logic for this function
+            self.send_announcement(announcement)
+
+        if TIMING:
+            elapsed = time.time() - tstart
+            self.logger.debug("Time taken to send garps/announcements: "+str(elapsed))
+            tstart = time.time()
 
 
     def send_announcement(self, announcement):
