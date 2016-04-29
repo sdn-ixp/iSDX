@@ -41,11 +41,11 @@ Matching on various combinations of:
 
  **OF-DPA Matching**  
  [OF-DPA defines a pipeline of flow tables]
- (https://github.com/Broadcom-Switch/of-dpa/blob/master/OF-DPA-2.0/OFDPA_ASSV-ETP200-R.pdf),
+ (https://drive.google.com/file/d/0B_ng-xn3c5pjdjhiajhicUl2Z1E/view?usp=sharing)
  each of which supports different types of 
  rules.
  (The formal definition of these rules is described [here]
- (https://github.com/Broadcom-Switch/of-dpa/blob/master/OF-DPA-2.0/ofdpa-v2.0.0.2.ttp.json)
+ (https://drive.google.com/file/d/0B_ng-xn3c5pjdXE2ZVFRdDg1Y0E/view?usp=sharing)
  using [OpenFlow Table Type patterns]
  (https://www.opennetworking.org/images/stories/downloads/sdn-resources/onf-specifications/openflow/OpenFlow%20Table%20Type%20Patterns%20v1.0.pdf).)
  Only one of these tables, the Policy ACL table, is relevant to iSDX.  The Policy
