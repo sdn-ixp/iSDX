@@ -12,8 +12,11 @@ sudo pip install eventlet
 #  Ryu install
 cd ~
 git clone git://github.com/osrg/ryu.git
-sudo cp iSDX/setup/ryu-flags.py ryu/ryu/flags.py
+sudo cat iSDX/setup/ryu-flags.py >>ryu/ryu/flags.py
 cd ryu
+
+# get version 3.6. Later might work. Latest does not.
+git checkout 4f1a4db7
 
 # Below should be temporary until ryu's pip-requires file is fixed
 sed -i "s/python_version < '2.7'/(python_version != '2.7' and python_version != '3.0')/" tools/pip-requires
