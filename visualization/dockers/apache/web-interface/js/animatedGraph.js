@@ -288,13 +288,13 @@ var graph;
           step++;
           return 2000 + (1500*step); // initial time, wait time
       }
-
+/*
       setTimeout(function() {
         graph.removeLink('BGP-Proxy', 'Main');
         graph.addLink('Main', 'Router-B', '90');
           keepNodesOnTop();
       }, 3000);
-
+*/
 
       var socket = io.connect(localStorage.getItem("nodejs"));
 

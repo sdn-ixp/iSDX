@@ -119,7 +119,8 @@ class LogReplay(object):
 
         while self.run:
             start_time = time.time()
-            data = self.log_history.next_values(self.time_step)
+            # data = self.log_history.next_values(self.time_step)
+            data = self.log_history.next_values()
 
             # publish data
             for d in data:
