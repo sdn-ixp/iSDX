@@ -3,22 +3,20 @@
 
 use strict;
 
-# Port assignments
-my ($A,$B,$C1,$C2) = ('PORT_1_7','PORT_1_8','PORT_1_11','PORT_1_12');
-# Cookie assignments
-my ($Aout,$Bout,$C1out,$C2out) = (28,29,26,27);
-
 sub usage {
-    print "Usage: quickviz <data_directory>\n";
+    print "Usage: quickviz <config_file> <data_directory>\n";
     exit 1;
 }
 
-usage() if scalar(@ARGV) != 1;
+usage() if scalar(@ARGV) != 2;
 
-my $dir = $ARGV[0];
+my ($config,$dir) = @ARGV;
+
+load_config();
 
 my $count = 0;
 my (%cookie2cnt, %prev_cnt);
+my (%ports,%flows);
 
 printf "    %8s%8s%8s%8s%8s%8s%8s%8s\n", 'A','B','C1','C2','Aout','Bout','C1out','C2out';
 
@@ -49,10 +47,10 @@ while (1) {
 
     
     printf "%3d:%8d%8d%8d%8d%8d%8d%8d%8d\n", $count+1,
-     cookie_diff($A), cookie_diff($B),
-     cookie_diff($C1), cookie_diff($C2),
-     cookie_diff($Aout), cookie_diff($Bout),
-     cookie_diff($C1out), cookie_diff($C2out);
+     cookie_diff($ports{'A1'}), cookie_diff($ports{'B1'}),
+     cookie_diff($ports{'C1'}), cookie_diff($ports{'C2'}),
+     cookie_diff($flows{'VA1'}), cookie_diff($flows{'VB1'}),
+     cookie_diff($flows{'VC1'}), cookie_diff($flows{'VC2'});
     %prev_cnt = %cookie2cnt;
     $count += 1;
 }
@@ -64,4 +62,18 @@ sub cookie_diff {
     return $cookie2cnt{$cookie} - $prev_cnt{$cookie};
 }
 
-	
+sub load_config {
+    open(CONFIG, "<$config") or die "Can't open $config";
+    while (<CONFIG>) {
+	s/#.*//;
+	next if /^\s*$/;
+	if (/(\S+).*\s+(PORT\S+)/) {
+	    my ($portFlow,$portId) = ($1,$2);
+	    $ports{$portFlow} = $portId;
+	} else {
+	    my @fields = split(/\s+/);
+	    $flows{$fields[1]} = $fields[3];
+	}
+    }
+    close(CONFIG);
+}
