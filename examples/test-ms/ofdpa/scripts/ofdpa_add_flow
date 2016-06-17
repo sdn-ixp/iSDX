@@ -10,6 +10,7 @@ my $vlan = 1;
 my $host = 'localhost';
 my $port = '8080';
 my $dpid = 1;
+my $table = 60; # Default for OFDPA.  Specify 0 for OVS.
 my $cookie = 0;
 my $priority = 0;
 my $hard_timeout = 0;
@@ -21,6 +22,7 @@ my $skip_intf_group;
 my $rc;
 
 GetOptions("dpid=i" => \$dpid,
+	   "table=i" => \$table,
 	   "cookie=i" => \$cookie,
 	   "priority=i" => \$priority,
 	   "hard_timeout=i" => \$hard_timeout,
@@ -52,6 +54,7 @@ usage: $cmd <options..> output_ports...
 
     General OpenFlow Options:
       --dpid <n>
+      --table <n> # Default is 60 (OF-DPA).  Specify 0 for OVS.
       --cookie <n>
       --priority <n>
       --hard_timeout <n>
@@ -75,7 +78,7 @@ END_USAGE
 #print "gid is $group_id\n";
 
 my $port_in_str = $port_in ? "'in_port': $port_in," : '';
-my $eth_type_str = $eth_type_arp ? "'eth_type': 2054," : '';
+my $eth_type_str = $eth_type_arp ? "'eth_type': 2054," : ($tcp_src || $tcp_dst) ? "'eth_type': 2048," : '';
 my $eth_src_in_str = $eth_src_in ? "'eth_src': \"$eth_src_in\"," : '';
 my $eth_dst_in_str = $eth_dst_in ? "'eth_dst': \"$eth_dst_in\"," : '';
 my $tcp_src_str = $tcp_src ? "'tcp_src': $tcp_src," : '';
@@ -194,7 +197,7 @@ my $flow_msg = <<ENDMSG;
 {
     'dpid': $dpid,
     'cookie': $cookie,
-    'table_id': 60,
+    'table_id': $table,
     'priority': $priority,
     'hard_timeout': $hard_timeout,
     'match':{
