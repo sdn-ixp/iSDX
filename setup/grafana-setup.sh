@@ -20,7 +20,7 @@ sudo update-rc.d grafana-server defaults 95 10
 sudo service grafana-server start
 
 # configure grafana
-curl -X POST -d @grafanaDataSource.json http://admin:admin@localhost:3000/api/datasources --header "Content-Type:application/json"
+curl -X POST -d @/home/vagrant/iSDX/setup/grafanaDataSource.json http://admin:admin@localhost:3000/api/datasources --header "Content-Type:application/json"
 
 # configure directories for stats
 sudo mkdir -p /var/log/sdx
