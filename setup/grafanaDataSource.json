@@ -1,0 +1,17 @@
+    {
+        "access": "proxy",
+        "basicAuth": false,
+        "basicAuthPassword": "",
+        "basicAuthUser": "",
+        "database": "sdx",
+        "id": 1,
+        "isDefault": true,
+        "name": "sdx",
+        "orgId": 1,
+        "password": "",
+        "type": "influxdb",
+        "typeLogoUrl": "public/app/plugins/datasource/influxdb/img/influxdb_logo.svg",
+        "url": "http://localhost:8086",
+        "user": "",
+        "withCredentials": false
+    }

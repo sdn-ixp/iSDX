@@ -6,6 +6,7 @@ sudo dpkg -i influxdb_0.13.0_amd64.deb
 rm -f influxdb_0.13.0_amd64.deb
 
 sudo service influxdb start
+influx -execute 'create database sdx'
 
 # download and install grafana
 wget https://grafanarel.s3.amazonaws.com/builds/grafana_3.0.4-1464167696_amd64.deb
@@ -17,3 +18,7 @@ rm -f grafana_3.0.4-1464167696_amd64.deb
 sudo update-rc.d grafana-server defaults 95 10
 
 sudo service grafana-server start
+
+# configure grafana
+curl -X POST -d @grafanaDataSource.json http://admin:admin@localhost:3000/api/datasources --header "Content-Type:application/json"
+
