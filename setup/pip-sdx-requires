@@ -1,2 +1,4 @@
 exabgp==3.4.13
 requests==2.2.1
+ipaddr==2.1.11
+influxdb==2.12.0

@@ -22,3 +22,6 @@ sudo service grafana-server start
 # configure grafana
 curl -X POST -d @grafanaDataSource.json http://admin:admin@localhost:3000/api/datasources --header "Content-Type:application/json"
 
+# configure directories for stats
+sudo mkdir -p /var/log/sdx
+sudo chmod og+w /var/log/sdx
