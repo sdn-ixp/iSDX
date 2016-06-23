@@ -459,7 +459,7 @@ class parser:
     checkports = {} 
     
     def _nextport (self):
-        for i in range(1, 100):
+        for i in range(1, 1000):
             if str(i) not in self.checkports:
                 return str(i)
         raise Exception('out of ports')

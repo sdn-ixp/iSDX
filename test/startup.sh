@@ -117,7 +117,7 @@ do
 		echo starting ryu
 		cd $BASE/flanc
 		ryu-manager ryu.app.ofctl_rest refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg >/dev/null 2>&1 &
-		#sleep 2
+		sleep 2
 
 		echo starting xctrl
 		cd $BASE/xctrl/
