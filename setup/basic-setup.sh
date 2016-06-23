@@ -19,7 +19,7 @@ sudo pip install -U pip
 
 sudo pip install -r ~/iSDX/setup/pip-basic-requires
 
-sudo apt-get install -y ssh git emacs sshfs graphviz feh
+sudo apt-get install -y ssh git sshfs graphviz feh
 sudo apt-get install -y libstring-crc32-perl
 
 echo 'PATH=$PATH:~/iSDX/bin' >> ~/.profile
