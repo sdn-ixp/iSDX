@@ -41,7 +41,7 @@ test xfer {
 }
 
 test info {
-	local ovs-ofctl dump-flows s1
+	local ovs-ofctl dump-flows S1
 	exec a1 ip route
 	bgp a1
 	exec b1 ip route

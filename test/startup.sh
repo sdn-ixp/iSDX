@@ -1,7 +1,16 @@
 #!/bin/bash
 
 BASE=~/iSDX
-LOG_DIR=regress/regress.$$
+
+for i in {0..9999}
+do
+	LOG_DIR=regress/regress.$(printf "%04d" $i)
+	if [ ! -d $LOG_DIR ]
+	then
+		break
+	fi
+done
+
 echo "Logging to $LOG_DIR"
 mkdir -p $LOG_DIR
 
@@ -140,7 +149,7 @@ do
 			then
 				part=`echo $part | tr -d :\"`
 				echo starting participant $part
-				sudo python participant_controller.py $TEST $part &
+				python participant_controller.py $TEST $part &
 				#sleep 1
 			fi
 		done < $EXAMPLES/$TEST/config/sdx_policies.cfg
@@ -155,11 +164,12 @@ do
 		python tmgr.py $EXAMPLES/$TEST/config/config.spec "test init regress"
 
 		FAIL=`grep -c FAILED $LOG_DIR/$TEST.$pcount.log`
-		if [ $FAIL = '0' ]
+		if [[ $FAIL = '0' ]]
 		then
 			echo "Test $TEST:$count succeeded.  All tests passed"
 			python $BASE/logmsg.py "Test $TEST:$count succeeded.  All tests passed"
 		else
+			echo "Test $TEST:$count failed."
 			python $BASE/logmsg.py "Test $TEST:$count failed."
 			python tmgr.py $EXAMPLES/$TEST/config/config.spec "test info"
 			if [ $PAUSEONERROR != '0' ]

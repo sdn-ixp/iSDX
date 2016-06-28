@@ -51,10 +51,10 @@ test regress {
 }
 
 test info {
-	local ovs-ofctl dump-flows s1
-	local ovs-ofctl dump-flows s2
-	local ovs-ofctl dump-flows s3
-	local ovs-ofctl dump-flows s4
+	local ovs-ofctl dump-flows S1
+	local ovs-ofctl dump-flows S2
+	local ovs-ofctl dump-flows S3
+	local ovs-ofctl dump-flows S4
 	exec a1 ip route
 	bgp a1
 	exec b1 ip route

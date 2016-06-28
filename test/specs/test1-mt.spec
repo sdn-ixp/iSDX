@@ -29,11 +29,11 @@ test regress {
 	test xfer
 	withdraw b1 140.0.0.0/24
 	exec a1 ip -s -s neigh flush all
-	delay 2
-	test xfer
+	delay 4
+	test xfer2
 	announce b1 140.0.0.0/24
 	exec a1 ip -s -s neigh flush all
-	delay 2
+	delay 4
 	test xfer
 }
 	
@@ -48,8 +48,15 @@ test xfer {
 	verify a1_100 b1_140 8888
 }
 
+test xfer2 {
+	verify a1_100 c1_140 80
+	verify a1_100 c1_140 4321
+	verify a1_100 c2_140 4322
+	verify a1_100 c1_140 8888
+}
+
 test info {
-	local ovs-ofctl dump-flows s1
+	local ovs-ofctl dump-flows S1
 	exec a1 ip route
 	bgp a1
 	exec b1 ip route
