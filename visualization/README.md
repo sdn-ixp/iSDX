@@ -1,3 +1,56 @@
+There are currently three ways to visualize SDX traffic in real time.
+All work by polling the OpenFlow port and flow counters.
+
+ 1. The original visualization mechanism is described further down
+ under 'Basic SDX Visualization'.
+ 1. A web based version that is implemented using docker containers is
+ described under the `dockers` directory.
+ 1. The latest version -- described below -- uses Grafana (very slick
+   web interface) to 
+   display flows.  It is generally better than the earlier versions,
+   but does not show traffic overlaid on a network diagram (the
+   earlier versions do).
+
+# SDX Visualization with Grafana
+
+The Grafana visualization works as follows:
+ * A Ryu app called `gauge.py` periodically polls the switches for
+   port and flow statistics.  The code for this is in `flanc/stats`.
+   To enable this Ryu app, you must include the `--stats` argument
+   when running phase 3 (which starts Ryu) of the `launch.sh` script.
+   I.e.:
+
+	`iSDX/launch.sh --stats test-ms 3`
+
+   Configuration information for the gauge app is located alongside
+   the `sdx_global.cfg` file.  The `gauge.conf` file contains one line
+   per datapath (switch) with the name of a `.yaml` file that contains
+   the configuration data for that switch.  *At the time of this
+   writing, there is only gauge configuration data for `test-ms`.*
+
+   Note that the gauge code was borrowed from
+   https://github.com/REANNZ/faucet/tree/master/src/ryu_faucet/org/onfsdn/faucet.
+
+ * The gauge app stores the data it collects in an InfluxDB database.
+   It you want to see all the different time series that are stored in
+   the DB, after iSDX has run -- i.e., after some data has been stored
+   in the DB -- run:
+
+	`influx -database sdx -execute 'show series'`
+
+ * Grafana is a web application that for our purposes is configured to
+   display data from this InfluxDB database.  To run Grafana, simply point
+   your browser at `http://<iSDX_HOST>:3000`.  The login and password
+   are both 'admin'.  Grafana is currently configured to show several
+   graphs.  You can easily change them or add other graphs.  If you
+   save changes to the Grafana configuration, they are stored in
+   Grafana's SQLite database, `/var/lib/grafana/grafana.db`.  You can
+   dump the database with the command: `sqlite3
+   /var/lib/grafana/grafana.db 'dump'`. If you want to commit this
+   database to the SDX repo, save the output of the above command to
+   `iSDX/setup/grafana-init.sql`.  This file is used to initialize the
+   database when the vagrant machine is provisioned.
+
 # Basic SDX Visualization
 
 The `gen_sdx_viz` script is a poor man's visualization tool.  It
