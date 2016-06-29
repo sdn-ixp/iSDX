@@ -41,7 +41,9 @@ The Grafana visualization works as follows:
  * Grafana is a web application that for our purposes is configured to
    display data from this InfluxDB database.  To run Grafana, simply point
    your browser at `http://<iSDX_HOST>:3000`.  The login and password
-   are both 'admin'.  Grafana is currently configured to show several
+   are both 'admin'.  Select the `iSDX` dashboard and set the time
+   interval (upper right) to something like `last 15 minutes`.
+   Grafana is currently configured to show several
    graphs.  You can easily change them or add other graphs.  If you
    save changes to the Grafana configuration, they are stored in
    Grafana's SQLite database, `/var/lib/grafana/grafana.db`.  You can
@@ -50,6 +52,9 @@ The Grafana visualization works as follows:
    database to the SDX repo, save the output of the above command to
    `iSDX/setup/grafana-init.sql`.  This file is used to initialize the
    database when the vagrant machine is provisioned.
+
+![Grafana SDX Screenshot]
+(images/grafana.png)
 
 # Basic SDX Visualization
 
