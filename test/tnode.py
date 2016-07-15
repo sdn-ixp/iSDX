@@ -354,6 +354,33 @@ def cmd_thread(conn):
             return
         return
     
+    if cmd == 'router':
+        del tokens[0]
+        all = ""
+        for arg in tokens:
+            all += arg + ' '
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect(('127.0.0.1', 2605))
+            seq = 'sdnip\n'  # password in sdnip.py
+            seq += 'enable\n'  # reach privileged bgp commands
+            seq += all + '\n' 
+            seq += 'quit\nquit\n' # unwind the commands (or connection won't terminate
+            s.sendall(seq)
+            
+            while True:
+                data = s.recv(4096)
+                if data is None or len(data) == 0:
+                    break
+                conn.sendall(data)
+            s.close()
+            conn.close()
+        except Exception, e:
+            conn.sendall(host + ':XX ERROR: ' + 'ROUTER ' + repr(e) + '\n')
+            conn.close()
+            return
+        return
+    
     conn.sendall(host + ':XX ERROR: Bad command: ' + data)
     conn.close()
 

@@ -75,6 +75,7 @@ def main (argv):
         'announce': announce, 'a': announce, 
         'withdraw': withdraw, 'w': withdraw,
         'bgp': bgp,
+        'router': router,
         'delay': delay,
         'exec': remote, 'x': remote, 'remote': remote,
         'local': local, 'll': local,
@@ -231,6 +232,22 @@ def remote (args):
     if r is not None:
         log.debug('MM:' + host + ' REXEC: output = \n' + r.strip())
         
+def router (args):
+    if len(args) < 2:
+        log.error('MM:00 ROUTER: ERROR: usage: router arg arg ...')
+        return
+    host = args[0]
+    if host not in bgprouters:
+        log.error('MM:' + host + ' ERROR: ' + 'WITHDRAW' + ' ' + host + ' : must be a BGP router')
+        return
+    del args[0]
+    cmd = ''
+    for arg in args:
+        cmd += arg + ' '
+    log.info('MM:' + host + ' ROUTER: ' + cmd)
+    r = generic(host, 'ROUTER', 'router ' + cmd + '\n')
+    if r is not None:
+        log.debug('MM:' + host + ' ROUTER: output = \n' + r.strip())
         
 # generic command interface to a tnode - send cmd, capture data
 # return None id cannot connect or socket error
@@ -499,6 +516,7 @@ def usage (args):
     'announce bgprouter network ...  # advertise BGP route\n'
     'withdraw bgprouter network ...  # withdraw BGP route\n'
     'bgp bgprouter                   # show advertised bgp routes\n'
+    'router bgprouter cmd arg arg    # run arbitrary command on router\n'
     'delay seconds                   # pause for things to settle\n'
     'exec anynode cmd arg arg        # execute cmd on node\n'
     'local cmd arg arg               # execute cmd on local machine\n'
