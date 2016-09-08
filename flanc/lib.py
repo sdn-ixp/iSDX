@@ -340,6 +340,9 @@ class OneSwitchController(object):
         self.config.datapaths["arp"].send_msg(mod)
 
     def switch_connect(self, dp):
+        if not dp.id in self.config.dpid_2_name:
+            self.logger.warning('os_ctrlr: ignoring connection from unknown DP id: ' + str(dp.id))
+            return
         dp_name = self.config.dpid_2_name[dp.id]
 
         self.config.datapaths[dp_name] = dp
