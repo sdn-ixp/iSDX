@@ -68,13 +68,26 @@ class OFDPA20_switch():
 
         for action, value in fm.actions.iteritems():
             if action == "fwd":
-                for port in value:
-                    if isinstance( port, int ) or port.isdigit():
-                        fwd_ports.append(int(port))
-                    else:
-                        if port in self.config.dp_alias:
-                            port = self.config.dp_alias[port]
-                        fwd_ports.append(self.config.datapath_ports[fm.rule_type][port])
+                if self.config.isMultiTableMode():
+                    self.logger.error('ERROR: OFDPA does not support multi table mode')
+                elif self.config.isMultiSwitchMode():
+                    for port in value:
+                        if isinstance( port, int ) or port.isdigit():
+                            fwd_ports.append(int(port))
+                        else:
+                            if port in self.config.dp_alias:
+                                port = self.config.dp_alias[port]
+                                fwd_ports.append(self.config.datapath_ports[fm.rule_type][port])
+                elif self.config.isOneSwitchMode():
+                    for port in value:
+                        if isinstance( port, int ) or port.isdigit():
+                            fwd_ports.append(int(port))
+                        elif port in self.config.loops:
+                            fwd_ports.append(self.config.loops[port][0])
+                        elif port in self.config.datapath_ports["main"]:
+                            fwd_ports.append(self.config.datapath_ports["main"][port])
+                        elif port in self.config.datapath_ports["arp"]:
+                            fwd_ports.append(self.config.datapath_ports["arp"][port])
             elif action == "set_eth_src":
                 eth_src = value
             elif action == "set_eth_dst":

@@ -11,6 +11,7 @@ class Config(object):
 
     MULTISWITCH = 0
     MULTITABLE  = 1
+    ONESWITCH  = 2
 
     SUPERSETS = 0
     MDS       = 1
@@ -43,8 +44,10 @@ class Config(object):
         if "Mode" in config:
             if config["Mode"] == "Multi-Switch":
                 self.mode = self.MULTISWITCH
-            if config["Mode"] == "Multi-Table":
+            elif config["Mode"] == "Multi-Table":
                 self.mode = self.MULTITABLE
+            elif config["Mode"] == "One-Switch":
+                self.mode = self.ONESWITCH
         if "VMAC" in config:
             if "Mode" in config["VMAC"]:
                 if config["VMAC"]["Mode"] == "Superset":
@@ -93,6 +96,9 @@ class Config(object):
 
     def isMultiTableMode(self):
         return self.mode == self.MULTITABLE
+
+    def isOneSwitchMode(self):
+        return self.mode == self.ONESWITCH
 
     def isSupersetsMode(self):
         return self.vmac_mode == self.SUPERSETS

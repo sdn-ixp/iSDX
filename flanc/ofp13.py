@@ -41,24 +41,44 @@ class FlowMod(object):
             else:
                 self.cookie["cookie"] = int('{0:016b}'.format(int(self.origin))+'{0:016b}'.format(int(flow_mod["cookie"])),2)
                 self.cookie["mask"] = 2**32-1
-            if ("mod_type" in flow_mod and flow_mod["mod_type"] in self.mod_types):
+            if "mod_type" in flow_mod and flow_mod["mod_type"] in self.mod_types:
                 self.mod_type = flow_mod["mod_type"]
-                if ("rule_type" in flow_mod and flow_mod["rule_type"] in self.rule_types):
+                if "rule_type" in flow_mod and flow_mod["rule_type"] in self.rule_types:
                     if flow_mod["rule_type"] in self.config.dp_alias:
                         self.rule_type = self.config.dp_alias[flow_mod["rule_type"]]
                     else:
                         self.rule_type = flow_mod["rule_type"]
 
-                    if ("priority" in flow_mod):
-                        self.priority = flow_mod["priority"]
+                    if "priority" in flow_mod:
+                        self.priority = self.get_priority(self.rule_type, flow_mod["priority"])
                         if "match" in flow_mod:
-                            self.matches = self.validate_match(flow_mod["match"])
+                            matches = flow_mod["match"]
+                            if self.config.isOneSwitchMode():
+                                matches = self.augment_match(matches, flow_mod["rule_type"])
+                            self.matches = self.validate_match(matches)
                         if "action" in flow_mod:
                             self.actions = self.validate_action(flow_mod["action"])
 
+    def get_priority(self, rule_type, priority):
+        if priority not in self.config.priorities[rule_type]:
+            if rule_type == "inbound" or rule_type == "outbound":
+                priority = "participant"
+            else:
+                priority = "default"
+        return self.config.priorities[rule_type][priority]
+
+    def augment_match(self, matches, rule_type):
+        if rule_type != "main-in":
+            if "in_port" in matches:
+                print "in_port already in match"
+                print str(matches)
+            else:
+                matches["in_port"] = self.config.loops[rule_type][1]
+
+        return matches
+
     def validate_match(self, matches):
         validated_matches = {}
-
         for match, value in matches.iteritems():
             if match == "eth_type":
                 validated_matches[match] = value
@@ -70,14 +90,21 @@ class FlowMod(object):
                 if isinstance( value, int ) or value.isdigit():
                     validated_matches["in_port"] = value
                 else:
-                    if self.config.tables:
+                    if self.config.isMultiTableMode():
                         if self.rule_type == "arp" and value in self.config.datapath_ports[self.rule_type]:
                             validated_matches["in_port"] = self.config.datapath_ports[self.rule_type][value]
                         else:
                             validated_matches["in_port"] = self.config.datapath_ports["main"][value]
-                    else: 
-                        if self.rule_type in self.config.datapath_ports and value in self.config.datapath_ports[self.rule_type]:
+                    elif self.config.isMultiSwitchMode():
+                        if self.rule_type in self.config.datapath_ports and \
+                                        value in self.config.datapath_ports[self.rule_type]:
                             validated_matches["in_port"] = self.config.datapath_ports[self.rule_type][value]
+                    elif self.config.isOneSwitchMode():
+                        if value in self.config.datapath_ports["main"]:
+                            validated_matches["in_port"] = self.config.datapath_ports["main"][value]
+                        elif value in self.config.datapath_ports["arp"]:
+                            validated_matches["in_port"] = self.config.datapath_ports["arp"][value]
+
             elif match == "eth_dst":
                 if len(value) > 1:
                     validated_matches[match] = value
@@ -126,7 +153,7 @@ class FlowMod(object):
 
         for action, value in self.actions.iteritems():
             if action == "fwd":
-                if self.config.tables:
+                if self.config.isMultiTableMode():
                     for port in value:
                         if isinstance( port, int ) or port.isdigit():
                             temp_fwd_actions.append(self.parser.OFPActionOutput(int(port)))
@@ -136,7 +163,7 @@ class FlowMod(object):
                             temp_fwd_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["main"][port]))
                         elif port in self.config.datapath_ports["arp"]:
                             temp_fwd_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["arp"][port]))
-                else:
+                elif self.config.isMultiSwitchMode():
                     for port in value:
                         if isinstance( port, int ) or port.isdigit():
                             temp_fwd_actions.append(self.parser.OFPActionOutput(int(port)))
@@ -144,6 +171,16 @@ class FlowMod(object):
                             if port in self.config.dp_alias:
                                 port = self.config.dp_alias[port]
                             temp_fwd_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports[self.rule_type][port]))
+                elif self.config.isOneSwitchMode():
+                    for port in value:
+                        if isinstance( port, int ) or port.isdigit():
+                            temp_fwd_actions.append(self.parser.OFPActionOutput(int(port)))
+                        elif port in self.config.loops:
+                            temp_fwd_actions.append(self.parser.OFPActionOutput(self.config.loops[port][0]))
+                        elif port in self.config.datapath_ports["main"]:
+                            temp_fwd_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["main"][port]))
+                        elif port in self.config.datapath_ports["arp"]:
+                            temp_fwd_actions.append(self.parser.OFPActionOutput(self.config.datapath_ports["arp"][port]))
             elif action == "set_eth_src":
                 temp_actions.append(self.parser.OFPActionSetField(eth_src=value))
             elif action == "set_eth_dst":
@@ -196,9 +233,16 @@ class FlowMod(object):
             else:
                 table_id = self.config.tables[self.rule_type]
                 datapath = self.config.datapaths["main"]
+        elif self.config.loops:
+            if self.rule_type == "arp":
+                datapath = self.config.datapaths["arp"]
+            else:
+                datapath = self.config.datapaths["main"]
+            table_id = self.ofdpa.get_table_id() if self.is_ofdpa_datapath(datapath) else 0
         else:
             datapath = self.config.datapaths[self.rule_type]
             table_id = self.ofdpa.get_table_id() if self.is_ofdpa_datapath(datapath) else 0
+
 
         if self.mod_type == "insert":
             if self.is_ofdpa_datapath(datapath):
@@ -222,7 +266,7 @@ class FlowMod(object):
         return flow_mod, group_mods
 
     def get_dst_dp(self):
-        if self.config.tables and self.rule_type != "arp":
+        if (self.config.tables or self.config.loops) and self.rule_type != "arp":
             return "main"
         return self.rule_type
 

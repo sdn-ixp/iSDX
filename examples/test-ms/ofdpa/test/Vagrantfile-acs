@@ -1,0 +1,39 @@
+# This is the base Vagrantfile used to create the iSDX box.
+
+#Vagrant.configure("1") do |config|
+  #config.vm.boot_mode = :gui
+#end
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/trusty64"
+  #config.vm.box = "ubuntu/trusty32"
+
+  config.vm.provider "virtualbox" do |v|
+      v.customize ["modifyvm", :id, "--cpuexecutioncap", "80"]
+      v.customize ["modifyvm", :id, "--memory", "2048"]
+  end
+
+  ## Guest Config
+  config.vm.hostname = "iSDXVM"
+  config.vm.network :private_network, ip: "172.28.128.3"
+#  config.vm.network :forwarded_port, guest:6633, host:6637 # forwarding of port
+  config.vm.network :public_network, ip: "192.168.22.202", :bridge => 'isdx_openflow'
+  config.vm.network :public_network, :bridge => 'isdx_arp', auto_config: false # ARP (expected to come up as eth3)
+  config.vm.network :public_network, ip: "172.0.255.254", :netmask => "255.255.0.0", :bridge => 'isdx_bgp', :mac => "080027893BFF" # BGP
+
+  ## Provisioning
+  config.vm.provision :shell, privileged: false, :path => "../../../../setup/basic-setup.sh", :args => "--no-mininet"
+  config.vm.provision :shell, privileged: false, :path => "../../../../setup/ovs-setup.sh"
+#  config.vm.provision :shell, privileged: false, :path => "../../../../setup/mininet-setup.sh"
+  config.vm.provision :shell, privileged: false, :path => "../../../../setup/ryu-setup.sh"
+  config.vm.provision :shell, privileged: false, :path => "../../../../setup/sdx-setup.sh", :args => "--no-mininet"
+  config.vm.provision :shell, privileged: false, :path => "./init_arp_switch.sh"
+
+  ## SSH config
+  config.ssh.forward_x11 = true
+
+  #config.vm.synced_folder ".", "/home/vagrant/iSDX", type: "rsync",
+    #rsync__exclude: ".git/"
+  config.vm.synced_folder "../../../..", "/home/vagrant/iSDX"
+
+end
