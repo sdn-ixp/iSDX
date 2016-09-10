@@ -3,9 +3,14 @@
 HOST=localhost
 PORT=8080
 
+if [ $# -eq 2 -a $1 = '-b' ]; then
+    DO_BYTES=1
+    shift
+fi
+
 if [ $# -ne 1 ]; then
     CMD=`basename $0`
-    echo "usage: $CMD [-n] [-p] <dpid>"
+    echo "usage: $CMD [-b] [-n] [-p] <dpid>"
     exit 1
 fi
 DPID=$1
@@ -23,6 +28,10 @@ while getopts "p:n" opt; do
     esac
 done
 
-curl -X GET http://$HOST:$PORT/stats/flow/$DPID 2> /dev/null|
-perl -ne 'while (s/("actions[^]]*?\]).*?cookie...(\d+).*?("packet_count.. (\d+)).*?("priority.. \d+).*?("match": {[^}]*})//) {  $part = $2 >> 16; $pcookie = ""; $pcookie = ("(P_$part/" . ($2 & 0xffff) . ")") if $part; printf "$2 $pcookie $6, $1, $5, $3\n";}' | $FILTER
-
+if [ -z "$DO_BYTES" ]; then
+    curl -X GET http://$HOST:$PORT/stats/flow/$DPID 2> /dev/null|
+	perl -ne 'while (s/("actions[^]]*?\]).*?cookie...(\d+).*?("packet_count.. (\d+)).*?("priority.. \d+).*?("match": {[^}]*})//) {  $part = $2 >> 16; $pcookie = ""; $pcookie = ("(P_$part/" . ($2 & 0xffff) . ")") if $part; printf "$2 $pcookie $6, $1, $5, $3\n";}' | $FILTER
+else
+    curl -X GET http://$HOST:$PORT/stats/flow/$DPID 2> /dev/null|
+	perl -ne 'while (s/("actions[^]]*?\]).*?cookie...(\d+).*?("byte_count.. (\d+)).*?("priority.. \d+).*?("match": {[^}]*})//) {  $part = $2 >> 16; $pcookie = ""; $pcookie = ("(P_$part/" . ($2 & 0xffff) . ")") if $part; printf "$2 $pcookie $6, $1, $5, $3\n";}' | $FILTER
+fi
