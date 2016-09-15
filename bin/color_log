@@ -1,0 +1,79 @@
+#!/usr/bin/perl -w
+
+# This is a filter specifically to colorize the SDXLog.log file.
+# It gives a different color to each entity (xctl, xrs, arp proxy, refmon, each participant) and a different
+# shade of the color to each separate thread of the entity.  The goal is to make it easier to read the log.
+
+# If you are using this with 'less', use the '-r' option: e.g., 'color_log SDXLog.log | less -r'
+
+use Term::ANSIColor;
+use Term::ANSIColor 4.00 qw(coloralias);
+
+
+my %alias;
+my %colors;
+#my %count;
+my %colorById;
+
+$alias{'MultiSwitchController'} = 'refmon';
+$alias{'ReferenceMonitor'} = 'refmon';
+$alias{'RefMon_Server'} = 'refmon';
+
+$alias{'GSSmS'} = 'xctrl';
+
+$alias{'XRS-recv'} = 'XRS';
+$alias{'XRS-send'} = 'XRS';
+
+$alias{'P1-peer'} = 'P_1';
+$alias{'P2-peer'} = 'P_2';
+$alias{'P3-peer'} = 'P_3';
+
+my @reds = ('on_rgb200', 'on_rgb300', 'on_rgb400', 'on_rgb500');
+my @greens = ('on_rgb020', 'on_rgb030', 'on_rgb040', 'on_rgb050');
+my @blues = ('on_rgb002', 'on_rgb003', 'on_rgb004', 'on_rgb005');
+
+my @oranges = ('on_rgb520', 'on_rgb530', 'on_rgb540', 'on_rgb550');
+#my @pinks = ('on_rgb502', 'on_rgb503', 'on_rgb504');
+my @pinks = ('on_rgb515', 'on_rgb525', 'on_rgb535', 'on_rgb545');
+
+my @cyans = ('on_rgb053', 'on_rgb054', 'on_rgb055');
+my @yellows = ('on_rgb250', 'on_rgb350', 'on_rgb450');
+
+my @purples = ('on_rgb305', 'on_rgb405', 'on_rgb505');
+my @lightblues = ('on_rgb025', 'on_rgb035', 'on_rgb045');
+
+my @browns = ('on_rgb211');
+my @grays = ('on_rgb111', 'on_rgb222');
+
+@{$colors{'xctrl'}} = @browns;
+@{$colors{'refmon'}} = @grays;
+@{$colors{'arp'}} = (@pinks,@purples);
+@{$colors{'XRS'}} = (@blues, @lightblues);
+@{$colors{'P_1'}} = @reds;
+@{$colors{'P_2'}} = @oranges;
+@{$colors{'P_3'}} = @greens;
+
+#foreach my $i (@reds, @greens, @blues, @oranges, @pinks, @cyans, @yellows, @purples, @lightblues, @browns, @grays) {
+#    print color($i)."hello world".color('reset')."\n";
+#}
+
+while (<>) {
+    chomp;
+    my @a = split(/:/);
+    my ($pid, $tid, $type) = ($a[1], $a[2], $a[4]);
+    $type = $alias{$type} if defined($alias{$type});
+    my $id = "$type:$pid:$tid";
+    if (! defined($colorById{$id})) {
+	if (!defined($colors{$type})) {
+	    print "No color for $type\n";
+	    exit;
+	}
+	$colorById{$id} = pop(@{$colors{$type}});
+	push(@{$colors{$type}}, $colorById{$id}) if ! @{$colors{$type}};
+
+    }
+    print color($colorById{$id});
+    print color('black') if grep(/^$colorById{$id}$/, (@yellows,@oranges,@cyans,@pinks));
+    print "$_" . color('reset') . "\n";
+}
+

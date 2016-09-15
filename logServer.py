@@ -16,7 +16,7 @@ class MyFormatter(logging.Formatter):
 	return datetime.datetime.fromtimestamp(record.created).strftime('%Y%m%d %H%M%S.%f')
 
 def getLogger(fname=None):
-    format='%(asctime)s:%(process)d:%(thread)d:%(levelname)s:%(name)s:%(pathname)s %(lineno)d:%(message)s'
+    format='%(asctime)s:%(process)d:%(threadName)s:%(levelname)s:%(name)s:%(pathname)s %(lineno)d:%(message)s'
     formatter = MyFormatter(format)
 
     logger = logging.getLogger('sdx')
