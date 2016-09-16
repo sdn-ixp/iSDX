@@ -12,7 +12,6 @@ use Term::ANSIColor 4.00 qw(coloralias);
 
 my %alias;
 my %colors;
-#my %count;
 my %colorById;
 
 $alias{'MultiSwitchController'} = 'refmon';
@@ -33,7 +32,6 @@ my @greens = ('on_rgb020', 'on_rgb030', 'on_rgb040', 'on_rgb050');
 my @blues = ('on_rgb002', 'on_rgb003', 'on_rgb004', 'on_rgb005');
 
 my @oranges = ('on_rgb520', 'on_rgb530', 'on_rgb540', 'on_rgb550');
-#my @pinks = ('on_rgb502', 'on_rgb503', 'on_rgb504');
 my @pinks = ('on_rgb515', 'on_rgb525', 'on_rgb535', 'on_rgb545');
 
 my @cyans = ('on_rgb053', 'on_rgb054', 'on_rgb055');
@@ -65,15 +63,15 @@ while (<>) {
     my $id = "$type:$pid:$tid";
     if (! defined($colorById{$id})) {
 	if (!defined($colors{$type})) {
-	    print "No color for $type\n";
-	    exit;
+	    print $_ . "\n";
+	    next;
 	}
 	$colorById{$id} = pop(@{$colors{$type}});
 	push(@{$colors{$type}}, $colorById{$id}) if ! @{$colors{$type}};
 
     }
     print color($colorById{$id});
-    print color('black') if grep(/^$colorById{$id}$/, (@yellows,@oranges,@cyans,@pinks));
+    print color(grep(/^$colorById{$id}$/, (@yellows,@oranges,@cyans,@pinks)) ? 'black' : 'white');
     print "$_" . color('reset') . "\n";
 }
 
