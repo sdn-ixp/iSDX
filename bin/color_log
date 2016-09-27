@@ -4,7 +4,7 @@
 # It gives a different color to each entity (xctl, xrs, arp proxy, refmon, each participant) and a different
 # shade of the color to each separate thread of the entity.  The goal is to make it easier to read the log.
 
-# If you are using this with 'less', use the '-r' option: e.g., 'color_log SDXLog.log | less -r'
+# If you are using this with 'less', use the '-r' option: e.g., 'color_log SDXLog.log | less -R'
 
 use Term::ANSIColor;
 use Term::ANSIColor 4.00 qw(coloralias);
