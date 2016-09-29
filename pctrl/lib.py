@@ -17,6 +17,7 @@ if np not in sys.path:
 from xctrl.flowmodmsg import FlowModMsgBuilder
 
 from peer import BGPPeer
+from participant_server import ParticipantServer
 
 
 class PConfig(object):
@@ -101,6 +102,27 @@ class PConfig(object):
         config = self.config
         conn_info = config["Route Server"]
         return GenericClient2(conn_info["AH_SOCKET"][0], conn_info["AH_SOCKET"][1], '', logger, 'xrs')
+
+    def get_xrs_info(self, logger=None):
+        config = self.config
+        conn_info = config["Route Server"]
+        string = ("%s %s" % (conn_info["AH_SOCKET"][0], conn_info["AH_SOCKET"][1]))
+        return string
+
+    # participant client
+    def get_participant_client(self, id, logger):
+        config = self.config
+        conn_info = config["Participants"]
+        conn_info = conn_info[str(id)]
+        return GenericClient2(conn_info["PH_SOCKET"][0], conn_info["PH_SOCKET"][1], '', logger, 'participant')
+
+    # participant server
+    def get_participant_server(self, id, logger):
+        config = self.config
+        conn_info = config["Participants"]
+        part_info = conn_info[str(id)]
+        return ParticipantServer(part_info["PH_SOCKET"][0], part_info["PH_SOCKET"][1], logger)
+
 
     def get_arp_client(self, logger):
         config = self.config
