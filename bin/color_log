@@ -56,9 +56,12 @@ my @grays = ('on_rgb111', 'on_rgb222');
 #}
 
 while (<>) {
+    if (!/^[^:]+:(\d+):([^:]+):[^:]+:([^:]+):/) {
+	print;
+	next;
+    }
     chomp;
-    my @a = split(/:/);
-    my ($pid, $tid, $type) = ($a[1], $a[2], $a[4]);
+    my ($pid, $tid, $type) = ($1, $2, $3);
     $type = $alias{$type} if defined($alias{$type});
     my $id = "$type:$pid:$tid";
     if (! defined($colorById{$id})) {
