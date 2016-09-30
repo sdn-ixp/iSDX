@@ -4,8 +4,9 @@
 #  Robert MacDavid (Princeton)
 
 from threading import RLock
-
 from ss_lib import minimize_ss_rules_greedy, best_ss_to_expand_greedy, is_subset_of_superset, removeSubsets, clear_inactive_parts
+
+import util.log
 
 lock = RLock()
 
@@ -110,6 +111,8 @@ class SuperSets(object):
 
                 # if no merge is possible, recompute from scratch
                 if expansion_index == -1:
+                    # TODO: FIX & TEST.  Looks like this has never been tested.  superset_index is never defined.
+                    # Can replace this with call to initial_computation()
                     self.logger.debug("No SS merge was possible. Recomputing.")
                     self.recompute_all_supersets(pctrl)
 
@@ -239,7 +242,6 @@ class SuperSets(object):
             pad_len = self.mask_size - len(set_bitstring)
             set_bitstring += '0' * pad_len
 
-
         #self.logger.debug("****DEBUG: nexthop_part: %d, best_path_size: %d, ss_id: %d, id_size: %d", nexthop_part, self.best_path_size, ss_id, self.id_size)
 
         id_bitstring = '{num:0{width}b}'.format(num=ss_id, width=self.id_size)
@@ -247,7 +249,6 @@ class SuperSets(object):
         nexthop_bitstring = '{num:0{width}b}'.format(num=nexthop_part, width=self.best_path_size)
 
         vmac_bitstring = '1' + id_bitstring + set_bitstring + nexthop_bitstring
-
 
         if len(vmac_bitstring) != 48:
             self.logger.error("BAD VMAC SIZE!! FIELDS ADD UP TO "+str(len(vmac_bitstring)))
@@ -278,7 +279,7 @@ def get_all_participants_advertising(pctrl, prefix):
     nexthop_2_part = pctrl.nexthop_2_part
 
     routes = bgp_instance.get_routes('input',prefix)
-    pctrl.logger.debug("Supersets all routes:: "+str(routes))
+    pctrl.logger.debug("Supersets all routes:: "+ util.log.pformat(routes))
 
     parts = set([])
 

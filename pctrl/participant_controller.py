@@ -122,13 +122,23 @@ class ParticipantController(object):
 
         port_count = len(self.cfg.ports)
 
-        # sanitize the input policies
+        # sanitize the inbound policies
         if 'inbound' in policies:
             for policy in policies['inbound']:
                 if 'action' not in policy:
                     continue
                 if 'fwd' in policy['action'] and int(policy['action']['fwd']) >= port_count:
                     policy['action']['fwd'] = 0
+                    self.logger.warn('Port count in inbound policy is too big.  Setting it to 0.')
+
+        # sanitize the outbound policies
+        if 'outbound' in policies:
+            for policy in policies['outbound']:
+                # If no cookie field, give it cookie 0. (Should be OK for multiple flows with same cookie,
+                # though they can't be individually removed.  TODO: THIS SHOULD BE VERIFIED)
+                if 'cookie' not in policy:
+                    policy['cookie'] = 0
+                    self.logger.warn('Cookie not specified in new policy.  Defaulting to 0.')
 
         return policies
 
@@ -241,7 +251,7 @@ class ParticipantController(object):
                 break
 
             data = json.loads(tmp)
-            self.logger.debug("XRS Event received: %s", data)
+            self.logger.debug("XRS Event received: %s", util.log.pformat(data))
 
             self.process_event(data)
 
@@ -300,20 +310,50 @@ class ParticipantController(object):
             self.logger.debug('removed cookies: ' + str(cookies) + ' from: ' + in_out)
 
     def process_policy_changes(self, change_info):
-        self.logger.debug("pre-updated policies: \n" + pprint.pformat(self.policies))
+        if not self.cfg.isSupersetsMode():
+            self.logger.warn('Dynamic policy updates only supported in SuperSet mode')
+            return
+        
+        self.logger.debug("Wiping outbound rules.")
+        wipe_msgs = msg_clear_all_outbound(self.policies, self.port0_mac)
+        self.dp_queued.extend(wipe_msgs)
+
+        self.logger.debug("pre-updated policies: " + util.log.pformat(self.policies))
+        if 'removal_cookies' in change_info:
+            cookies = change_info['removal_cookies']
+            self.remove_policies_by_cookies(cookies, 'inbound')
+            self.remove_policies_by_cookies(cookies, 'outbound')
+
         if 'new_policies' in change_info:
             new_policies = change_info['new_policies']
             self.sanitize_policies(new_policies)
             self.update_policies(new_policies, 'inbound')
             self.update_policies(new_policies, 'outbound')
 
-        if 'removal_cookies' in change_info:
-            cookies = change_info['removal_cookies']
-            self.remove_policies_by_cookies(cookies, 'inbound')
-            self.remove_policies_by_cookies(cookies, 'outbound')
+        self.logger.debug("updated policies: " + util.log.pformat(self.policies))
+        self.logger.debug("pre-recomputed supersets: " + util.log.pformat(self.supersets.supersets))
 
-        self.logger.debug("updated policies: \n" + pprint.pformat(self.policies))
+        changes = self.supersets.initial_computation(self)
+        self.logger.debug("policy changes: " + util.log.pformat(changes))
+        self.logger.debug("post-recomputed supersets: " + util.log.pformat(self.supersets.supersets))
 
+        garp_required_vnhs = self.VNH_2_prefix.keys()
+        
+        if len(changes['changes']) > 0:
+            "Map the superset changes to a list of new flow rules."
+            flow_msgs = update_outbound_rules(changes, self.policies,
+                                              self.supersets, self.port0_mac)
+
+            self.logger.debug("Flow msgs: "+ util.log.pformat(flow_msgs))
+            "Dump the new rules into the dataplane queue."
+            self.dp_queued.extend(flow_msgs)
+
+        self.push_dp()
+
+        # Send gratuitous ARP responses for all
+        for vnh in garp_required_vnhs:
+            self.process_arp_request(None, vnh)
+            
         return
 
         # Original code below...
