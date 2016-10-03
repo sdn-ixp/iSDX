@@ -98,9 +98,6 @@ class ParticipantController(object):
 
         self.refmon_client = self.cfg.get_refmon_client(self.logger)
 
-         # class for building flow mod msgs to the reference monitor
-        self.fm_builder = FlowModMsgBuilder(self.id, self.refmon_client.key)
-
         # Send flow rules for initial policies to the SDX's Reference Monitor
         self.initialize_dataplane()
         self.push_dp()
@@ -165,11 +162,11 @@ class ParticipantController(object):
 
         rule_msgs = init_inbound_rules(self.id, self.policies,
                                         self.supersets, final_switch)
-        self.logger.debug("Rule Messages INBOUND:: "+str(rule_msgs))
+        self.logger.debug("Rule Messages INBOUND:: "+json.dumps(rule_msgs))
 
         rule_msgs2 = init_outbound_rules(self, self.id, self.policies,
                                         self.supersets, final_switch)
-        self.logger.debug("Rule Messages OUTBOUND:: "+str(rule_msgs2))
+        self.logger.debug("Rule Messages OUTBOUND:: "+json.dumps(rule_msgs2))
 
         if 'changes' in rule_msgs2:
             if 'changes' not in rule_msgs:
@@ -177,7 +174,7 @@ class ParticipantController(object):
             rule_msgs['changes'] += rule_msgs2['changes']
 
         #TODO: Initialize Outbound Policies from RIB
-        self.logger.debug("Rule Messages:: "+str(rule_msgs))
+        self.logger.debug("Rule Messages:: "+json.dumps(rule_msgs))
         if 'changes' in rule_msgs:
             self.dp_queued.extend(rule_msgs["changes"])
 
@@ -191,13 +188,14 @@ class ParticipantController(object):
         self.logger.debug("Pushing current flow mod queue:")
 
         # it is crucial that dp_queued is traversed chronologically
+        fm_builder = FlowModMsgBuilder(self.id, self.refmon_client.key)
         for flowmod in self.dp_queued:
             self.logger.debug("MOD: "+str(flowmod))
-            self.fm_builder.add_flow_mod(**flowmod)
+            fm_builder.add_flow_mod(**flowmod)
             self.dp_pushed.append(flowmod)
 
         self.dp_queued = []
-        self.refmon_client.send(json.dumps(self.fm_builder.get_msg()))
+        self.refmon_client.send(json.dumps(fm_builder.get_msg()))
 
 
     def stop(self):
@@ -251,7 +249,7 @@ class ParticipantController(object):
                 break
 
             data = json.loads(tmp)
-            self.logger.debug("XRS Event received: %s", util.log.pformat(data))
+            self.logger.debug("XRS Event received: %s", json.dumps(data))
 
             self.process_event(data)
 
@@ -301,24 +299,51 @@ class ParticipantController(object):
         self.logger.debug('new_policies[io]: ' + str(new_policies[in_out]))
         self.policies[in_out].extend(new_policies[in_out])
 
+    # Remove polices that match the cookies and return the list of cookies for removed policies
     def remove_policies_by_cookies(self, cookies, in_out):
         if in_out != 'inbound' and in_out != 'outbound':
             self.logger.exception("Illegal argument to update_policies: " + in_out)
             raise
         if in_out in self.policies:
+            to_remove = [x['cookie'] for x in self.policies[in_out] if x['cookie'] in cookies]
             self.policies[in_out] = [x for x in self.policies[in_out] if x['cookie'] not in cookies]
-            self.logger.debug('removed cookies: ' + str(cookies) + ' from: ' + in_out)
+            self.logger.debug('removed cookies: ' + str(to_remove) + ' from: ' + in_out)
+            return to_remove
+        return []
+
+    def queue_flow_removals(self, cookies, in_out):
+        removal_msgs = []
+        for cookie in cookies:
+            mod =  {"rule_type":in_out, "priority":0,
+                    "match":{"eth_src":self.port0_mac}, "action":{},
+                    #"match":{}, "action":{},
+                    "cookie":(cookie,2**16-1), "mod_type":"remove"}
+            removal_msgs.append(mod)
+        self.dp_queued.extend(removal_msgs)
+            
 
     def process_policy_changes(self, change_info):
         if not self.cfg.isSupersetsMode():
             self.logger.warn('Dynamic policy updates only supported in SuperSet mode')
             return
-        
+
+        # First step towards a less brute force approach: Handle removals without having to remove everything
+        if 'removal_cookies' in change_info and not 'new_policies' in change_info:
+            cookies = change_info['removal_cookies']
+            removed_in_cookies = self.remove_policies_by_cookies(cookies, 'inbound')
+            self.queue_flow_removals(removed_in_cookies, 'inbound')
+            removed_out_cookies = self.remove_policies_by_cookies(cookies, 'outbound')
+            self.queue_flow_removals(removed_out_cookies, 'outbound')
+            self.push_dp()
+            return
+
+        # Remainder of this method is brute force approach: wipe everything and re-do it
+        # This should be replaced by a more fine grained approach
         self.logger.debug("Wiping outbound rules.")
         wipe_msgs = msg_clear_all_outbound(self.policies, self.port0_mac)
         self.dp_queued.extend(wipe_msgs)
 
-        self.logger.debug("pre-updated policies: " + util.log.pformat(self.policies))
+        self.logger.debug("pre-updated policies: " + json.dumps(self.policies))
         if 'removal_cookies' in change_info:
             cookies = change_info['removal_cookies']
             self.remove_policies_by_cookies(cookies, 'inbound')
@@ -330,12 +355,12 @@ class ParticipantController(object):
             self.update_policies(new_policies, 'inbound')
             self.update_policies(new_policies, 'outbound')
 
-        self.logger.debug("updated policies: " + util.log.pformat(self.policies))
-        self.logger.debug("pre-recomputed supersets: " + util.log.pformat(self.supersets.supersets))
+        self.logger.debug("updated policies: " + json.dumps(self.policies))
+        self.logger.debug("pre-recomputed supersets: " + json.dumps(self.supersets.supersets))
 
         changes = self.supersets.initial_computation(self)
-        self.logger.debug("policy changes: " + util.log.pformat(changes))
-        self.logger.debug("post-recomputed supersets: " + util.log.pformat(self.supersets.supersets))
+        self.logger.debug("policy changes: " + json.dumps(changes))
+        self.logger.debug("post-recomputed supersets: " + json.dumps(self.supersets.supersets))
 
         garp_required_vnhs = self.VNH_2_prefix.keys()
         
@@ -344,7 +369,7 @@ class ParticipantController(object):
             flow_msgs = update_outbound_rules(changes, self.policies,
                                               self.supersets, self.port0_mac)
 
-            self.logger.debug("Flow msgs: "+ util.log.pformat(flow_msgs))
+            self.logger.debug("Flow msgs: "+ json.dumps(flow_msgs))
             "Dump the new rules into the dataplane queue."
             self.dp_queued.extend(flow_msgs)
 

@@ -1,11 +1,9 @@
 import logging, logging.handlers
 import pprint
+import json
 
 # Use a global LogLevel to get uniform behavior across all python processes.
 LogLevel = logging.DEBUG
-
-# PrettyPrint helpful during development, but not good for grepping logs
-PrettyPrint = True
 
 # where logging info goes / where logServer.py is running.
 HOST = 'localhost'
@@ -19,9 +17,3 @@ def getLogger(name):
     logger.addHandler(socketHandler)
 
     return logger
-
-def pformat(json):
-    if PrettyPrint == True:
-        return "\n" + pprint.pformat(json)
-    else:
-        return str(json)

@@ -6,7 +6,7 @@
 from threading import RLock
 from ss_lib import minimize_ss_rules_greedy, best_ss_to_expand_greedy, is_subset_of_superset, removeSubsets, clear_inactive_parts
 
-import util.log
+import json
 
 lock = RLock()
 
@@ -279,7 +279,7 @@ def get_all_participants_advertising(pctrl, prefix):
     nexthop_2_part = pctrl.nexthop_2_part
 
     routes = bgp_instance.get_routes('input',prefix)
-    pctrl.logger.debug("Supersets all routes:: "+ util.log.pformat(routes))
+    pctrl.logger.debug("Supersets all routes:: "+ json.dumps(routes))
 
     parts = set([])
 

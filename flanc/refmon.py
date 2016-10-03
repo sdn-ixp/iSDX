@@ -127,7 +127,7 @@ class RefMon(app_manager.RyuApp):
     def process_flow_mods(self, msg):
         self.flow_mod_times.put(time())
 
-        self.logger.info('refmon: received flowmod request')
+        self.logger.info('refmon: received flowmod request ' + json.dumps(msg))
 
         # authorization
         if "auth_info" in msg:
