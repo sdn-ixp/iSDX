@@ -1,11 +1,13 @@
+#!/usr/bin/env python
+
 import os, sys
+import argparse
 import json
 
 np = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if np not in sys.path:
     sys.path.append(np)
 from multiprocessing.connection import Client
-from netaddr import IPNetwork
 from socket import error as SocketError
 
 import util.log
@@ -14,10 +16,8 @@ class PolicyLoader(object):
         def __init__(self, address, port, key, logger, sname):
                 self.client = GenericClient2(address, port, key, logger, sname)
 
-        def send_file(self, pol_file):
-                with open(pol_file, 'r') as f:
-	                data = json.load(f)
-                f.close
+        def send_file(self, f):
+	        data = json.load(f)
                 self.client.send(data)
 
 class GenericClient2(object):
@@ -59,10 +59,16 @@ class GenericClient2(object):
         self.conn.close()
 
 
-                
-script, pol_file = sys.argv
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Send policy changes to a participant.')
+    parser.add_argument('-H', '--Host', help='host (default is localhost)')
+    parser.add_argument('port', type=int)
+    parser.add_argument('policy_file', type=argparse.FileType('r'))
+    args = parser.parse_args()
+
+#print 'args ' + str(args)
 
 logger = util.log.getLogger('loader')
-pol_loader = PolicyLoader('localhost', 5551, '', logger, 'pol_loader')
+pol_loader = PolicyLoader('localhost', args.port, '', logger, 'policy server')
 
-pol_loader.send_file(pol_file)
+pol_loader.send_file(args.policy_file)
