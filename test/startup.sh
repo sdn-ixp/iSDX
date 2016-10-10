@@ -2,6 +2,12 @@
 
 BASE=~/iSDX
 
+
+TMGR=tmgr
+#CONFIG=config.spec
+#TMGR=tmgr2
+CONFIG=torch.cfg
+
 for i in {0..9999}
 do
 	LOG_DIR=regress/regress.$(printf "%04d" $i)
@@ -67,7 +73,7 @@ fi
 
 for TEST in $@
 do
-	if [ ! -e $EXAMPLES/$TEST/config/config.spec ] ; then
+	if [ ! -e $EXAMPLES/$TEST/config/$CONFIG ] ; then
         echo $0 ERROR: Test $TEST is not defined
         exit 1
     fi
@@ -131,17 +137,14 @@ do
 		echo starting xctrl
 		cd $BASE/xctrl/
 		python ./xctrl.py $EXAMPLES/$TEST/config/sdx_global.cfg
-
 		echo starting arp proxy
 		cd $BASE/arproxy/
 		python arproxy.py $TEST &
 		#sleep 3
-
 		echo starting route server
 		cd $BASE/xrs/
 		python route_server.py $TEST &
 		#sleep 3
-
 		cd $BASE/pctrl/
 		while read -r part other
 		do
@@ -154,14 +157,12 @@ do
 			fi
 		done < $EXAMPLES/$TEST/config/sdx_policies.cfg
 		sleep 5
-
 		echo starting exabgp
 		exabgp $EXAMPLES/$TEST/config/bgp.conf >/dev/null 2>&1 &
 		sleep 10
-
 		echo starting $TEST
 		cd $BASE/test
-		python tmgr.py $EXAMPLES/$TEST/config/config.spec "test init regress"
+		python $TMGR.py $EXAMPLES/$TEST/config/$CONFIG "test init regress"
 
 		FAIL=`grep -c FAILED $LOG_DIR/$TEST.$pcount.log`
 		if [[ $FAIL = '0' ]]
@@ -171,13 +172,13 @@ do
 		else
 			echo "Test $TEST:$count failed."
 			python $BASE/logmsg.py "Test $TEST:$count failed."
-			python tmgr.py $EXAMPLES/$TEST/config/config.spec "test info"
+			python $TMGR.py $EXAMPLES/$TEST/config/$CONFIG "test info"
 			if [ $PAUSEONERROR != '0' ]
 			then
 				echo; echo "************ ERROR OCCCURED - PAUSING ************"
 				echo enter TORCH commands followed by control-d to exit
 				echo; echo "**************************************************"
-				python tmgr.py $EXAMPLES/$TEST/config/config.spec
+				python $TMGR.py $EXAMPLES/$TEST/config/$CONFIG
 			fi
 			if [ $STOPONERROR != '0' ]
 			then
@@ -190,7 +191,7 @@ do
 			echo; echo "************************"
 			echo enter TORCH commands followed by control-d to exit
 			echo; echo "************************"
-			python tmgr.py $EXAMPLES/$TEST/config/config.spec
+			python $TMGR.py $EXAMPLES/$TEST/config/$CONFIG
 		fi
 
 		#echo capturing what processes are using what ports

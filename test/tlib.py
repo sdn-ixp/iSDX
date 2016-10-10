@@ -1,20 +1,22 @@
 '''
-Created on Mar 17, 2016
+Created on Oct 4, 2016
 
 @author: Marc Pucci
 '''
 import json
+import collections
+
+# host is specified as either name:port or /tmp/socket. In the latter case, port is None
+# bind is the binding address for host listeners
+# tcp and udp are lists of ports to listen on
+Nodename = collections.namedtuple('Nodename', 'host, port, bind, tcp, udp' )
 
 class parser:
     
-    bgprouters = []                 # hosts that are routers, not listeners, but we may want to send commands to anyway
-    peers = []                      # holds multiple peer group relationships
-    listeners = {}                  # holds details for a listener
+    bgprouters = {}                 # hosts that are routers, not listeners, but we may want to send commands to anyway
     tests = {}                      # holds details for named tests
-    mode = None                     # multi-switch or multi-table
-    policies = {}                   # details on participant policies (flow rules)
-    participants = {}               # details on each participant
-    cookie_id = 1                   # common cookie ID for flow rules (should this be per participant?)
+    participants = {}               # address of participant
+    hosts = {}                      # address of a data source or sync host
 
     def __init__(self, cfile):
 
@@ -48,44 +50,91 @@ class parser:
             except Exception as err:
                 f.close()
                 raise Exception('Fatal error on line ' + str(lines) + ': ' + line + ' (' + str(err) + ')')
-        f.close
-        self._seenall()
-        
+        f.close        
         
     def _parse (self, line, gather):
         tokens = line.split()
         if len(tokens) == 0:
             return
-        self._seen(tokens[0])
         
         if tokens[0] == 'participants':
-            self._do_participants(tokens)
-        elif tokens[0] == 'participant':
-            self._do_participant(tokens)
+            self._do_participants(tokens, gather)
         elif tokens[0] == 'flow':
             self._do_flow(tokens)
         elif tokens[0] == 'announce':
             self._do_announce(tokens)
-        elif tokens[0] == 'peers':
-            self._do_peers(tokens)
-        elif tokens[0] == 'mode':
-            self._do_mode(tokens)
         elif tokens[0] == 'test':
             self._do_test(tokens, gather)
         elif tokens[0] == 'listener':
             self._do_listener(tokens)
-        elif tokens[0] == 'host':
-            self._do_host(tokens)
+        elif tokens[0] == 'hosts':
+            self._do_hosts(tokens, gather)
+        elif tokens[0] == 'bgprouters':
+            self._do_bgprouters(tokens, gather)
         else:
             raise Exception('unrecognized command')
     
+    def _do_bgprouters (self, args, gather):
+        if len(args) != 2 or args[1] != "{":
+            raise Exception('usage: bgprouters {\n             host=name:port | /named/pipe\n         }\n ')
+        for line in gather:
+            n, t = self.getname(line)
+            if n is None:
+                continue
+            self.bgprouters[n] = t
+        #print self.bgprouters
+        
+    def _do_hosts (self, args, gather):
+        if len(args) != 2 or args[1] != "{":
+            raise Exception('usage: hosts {\n             host=name:port | /named/pipe\n         }\n ')
+        for line in gather:
+            n, t = self.getname(line)
+            if n is None:
+                continue
+            self.hosts[n] = t
+        #print self.hosts
+        
+    def _do_participants (self, args, gather):
+        if len(args) != 2 or args[1] != "{":
+            raise Exception('usage: participants {\n             host=name:port | /named/pipe\n         }\n ')
+        for line in gather:
+            n, t = self.getname(line)
+            if n is None:
+                continue
+            self.participants[n] = t
+        #print self.participants
     
-    def _do_participants (self, args):        
-        number = args[1]
-        for i in range(1, int(number) + 1):
-            self._get_policy(str(i))
-        self.number_of_participants = int(number)
+    def getname (self, arg):
+        arg = arg.partition('#')[0].strip('\n')
+        args = arg.split()
+        if len(args) == 0:
+            return None, None
+        if len(args) == 1:
+            raise Exception('name host:port | /named/pipe [ bind_address [ tcp_ports ... ] ]')
+        
+        # print(args)
     
+        name = args[0]
+        addr = args[1]
+        port = None
+        bind = None
+        tcp = []
+        udp = []
+        
+        addr_port = addr.partition(':')
+        if len(addr_port) == 3 and addr_port[1] == ':':
+            addr = addr_port[0]
+            port = addr_port[2]
+            
+        if len(args) >= 3:
+            bind = args[2]
+            
+        for i in range(3, len(args)):
+            tcp.append(args[i])
+        
+        # print(name + " " + addr + ' ' + str(port) + ' ' + str(bind) + ' ' + str(tcp) + ' ' + str(udp))
+        return name, Nodename(addr, port, bind, tcp, udp)
+        
             
     def _do_flow (self, args):
         if args[3] == '>>':
@@ -149,78 +198,6 @@ class parser:
         policy["outbound"].append(tmp_policy)
     
     
-    # participant 3 300 7 08:00:27:54:56:ea 172.0.0.21 8 08:00:27:bd:f8:b2 172.0.0.22
-    
-    def _do_participant (self, args):        
-        if len(args) < 6 or len(args) % 3 != 0:
-            raise Exception('usage: participant # ASN switchport MAC IP ...')
-        part = args[1]
-        ipart = int(part)
-        asn = args[2]
-        
-        i = 3
-        
-        p = self.participants.get(part, {})
-        p['ASN'] = asn
-        routers = []
-        index = 0
-        while i < len(args):
-            port = self._checkport(args[i])
-            mac = self._checkmac(args[i+1], ipart, index)
-            ip = args[i+2]
-            i += 3
-            #print 'part=' + part + ' asn=' + asn + ' port=' + port + ' mac=' + mac + ' ip=' + ip
-    
-            router = {}
-            router['hostname'] = part_router2host(part, index)
-            self.bgprouters.append(part_router2host(part, index))
-            router['Id'] = int(port) # switch port
-            router['MAC'] = mac
-            if len(ip.split('/')) != 2:
-                raise Exception('malformed network address ' + ip)
-            router['IP'] = ip.split('/')[0]
-            router['NET'] = ip
-            router['index'] = index
-            router['description'] = 'Virtual AS ' + part2as(part)
-            if len(args) > 6:
-                router['description'] += ' Router ' + router['hostname']
-            index += 1
-            routers.append(router)
-        p['Ports'] = routers
-        
-        # get the peer group and gen the peer set (less this instance)
-        found = False
-        for pg in self.peers:
-            if found:
-                break
-            for n in pg:
-                if n == ipart:
-                    found = True
-                    mypeers = []
-                    for m in pg:
-                        if m != ipart:
-                            mypeers.append(m)
-                    p['Peers'] = mypeers
-                    break
-        '''        
-        # do inbound and outbound rules exist (participant defs must follow flows)      
-        if len(policies[part]['inbound']) != 0:
-            p['Inbound Rules'] = True
-        else:
-            p['Inbound Rules'] = False
-        if len(policies[part]['outbound']) != 0:
-            p['Outbound Rules'] = True
-        else:
-            p['Outbound Rules'] = False
-        '''        
-        self.participants[part] = p
-
-    
-    # define formatter for names of hosts.  special macros are:
-    # IP first part of network address, i.e., 150 in 150.0.0.0.24
-    # ROUTER - router number styarting from 1
-    # NET - network number starting from 1
-    # AS - AS letter name
     
     hostformer = []
     
@@ -271,63 +248,6 @@ class parser:
         p['announcements'] = announcements
         p['networks'] = networks
     
-    
-    def _do_peers (self, args):        
-        if len(args) == 1:
-            raise Exception('usage: peers participant_member participant_member ...')
-        p = []
-        for i in range(1, len(args)):
-            n = int(args[i])
-            if n < 1 or n > self.number_of_participants:
-                raise Exception('bad peer group value')
-            p.append(n)
-        #print p
-        self.peers.append(p)
-    
-    
-    def _do_mode (self, args):        
-        if len(args) != 2:
-            raise Exception('usage: mode multi-switch | multi-table')
-        if self.mode is not None:
-            raise Exception('error: mode already set')
-        
-        self.mode = args[1]
-        
-        if self.mode == 'multi-switch':
-            for i in ['1', '2', '3', '4']:
-                self._checkport(i)
-        elif self.mode == 'multi-table':
-            for i in ['1', '2']:
-                self._checkport(i)
-        else:
-            raise Exception('unknown mode')
-    
-    
-    def _do_listener (self, args):
-        autogen = len(args) > 2 and args[1] == 'AUTOGEN'
-        if autogen and len(args) < 3 or not autogen and len(args) < 4:
-            raise Exception('usage: node host binding_address port ... OR node AUTOGEN port port ...')
-        if autogen:
-            for nn in sorted(self.listeners):
-                n = self.listeners[nn]
-                ports = []
-                for i in range(2, len(args)):
-                    ports.append(args[i])
-                n['ports'] = ports
-                #print 'auto gen node = ' + nn + ' ' + n['bind'] + ' ' + str(n['ports'])
-            return
-        n = self.listeners.get(args[1])
-        if n is None:
-            raise Exception('Node ' + args[1] + ' is not defined by an earlier network announcement')
-        if len(n['ports']) != 0:
-            raise Exception('Node ' + args[1] + ' is already defined')
-        n['bind'] = args[2]
-        ports = []
-        for i in range(3, len(args)):
-            ports.append(args[i])
-        n['ports'] = ports
-
-    
     def _do_test (self, args, gather):
         if len(args) != 3 or args[2] != "{":
             raise Exception('usage: test testname {\n             test commands\n         }\n ')
@@ -341,194 +261,7 @@ class parser:
                 continue
             
             testcmds.append(line.strip())
-            
-            # perform sanity checks on test commands to avoid surprises
-            # keep up to date with tmgr
-            # todo - tmgr should use tlib to check commands as in verifycheck() 
-    
-            if args[0] == 'send':
-                continue
-            
-            if args[0] == 'verify':
-                if len(args) != 4:
-                    raise Exception('usage: verify src dst port')
-                self.verifycheck(args[1], args[2], args[3])
-                continue
-            
-            if args[0] == 'exec':
-                if len(args) < 3:
-                    raise Exception('bad run command: usage: run host cmd args ...')
-                host = args[1]
-                if host == 'local' or host == 'bgp' or host == 'hosts':
-                    continue
-                if host in self.listeners or host in self.bgprouters:
-                    continue
-                raise Exception('bad run command: unknown host: ' + host)
-            
-            if args[0] == 'dump':
-                continue
-            
-            if args[0] == 'announce' or args[0] == 'withdraw':
-                continue
-            
-            if args[0] == 'delay':
-                continue
-            
-            if args[0] == 'listener':
-                continue
-
-            if args[0] == 'local':
-                continue
-            
-            if args[0] == 'test':
-                continue
-            
-            if args[0] == 'bgp':
-                continue
-            
-            raise Exception('unknown test command: ' + args[0])   
-        
         self.tests[testname] = testcmds    
-
-    # early checks for test command correctness
-    
-    def verifycheck (self, src, dst, dport):                
-        # validate that the source is a valid node - the binding address also comes from the node description
-        try:
-            n = self.listeners[src]
-            baddr = n['bind']
-        except:
-            raise Exception('bad source node: ' + src)
-    
-        # validate the destination - the destination address also comes from the node description
-        # there must be a listener for the port
-        found = False
-        try:
-            i = 0
-            for p in self.listeners[dst]['ports']:
-                if p == dport:
-                    daddr = self.listeners[dst]['bind']
-                    found = True
-                    break
-                i += 1
-        except:
-            raise Exception('bad destination node: ' + dst)
-        if found == False:
-            raise Exception('bad destination port - no listener defined') 
-        return (baddr, daddr)   
-     
-    # check if commands have appeared in the right order
-    # all predecessor commands must be seen before this cmd
-    # all successor cmds must not have occurred
-    # return True if cmd has already been seen
-    
-    cmdorder = [ 'mode', 'participants', 'peers', 'participant', 'host', 'announce', 'flow', 'listener', 'test']
-    cmdoptional = ['listener', 'test']
-    cmdseen = {}
-        
-    def _seen (self, cmd):
-        if cmd not in self.cmdorder:
-            raise Exception('unknown command: ' + cmd)
-        if cmd in self.cmdseen:
-            already = True
-        else:
-            already = False
-        self.cmdseen[cmd] = True
-        match = False
-        for i in self.cmdorder:
-            if i == cmd:
-                match = True
-                continue
-            if not match: # must have been seen
-                if i not in self.cmdseen:
-                    raise Exception(i + ' must be specified before ' + cmd)
-            else:
-                if i in self.cmdseen:
-                    raise Exception(cmd + ' must be specified before ' + i)
-        return already
-    
-    
-    def _seenall (self):
-        for i in self.cmdorder:
-            if i not in self.cmdseen:
-                if i in self.cmdoptional:
-                    continue
-                raise Exception('specification for ' + i + ' is missing')
-
-    
-    checkports = {} 
-    
-    def _nextport (self):
-        for i in range(1, 1000):
-            if str(i) not in self.checkports:
-                return str(i)
-        raise Exception('out of ports')
-    
-    def _checkport (self, i):
-        if i == 'PORT':
-            i = self._nextport()
-            #print 'auto gen port = ' + i
-        if i in self.checkports:
-            raise Exception('port ' + i + ' is already used')
-        try:
-            ii = int(i)
-        except:
-            raise Exception(i + ' is an invalid port number')
-        if ii <= 0:
-            raise Exception(i + ' is an invalid port number')
-        self.checkports[i] = True
-        return i
-        
-    # see if there is a gap in the switch port sequence
-    # this was/is a bug with mininext/mininet
-    def portgap (self):
-        gap = False
-        for i in range(1, 50):
-            if str(i) not in self.checkports:
-                gap = True
-            elif gap == True:
-                return True
-        return False
-    
-    checkmacs = {} 
-    
-    # 08:00:27:54:56:ea
-    def _checkmac (self, mac, part, router):
-        if mac == 'MAC':
-            mac = nextmac(part, router)
-            #print 'auto gen mac = ' + mac
-        if mac in self.checkmacs:
-            raise Exception('mac ' + mac + ' is already used')
-        if len(mac) != 17:
-            raise Exception('mac ' + mac + ' is poorly formatted')
-        digits = mac.split(':')
-        if len(digits) != 6:
-            raise Exception('mac ' + mac + ' is poorly formatted')
-        for pair in digits:
-            if len(pair) != 2:
-                raise Exception('mac ' + mac + ' is poorly formatted')
-            try:
-                int(pair, 16)
-            except ValueError:
-                raise Exception('mac ' + mac + ' is not hexadecimal')
-        self.checkmacs[mac] = True
-        return mac
-
-    
-    def genname (self, netnumb, ip, asys, router):
-        h = ''
-        for i in self.hostformer:
-            if i == 'NETNUMB':
-                h += str(netnumb + 1)
-            elif i == 'IP':
-                h += ip.split('.')[0]
-            elif i == 'ROUTER':
-                h += str(int(router) + 1)
-            elif i == 'AS':
-                h += asys
-            else:
-                h += i
-        return h
         
 # convert participant + index into a1, b1, c1, c2, etc., index starts at 0
 def part_router2host(part, router):
@@ -547,7 +280,7 @@ def as2part (name):
             raise Exception('bad AS name: ' + name)
         p += n + 1
     if p < 1: ############# TODO  or p > number_of_participants:
-        raise Exception('Illegal AS name: ' + name)
+        return None
     return str(p)
 
 
@@ -571,19 +304,19 @@ def host2as_router(name):
     for c in name:
         if c in nameset:
             if not lookforasys:
-                raise Exception('bad hostname: ' + name)
+                return None, None
             asys += c;
             foundasys = True
         elif c in routerset:
             if not foundasys:
-                raise Exception('bad hostname: ' + name)
+                return None, None
             lookforasys = False
             r += c
     if not foundasys or r == '':
-        raise Exception('bad hostname: ' + name)
+        return None, None
     n = int(r)
     if n <= 0:
-        raise Exception('bad hostname: ' + name)
+        return None, None
     n -= 1  # routers run from 0 even though host is called a1, a2
     
     ################# TODO 
@@ -593,17 +326,6 @@ def host2as_router(name):
         #raise Exception('router does not exist for ' + name)
     return asys, str(n)
 
-
-# generate a mac address   
-def nextmac (part, router):
-    a = 0x08
-    b = 0x00
-    c = 0xBB
-    d = 0xBB
-    e = part
-    f = router
-    return '%02x:%02x:%02x:%02x:%02x:%02x' % (a, b, c, d, e, f)
-    
 if __name__ == "__main__":
     p = parser('specs/test1-ms.spec')
     print 'bgprouters'

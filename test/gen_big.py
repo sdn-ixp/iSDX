@@ -10,7 +10,7 @@ generate really big configurations
 
 import sys
 
-import tlib         # iSDX parser
+import genlib
 
 def main (argv):
     global outdir
@@ -65,7 +65,7 @@ def main (argv):
     listener = "listener AUTOGEN "   
     for i in range(2, limit + 1):
         listener += " " + str(p)
-        print "flow " + tlib.part_router2host(1, 0) + " " + str(p) + " >> " + tlib.part2as(i)
+        print "flow " + genlib.part_router2host(1, 0) + " " + str(p) + " >> " + genlib.part2as(i)
         p += 1
     print
     print listener
@@ -79,7 +79,7 @@ def main (argv):
     p = port
     print "test xfer {"
     for i in range(2, limit + 1):
-        print "\tverify " + tlib.part_router2host(1, 0) + "_100 " + tlib.part_router2host(i, 0) + "_140" + " " + str(p)
+        print "\tverify " + genlib.part_router2host(1, 0) + "_100 " + genlib.part_router2host(i, 0) + "_140" + " " + str(p)
         p += 1
     print "}"
     print

@@ -37,7 +37,7 @@ class ParticipantServer(object):
                     msg = conn.recv()
                 except:
                     pass
-            self.logger.debug('participant_server(%s): received policy message' % self.id)
+            self.logger.debug('participant_server(%s): received policy message %s' % (self.id, msg))
             self.controller.process_policy_changes(json.loads(msg))
 
             conn.close()

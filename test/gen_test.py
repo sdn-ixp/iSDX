@@ -19,7 +19,7 @@ import os
 import shutil
 import collections
 
-import tlib         # iSDX parser
+import genlib         # iSDX parser
 
 noisy = False                   # print extra output for debugging
 policies = {}                   # details on participant policies (flow rules)
@@ -28,9 +28,11 @@ outdir = 'output'               # base directory for results, will have XXXXX fr
 template_dir = 'templates'      # directory for templates for configurations
 genmini = False                 # don't generate mininet sub directories for quagga
 config = None                   # parsed configuration
+torch = {}                      # torch file for testing
+ph_socket = 5551                # first socket for dynamic policy server
 
 def main (argv):
-    global outdir
+    global outdir, ph_socket
     
     if len(argv) < 2:
         print 'usage: gen_test specification_file'
@@ -39,7 +41,7 @@ def main (argv):
     cfile = argv[1]
 
     try:
-        config = tlib.parser(cfile)
+        config = genlib.parser(cfile)
     except Exception, e:
         print 'Configuration error: ' + cfile + ': ' + repr(e)
         exit()
@@ -53,7 +55,7 @@ def main (argv):
     sdx_global_template = os.path.join(template_dir, config.mode + '-sdx_global.cfg')
         
     # inbound and outbound rules are checked in global, not in policy files    
-    for part in participants:
+    for part in sorted(participants):
         p = participants.get(part)
         if len(policies[part]['inbound']) != 0:
             p['Inbound Rules'] = True
@@ -63,6 +65,8 @@ def main (argv):
             p['Outbound Rules'] = True
         else:
             p['Outbound Rules'] = False
+        p['PH_SOCKET'] = [ "localhost", ph_socket]
+        ph_socket += 1
         
     try:
         b = os.path.basename(cfile)
@@ -211,12 +215,12 @@ def main (argv):
             
             netnames = []
             for netnumb in range(len(q['networks'])):
-                netnames.append(config.genname(netnumb, q['networks'][netnumb], tlib.part2as(p), r['index']))
+                netnames.append(config.genname(netnumb, q['networks'][netnumb], genlib.part2as(p), r['index']))
             q['netnames'] = netnames
             
             q['asn'] = participants[p]['ASN']
             # convert participant + index into a1, b1, c1, c2, etc.
-            hostname = tlib.part_router2host(p, r['index'])
+            hostname = genlib.part_router2host(p, r['index'])
             # cmds.append('sudo python tnode.py ' + hostname)    # handle in sdx_mininet.py to simplify finding tnode.py
             quagga[hostname] = q
     
@@ -262,6 +266,43 @@ def main (argv):
                 dprint('\t\thold-time 180;', fout)
                 dprint('\t}', fout)
     fin.close()
+    fout.close()
+    
+    torch_file = 'torch.cfg'
+    torch_file = os.path.join(config_dir, torch_file)
+    print 'generating torch configuration file ' + torch_file  
+         
+    fout = open(torch_file, 'w')
+    fout.write('\n\n')
+
+    fout.write('bgprouters {\n')
+    for bgpr in sorted(quagga):
+        fout.write('\t' + bgpr + ' /tmp/' + bgpr + '\n')
+    fout.write('}\n\n')
+    
+    fout.write('hosts {\n')
+    for host in sorted(config.listeners):
+        h = config.listeners[host]
+        fout.write('\t' + host + ' /tmp/' + host + ' ' + h['bind'])
+        for i in h['ports']:
+            fout.write(' ' + i)
+        fout.write('\n')
+    fout.write('}\n\n')
+    
+    fout.write('participants {\n')
+    for part in sorted(participants):
+        p = participants[part]
+        n = genlib.part2as(part)
+        fout.write('\t' + n + ' ' + p['PH_SOCKET'][0] + ':' + str(p['PH_SOCKET'][1]) + '\n')
+    fout.write('}\n\n')
+    
+    for test in config.tests:
+        fout.write('test ' + test + ' {\n')
+        t = config.tests[test]
+        for c in t:
+            fout.write('\t' + c + '\n')
+        fout.write('}\n\n')
+            
     fout.close()
     
     if not genmini:
