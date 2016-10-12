@@ -10,7 +10,7 @@ CONFIG=torch.cfg
 
 for i in {0..9999}
 do
-	LOG_DIR=regress/regress.$(printf "%04d" $i)
+	LOG_DIR=$PWD/regress/regress.$(printf "%04d" $i)
 	if [ ! -d $LOG_DIR ]
 	then
 		break
@@ -131,7 +131,7 @@ do
 
 		echo starting ryu
 		cd $BASE/flanc
-		ryu-manager ryu.app.ofctl_rest refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg >/dev/null 2>&1 &
+		ryu-manager ryu.app.ofctl_rest refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg 2> $LOG_DIR/refmon.$pcount.stderr &
 		sleep 2
 
 		echo starting xctrl
@@ -164,6 +164,11 @@ do
 		cd $BASE/test
 		python $TMGR.py $EXAMPLES/$TEST/config/$CONFIG "test init regress"
 
+		if grep -iq exception $LOG_DIR/refmon.$pcount.stderr
+		then
+		    echo "*** EXCEPTION in refmon.  See $LOG_DIR/refmon.$pcount.stderr"
+		fi
+		   
 		FAIL=`grep -c FAILED $LOG_DIR/$TEST.$pcount.log`
 		if [[ $FAIL = '0' ]]
 		then
