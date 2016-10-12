@@ -349,9 +349,6 @@ class parser:
             # perform sanity checks on test commands to avoid surprises
             # keep up to date with tmgr
             # todo - tmgr should use tlib to check commands as in verifycheck() 
-    
-            if args[0] == 'send':
-                continue
             
             if args[0] == 'verify':
                 if len(args) != 4:
@@ -369,28 +366,7 @@ class parser:
                     continue
                 raise Exception('bad run command: unknown host: ' + host)
             
-            if args[0] == 'dump':
-                continue
-            
-            if args[0] == 'announce' or args[0] == 'withdraw':
-                continue
-            
-            if args[0] == 'delay':
-                continue
-            
-            if args[0] == 'listener':
-                continue
-
-            if args[0] == 'local':
-                continue
-            
-            if args[0] == 'test':
-                continue
-            
-            if args[0] == 'bgp':
-                continue
-            
-            raise Exception('unknown test command: ' + args[0])   
+            continue
         
         self.tests[testname] = testcmds    
 
