@@ -98,6 +98,10 @@ def main (argv):
     print "}"
     print
 
+    print "test flush {"
+    for router in ('a1', 'b1'):
+        print "\texec " + router + " ip -s -s neigh flush all"
+    print "}"
     
         
 if __name__ == "__main__":
