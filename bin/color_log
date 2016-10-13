@@ -37,7 +37,7 @@ my @pinks = ('on_rgb515', 'on_rgb525', 'on_rgb535', 'on_rgb545');
 my @cyans = ('on_rgb053', 'on_rgb054', 'on_rgb055');
 my @yellows = ('on_rgb250', 'on_rgb350', 'on_rgb450');
 
-my @purples = ('on_rgb305', 'on_rgb405', 'on_rgb505');
+my @purples = ('on_rgb405', 'on_rgb505');
 my @lightblues = ('on_rgb025', 'on_rgb035', 'on_rgb045');
 
 my @browns = ('on_rgb211');
@@ -50,6 +50,7 @@ my @grays = ('on_rgb111', 'on_rgb222');
 @{$colors{'P_1'}} = @reds;
 @{$colors{'P_2'}} = @oranges;
 @{$colors{'P_3'}} = @greens;
+@{$colors{'TMGR'}} = ('on_rgb305');
 
 #foreach my $i (@reds, @greens, @blues, @oranges, @pinks, @cyans, @yellows, @purples, @lightblues, @browns, @grays) {
 #    print color($i)."hello world".color('reset')."\n";
