@@ -17,6 +17,7 @@ import subprocess
 import traceback
 import time
 import shlex
+import readline
 from multiprocessing.connection import Client
 
 import tlib
