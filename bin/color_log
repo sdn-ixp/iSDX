@@ -66,15 +66,21 @@ while (<>) {
     my $id = "$type:$pid:$tid";
     if (! defined($colorById{$id})) {
 	if (!defined($colors{$type})) {
-	    print $_ . "\n";
-	    next;
+	    if ($type =~ /P_/) {
+		# Any participants > 3 are colored white
+		$colorById{$id} = 'on_white';
+	    } else {
+		print $_ . "\n";
+		next;
+	    }
+	} else {
+	    $colorById{$id} = pop(@{$colors{$type}});
+	    push(@{$colors{$type}}, $colorById{$id}) if ! @{$colors{$type}};
 	}
-	$colorById{$id} = pop(@{$colors{$type}});
-	push(@{$colors{$type}}, $colorById{$id}) if ! @{$colors{$type}};
 
     }
     print color($colorById{$id});
-    print color(grep(/^$colorById{$id}$/, (@yellows,@oranges,@cyans,@pinks)) ? 'black' : 'white');
+    print color(grep(/^$colorById{$id}$/, (@yellows,@oranges,@cyans,@pinks,'on_white')) ? 'black' : 'white');
     print "$_" . color('reset') . "\n";
 }
 
