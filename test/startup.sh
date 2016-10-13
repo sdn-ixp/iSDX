@@ -52,6 +52,9 @@ do
    -s)
      STOPONERROR=1
      ;;
+   -t)
+     export MININET_TCPDUMP=1
+     ;;
    -*)
      echo "Usage error.  Type just $0 for options" >&2
      exit 1
@@ -64,10 +67,12 @@ do
 done
 
 if [ "$#" -lt 1 ] ; then
-  echo "Usage: $0 -i -p -s -n number_of_loops -t traffic_test_group_name test_name test_name ..." >&2
+  echo "Usage: $0 -i -p -s -n number_of_loops -t test_name test_name ..." >&2
   echo "    -i runs interactive torch commands after tests" >&2
   echo "    -p pauses after any errors.  Implies -i if error" >&2
   echo "    -s is for stopping after any errors. Can be used with -p" >&2
+  echo "    -t starts tcpdump on all routers and hosts." >&2
+  echo "       Output is in /tmp/*.tcpdump and needs to be cleaned up manually" >&2
   exit 1
 fi
 
@@ -92,6 +97,10 @@ do
 		if [ $INTERACTIVE != '0' ]
 		then
 			echo "****** RUNNING IN INTERACTVE MODE - type control-D when finished to continue **********"
+		fi
+		if [ "$MININET_TCPDUMP" != "" ]
+		then
+		    echo "****** TCPDUMP RUNNING on all ROUTERS & HOSTS.  'sudo rm /tmp/*.tcpdump' when done **********"
 		fi
 		echo -------------------------------
 
@@ -211,7 +220,7 @@ do
 
 		echo cleaning up processes and files
 		(
-		#sudo killall tcpdump
+		sudo killall tcpdump
 		sudo killall python /usr/bin/python /usr/lib/quagga/bgpd /usr/lib/quagga/zebra
 		sudo killall exabgp
 		sudo fuser -k 6633/tcp

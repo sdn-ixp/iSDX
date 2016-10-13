@@ -7,6 +7,7 @@ from mininet.log import setLogLevel, info
 from mininet.node import RemoteController, OVSSwitch, Node
 from sdnip import BgpRouter, SdnipHost
 import sys, json, yaml
+import os
 
 ROUTE_SERVER_IP = '172.0.255.254'
 ROUTE_SERVER_ASN = 65000
@@ -128,6 +129,8 @@ if __name__ == "__main__":
         for host in net.hosts:
             if host.name in tnodenames:
                 host.cmd('python ' + tnode_file + ' ' + host.name + '&')
+                if 'MININET_TCPDUMP' in os.environ:
+                    host.cmd('tcpdump -qnn > /tmp/' + host.name + '.tcpdump &')
     
     # if a semaphore was provided, write into it to signal the next process to start
     if argc > 3:
