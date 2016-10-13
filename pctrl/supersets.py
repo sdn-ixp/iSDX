@@ -279,7 +279,7 @@ def get_all_participants_advertising(pctrl, prefix):
     nexthop_2_part = pctrl.nexthop_2_part
 
     routes = bgp_instance.get_routes('input',prefix)
-    pctrl.logger.debug("Supersets all routes:: "+ json.dumps(routes))
+    pctrl.logger.debug("Supersets all routes:: "+ str(routes))
 
     parts = set([])
 
