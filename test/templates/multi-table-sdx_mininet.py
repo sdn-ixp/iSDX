@@ -129,8 +129,9 @@ if __name__ == "__main__":
         for host in net.hosts:
             if host.name in tnodenames:
                 host.cmd('python ' + tnode_file + ' ' + host.name + '&')
-                if 'MININET_TCPDUMP' in os.environ:
-                    host.cmd('tcpdump -qnn > /tmp/' + host.name + '.tcpdump &')
+                if 'MININET_TCPDUMP' in os.environ and host.name.find('_') == -1:
+                    # tcpdump on routers, but not hosts
+                    host.cmd('tcpdump -e -qnn > /tmp/' + host.name + '.tcpdump &')
     
     # if a semaphore was provided, write into it to signal the next process to start
     if argc > 3:

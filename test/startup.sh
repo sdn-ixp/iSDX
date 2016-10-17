@@ -100,7 +100,7 @@ do
 		fi
 		if [ "$MININET_TCPDUMP" != "" ]
 		then
-		    echo "****** TCPDUMP RUNNING on all ROUTERS & HOSTS.  'sudo rm /tmp/*.tcpdump' when done **********"
+		    echo "****** TCPDUMP RUNNING on all ROUTERS.  'sudo rm /tmp/*.tcpdump' when done **********"
 		fi
 		echo -------------------------------
 
