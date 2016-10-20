@@ -3,7 +3,7 @@
 
 
 import json
-from multiprocessing import Queue
+from lib import Queue
 import os
 from Queue import Empty
 from time import time

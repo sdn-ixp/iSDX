@@ -6,10 +6,11 @@
 import argparse
 import json
 from multiprocessing import Queue
-from multiprocessing.connection import Client
 from Queue import Empty
 from threading import Thread
 from time import sleep, time
+import socket
+
 
 import os
 import sys
@@ -131,11 +132,10 @@ class LogClient(object):
             self.send(flow_mod)
 
     def send(self, flow_mod):
-        conn = Client((self.address, self.port))
-
-        conn.send(json.dumps(flow_mod))
-
-        conn.close()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((self.address, self.port))
+        sock.sendall(json.dumps(flow_mod))
+        sock.close()
 
     def sleep_time(self, flow_mod_time):
         time_diff = flow_mod_time - self.simulation_start_time

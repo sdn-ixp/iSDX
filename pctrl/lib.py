@@ -8,6 +8,7 @@ import json
 from multiprocessing.connection import Client
 from netaddr import IPNetwork
 from socket import error as SocketError
+from ryu.lib import hub
 
 import os
 import sys
@@ -139,7 +140,7 @@ class PConfig(object):
 
         key = config["Participants"][self.id]["Flanc Key"]
 
-        return GenericClient(address, port, key, logger, 'refmon')
+        return GenericSockClient(address, port, key, logger, 'refmon')
 
     def isMultiSwitchMode(self):
         return self.dp_mode == self.MULTISWITCH
@@ -184,6 +185,39 @@ class GenericClient(object):
                 raise
 
         conn.send(msg)
+
+        conn.close()
+
+class GenericSockClient(object):
+    def __init__(self, address, port, key, logger, sname):
+        self.address = address
+        self.port = int(port)
+        self.key = key
+        self.logger = logger
+        self.serverName = sname
+
+
+    def send(self, msg):
+        # TODO: Busy wait will do for initial startup but for dealing with server down in the middle of things
+        # TODO: then busy wait is probably inappropriate.
+        while True: # keep going until we break out inside the loop
+            try:
+                self.logger.debug('Attempting to connect to '+self.serverName+' server at '+str(self.address)+' port '+str(self.port))
+                conn = hub.connect((self.address, self.port))
+                self.logger.debug('Connect to '+self.serverName+' successful.')
+                break
+            except SocketError as serr:
+                if serr.errno == errno.ECONNREFUSED:
+                    self.logger.debug('Connect to '+self.serverName+' failed because connection was refused (the server is down). Trying again.')
+                else:
+                    # Not a recognized error. Treat as fatal.
+                    self.logger.debug('Connect to '+self.serverName+' gave socket error '+str(serr.errno))
+                    raise serr
+            except:
+                self.logger.exception('Connect to '+self.serverName+' threw unknown exception')
+                raise
+
+        conn.sendall(msg)
 
         conn.close()
 

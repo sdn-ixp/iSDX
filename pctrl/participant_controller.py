@@ -191,7 +191,13 @@ class ParticipantController(object):
         fm_builder = FlowModMsgBuilder(self.id, self.refmon_client.key)
         for flowmod in self.dp_queued:
             self.logger.debug("MOD: "+str(flowmod))
-            fm_builder.add_flow_mod(**flowmod)
+            if (flowmod['mod_type'] == 'remove'):
+                fm_builder.delete_flow_mod(flowmod['mod_type'], flowmod['rule_type'], flowmod['cookie'][0], flowmod['cookie'][1])
+            elif (flowmod['mod_type'] == 'insert'):
+                fm_builder.add_flow_mod(**flowmod)
+            else:
+                self.logger.error("Unhandled flow type: " + flowmod['mod_type'])
+                continue
             self.dp_pushed.append(flowmod)
 
         self.dp_queued = []
@@ -314,11 +320,10 @@ class ParticipantController(object):
     def queue_flow_removals(self, cookies, in_out):
         removal_msgs = []
         for cookie in cookies:
-            mod =  {"rule_type":in_out, "priority":0,
-                    "match":{"eth_src":self.port0_mac}, "action":{},
-                    #"match":{}, "action":{},
+            mod =  {"rule_type":in_out,
                     "cookie":(cookie,2**16-1), "mod_type":"remove"}
             removal_msgs.append(mod)
+        self.logger.debug('queue_flow_removals: ' + str(removal_msgs))
         self.dp_queued.extend(removal_msgs)
             
 

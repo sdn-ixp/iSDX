@@ -3,7 +3,7 @@
 #  Rudiger Birkner (Networked Systems Group ETH Zurich)
 
 import json
-from multiprocessing.connection import Client
+import socket
 
 class RefMonClient(object):
     def __init__(self, address, port, key):
@@ -12,9 +12,7 @@ class RefMonClient(object):
         self.key = key
 
     def send(self, msg):
-        #conn = Client((self.address, self.port), authkey=str(self.key))
-        conn = Client((self.address, self.port))
-
-        conn.send(json.dumps(msg))
-
-        conn.close()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((self.address, self.port))
+        sock.sendall(json.dumps(msg))
+        sock.close()
