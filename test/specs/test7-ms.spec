@@ -12,7 +12,7 @@ peers 1 2 3 4 5 6
 participant 1 100 PORT MAC 172.0.0.1/16
 participant 2 200 PORT MAC 172.0.0.11/16
 participant 3 300 PORT MAC 172.0.0.21/16
-participant 4 400 PORT MAC 172.0.0.31/16 PORT MAC 172.0.0.32/16 PORT MAC 172.0.0.33/16
+participant 4 400 PORT MAC 172.0.0.31/16
 participant 5 500 PORT MAC 172.0.0.41/16 PORT MAC 172.0.0.42/16 PORT MAC 172.0.0.43/16
 participant 6 600 PORT MAC 172.0.0.51/16 PORT MAC 172.0.0.52/16 PORT MAC 172.0.0.53/16
 
@@ -60,29 +60,20 @@ test regress {
 	flow b1 6 81 >> e
 	flow b1 7 82 >> e
 	flow b1 8 83 >> e
-	#exec b1 arp -d 172.0.1.2
+
 	exec a1 ip -s -s neigh flush all
 	exec b1 ip -s -s neigh flush all
-	#exec c1 ip -s -s neigh flush all
-	#exec d1 ip -s -s neigh flush all
-	#exec d2 ip -s -s neigh flush all
-	#exec d3 ip -s -s neigh flush all
-	#exec e1 ip -s -s neigh flush all
-	#exec e2 ip -s -s neigh flush all
-	#exec e3 ip -s -s neigh flush all
-	#exec f1 ip -s -s neigh flush all
-	#exec f2 ip -s -s neigh flush all
-	#exec f3 ip -s -s neigh flush all
+	
 	delay 5
 	test xfer3
 }
 
 test xfer {
-	#verify a1_100 d1_140 80
-	#verify a1_100 e2_140 81
-	#verify a1_100 e3_140 82
-	#verify a1_100 e1_140 83
-	#verify a1_100 c1_140 88
+	verify a1_100 d1_140 80
+	verify a1_100 e2_140 81
+	verify a1_100 e3_140 82
+	verify a1_100 e1_140 83
+	verify a1_100 c1_140 88
 	exec b1 arp
 	verify b1_110 d1_140 80
 	verify b1_110 f2_140 81
@@ -92,11 +83,11 @@ test xfer {
 }
 
 test xfer2 {
-	#verify a1_100 d1_140 80
-	#verify a1_100 e2_140 81
-	#verify a1_100 e3_140 82
-	#verify a1_100 e1_140 83
-	#verify a1_100 c1_140 88
+	verify a1_100 d1_140 80
+	verify a1_100 e2_140 81
+	verify a1_100 e3_140 82
+	verify a1_100 e1_140 83
+	verify a1_100 c1_140 88
 	exec b1 arp
 	verify b1_110 c1_140 80
 	verify b1_110 c1_140 81
@@ -106,11 +97,11 @@ test xfer2 {
 }
 
 test xfer3 {
-	#verify a1_100 d1_140 80
-	#verify a1_100 e2_140 81
-	#verify a1_100 e3_140 82
-	#verify a1_100 e1_140 83
-	#verify a1_100 c1_140 88
+	verify a1_100 d1_140 80
+	verify a1_100 e2_140 81
+	verify a1_100 e3_140 82
+	verify a1_100 e1_140 83
+	verify a1_100 c1_140 88
 	exec b1 arp
 	verify b1_110 d1_140 80
 	verify b1_110 e2_140 81
@@ -128,16 +119,4 @@ test info2 {
 	local ovs-ofctl dump-flows S2
 	local ovs-ofctl dump-flows S3
 	local ovs-ofctl dump-flows S4
-	exec a1 ip route
-	bgp a1
-	exec b1 ip route
-	bgp b1
-	exec c1 ip route
-	bgp c1
-	exec d1 ip route
-	bgp d1
-	exec d2 ip route
-	bgp d2
-	exec e1 ip route
-	bgp e1
 }
