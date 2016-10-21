@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-RYU_VERSION="v3.30"
+RYU_VERSION="v4.7"
 
 cd ~
 
