@@ -50,6 +50,7 @@ def main (argv):
     
     d = minsub
     c = 0
+    j = 140
     for i in range(1, limit + 1):
         if d > maxsub:
             d = minsub
@@ -57,7 +58,9 @@ def main (argv):
         if i == 1:
             print "announce " + str(i) + " 100.0.0.0/24"
         else:
-            print "announce " + str(i) + " 140.0.0.0/24"
+            print "announce " + str(i) + " " + str(j) + ".0.0.0/24"
+            if (i % 25) == 0:
+                j += 1
         d += 1
     print
     
@@ -71,15 +74,18 @@ def main (argv):
     print listener
     print
     
-    print "test regress {\n\ttest xfer\n}"
+    print "test regress {\n\texec a1 sleep " + str(limit/3) + "\n\ttest xfer\n}"
     print
     print "test init {\n\tlistener\n}"
     print
     
     p = port
     print "test xfer {"
+    j = 140
     for i in range(2, limit + 1):
-        print "\tverify " + genlib.part_router2host(1, 0) + "_100 " + genlib.part_router2host(i, 0) + "_140" + " " + str(p)
+        print "\tverify " + genlib.part_router2host(1, 0) + "_100 " + genlib.part_router2host(i, 0) + "_" + str(j) + " " + str(p)
+        if (i % 25) == 0:
+            j += 1
         p += 1
     print "}"
     print
