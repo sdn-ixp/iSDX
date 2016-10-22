@@ -146,6 +146,7 @@ do
 		echo starting xctrl
 		cd $BASE/xctrl/
 		python ./xctrl.py $EXAMPLES/$TEST/config/sdx_global.cfg
+		sleep 20
 		echo starting arp proxy
 		cd $BASE/arproxy/
 		python arproxy.py $TEST &
@@ -162,7 +163,7 @@ do
 				part=`echo $part | tr -d :\"`
 				echo starting participant $part
 				python participant_controller.py $TEST $part &
-				#sleep 1
+				sleep 0.5
 			fi
 		done < $EXAMPLES/$TEST/config/sdx_policies.cfg
 		sleep 5
