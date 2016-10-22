@@ -93,8 +93,8 @@ class ParticipantController(object):
 
         # Participant Server for dynamic route updates
         self.participant_server = self.cfg.get_participant_server(self.id, self.logger)
-        self.participant_server.start(self)
-
+        if self.participant_server is not None:
+            self.participant_server.start(self)
 
         self.refmon_client = self.cfg.get_refmon_client(self.logger)
 

@@ -122,6 +122,9 @@ class PConfig(object):
         config = self.config
         conn_info = config["Participants"]
         part_info = conn_info[str(id)]
+        if "PH_SOCKET" not in part_info:
+            logger.warn('No PH_SOCKET for participant: ' + str(id))
+            return None
         return ParticipantServer(part_info["PH_SOCKET"][0], part_info["PH_SOCKET"][1], logger)
 
 
