@@ -28,7 +28,8 @@ EXAMPLES=$BASE/examples
 INTERACTIVE=0
 STOPONERROR=0
 PAUSEONERROR=0
-
+MININET_TCPDUMP=0
+REALNET=0
 
 
 #number of tests to run
@@ -55,6 +56,9 @@ do
    -t)
      export MININET_TCPDUMP=1
      ;;
+   -r)
+     export REALNET=1
+     ;;
    -*)
      echo "Usage error.  Type just $0 for options" >&2
      exit 1
@@ -71,8 +75,9 @@ if [ "$#" -lt 1 ] ; then
   echo "    -i runs interactive torch commands after tests" >&2
   echo "    -p pauses after any errors.  Implies -i if error" >&2
   echo "    -s is for stopping after any errors. Can be used with -p" >&2
-  echo "    -t starts tcpdump on all routers and hosts." >&2
+  echo "    -t starts tcpdump on all routers and hosts in mininet." >&2
   echo "       Output is in /tmp/*.tcpdump and needs to be cleaned up manually" >&2
+  echo "    -r is for running on a real network (no mininet)" >&2
   exit 1
 fi
 
@@ -98,7 +103,7 @@ do
 		then
 			echo "****** RUNNING IN INTERACTVE MODE - type control-D when finished to continue **********"
 		fi
-		if [ "$MININET_TCPDUMP" != "" ]
+		if [ $MININET_TCPDUMP != '0' -a $REALNET = '0' ]
 		then
 		    echo "****** TCPDUMP RUNNING on all ROUTERS.  'sudo rm /tmp/*.tcpdump' when done **********"
 		fi
@@ -111,32 +116,35 @@ do
 		sleep 1
 		python $BASE/logmsg.py "running test: $TEST:$count"
 
-		echo starting mininet
+		if [[ $REALNET = '0' ]]
+		then
+		    echo starting mininet
 
-		M0=/tmp/sdxm0.$$
-		mkfifo $M0
+		    M0=/tmp/sdxm0.$$
+		    mkfifo $M0
 
-		SYNC=/tmp/sdxsync.$$
-		mkfifo $SYNC
+		    SYNC=/tmp/sdxsync.$$
+		    mkfifo $SYNC
 
-		rm /var/run/quagga/*
-		cd $EXAMPLES/$TEST/mininet
-		cat $M0 | python ./sdx_mininet.py mininet.cfg $BASE/test/tnode.py $SYNC &
-		M_PID=$!
-		cat $SYNC
+		    rm /var/run/quagga/*
+		    cd $EXAMPLES/$TEST/mininet
+		    cat $M0 | python ./sdx_mininet.py mininet.cfg $BASE/test/tnode.py $SYNC &
+		    M_PID=$!
+		    cat $SYNC
 
-		#sleep 2
-		#tcpdump -i x1-eth0 -w $BASE/test/$LOG_DIR/x1-eth0.$pcount.pcap &
-		#tcpdump -i x2-eth0 -w $BASE/test/$LOG_DIR/x2-eth0.$pcount.pcap &
-		#tcpdump -i s1-eth1 -w $BASE/test/$LOG_DIR/s1-eth1.$pcount.pcap &
-		#tcpdump -i s1-eth2 -w $BASE/test/$LOG_DIR/s1-eth2.$pcount.pcap &
-		#tcpdump -i s1-eth3 -w $BASE/test/$LOG_DIR/s1-eth3.$pcount.pcap &
-		#tcpdump -i s1-eth4 -w $BASE/test/$LOG_DIR/s1-eth4.$pcount.pcap &
-		#tcpdump -i s1-eth5 -w $BASE/test/$LOG_DIR/s1-eth5.$pcount.pcap &
-		#tcpdump -i s1-eth6 -w $BASE/test/$LOG_DIR/s1-eth6.$pcount.pcap &
-		#tcpdump -i s1-eth7 -w $BASE/test/$LOG_DIR/s1-eth7.$pcount.pcap &
-		#tcpdump -i s1-eth8 -w $BASE/test/$LOG_DIR/s1-eth8.$pcount.pcap &
-		#sleep 2
+		    #sleep 2
+		    #tcpdump -i x1-eth0 -w $BASE/test/$LOG_DIR/x1-eth0.$pcount.pcap &
+		    #tcpdump -i x2-eth0 -w $BASE/test/$LOG_DIR/x2-eth0.$pcount.pcap &
+		    #tcpdump -i s1-eth1 -w $BASE/test/$LOG_DIR/s1-eth1.$pcount.pcap &
+		    #tcpdump -i s1-eth2 -w $BASE/test/$LOG_DIR/s1-eth2.$pcount.pcap &
+		    #tcpdump -i s1-eth3 -w $BASE/test/$LOG_DIR/s1-eth3.$pcount.pcap &
+		    #tcpdump -i s1-eth4 -w $BASE/test/$LOG_DIR/s1-eth4.$pcount.pcap &
+		    #tcpdump -i s1-eth5 -w $BASE/test/$LOG_DIR/s1-eth5.$pcount.pcap &
+		    #tcpdump -i s1-eth6 -w $BASE/test/$LOG_DIR/s1-eth6.$pcount.pcap &
+		    #tcpdump -i s1-eth7 -w $BASE/test/$LOG_DIR/s1-eth7.$pcount.pcap &
+		    #tcpdump -i s1-eth8 -w $BASE/test/$LOG_DIR/s1-eth8.$pcount.pcap &
+		    #sleep 2
+		fi
 
 		echo starting ryu
 		cd $BASE/flanc
@@ -229,14 +237,16 @@ do
 		sudo rm -f ~/iSDX/xrs/ribs/*.db
 		) >/dev/null 2>&1
 
-		echo telling mininet to shutdown
-		echo quit >$M0
+		if [ $REALNET = '0' ]; then
+		    echo telling mininet to shutdown
+		    echo quit >$M0
 
-		wait $M_PID
-		rm -f $M0 $SYNC
+		    wait $M_PID
+		    rm -f $M0 $SYNC
 
-		echo cleaning up mininet
-		sudo mn -c >/dev/null 2>&1
+		    echo cleaning up mininet
+		    sudo mn -c >/dev/null 2>&1
+		fi
 		echo test done
 
 	done
