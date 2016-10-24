@@ -227,6 +227,15 @@ do
 		#done | python $BASE/loglines.py
 		#sleep 2
 
+		if [ $REALNET = '1' ]; then
+		    echo cleaning up flows in switches
+		    for i in {1..4}; do 
+			echo === dpid $i
+			ofdpa_delete_flows $i
+			ofdpa_delete_groups $i
+		    done
+		fi
+
 		echo cleaning up processes and files
 		(
 		sudo killall tcpdump
