@@ -381,6 +381,14 @@ def cmd_thread(conn):
             return
         return
     
+    if cmd == 'echo':
+        del tokens[0]
+        all = ""
+        for arg in tokens:
+            all += "<" + arg + "> "
+        conn.sendall(all + '\n')
+        conn.close()
+    
     conn.sendall(host + ':XX ERROR: Bad command: ' + data)
     conn.close()
 

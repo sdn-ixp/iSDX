@@ -95,6 +95,7 @@ def main (argv):
         'config': show, 
         'help': usage, '?': usage,
         'quit': terminate, 'q': terminate,
+        'echo': echo,
     }
     
     if len(argv) == 2:
@@ -121,12 +122,20 @@ def parse (line):
     global cmdfuncs
     
     tokens = line.partition('#')[0].split()
+    try:
+        tokens = shlex.split(line.partition('#')[0])
+    except Exception, e:
+        log.error('MM:00 PARSE ERROR: ' + repr(e))
+        return
+    
     n = len(tokens)
     if n == 0:
         return
     cmd = tokens[0]
     del tokens[0]
     
+    #print(cmd)
+    #print(tokens)
     if cmd not in cmdfuncs:
         log.error('MM:00 ERROR: unknown command: ' + cmd)
     else:
@@ -180,20 +189,22 @@ def dump (args):
 
 # force tnode to exit
 
-def kill (host):
-    log.info('MM:' + host + ' QUIT')
-    r = generic(host, 'QUIT', 'quit\n')
-    if r is not None:
-        log.info('MM:' + host + ' output = ' + r.strip())
+def kill (args):
+    for host in args:
+        log.info('MM:' + host + ' QUIT')
+        r = generic(host, 'QUIT', 'quit\n')
+        if r is not None:
+            log.info('MM:' + host + ' output = ' + r.strip())
 
 
 # terminate all listeners on a tnode, tnode does not exit
 
-def reset (host):
-    log.info('MM:' + host + ' RESET')
-    r = generic(host, 'RESET', 'reset\n')
-    if r is not None:
-        log.info('MM:' + host + ' output = ' + r.strip())
+def reset (args):
+    for host in args:
+        log.info('MM:' + host + ' RESET')
+        r = generic(host, 'RESET', 'reset\n')
+        if r is not None:
+            log.info('MM:' + host + ' output = ' + r.strip())
 
 # execute a command locally
 
@@ -204,7 +215,7 @@ def local (args):
     
     cmd = ''
     for arg in args:
-        cmd += arg + ' '
+        cmd += '"' + arg + '" '
     log.info('MM:00 LOCAL: ' + cmd)
     try:
         p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -226,7 +237,7 @@ def remote (args):
     del args[0]
     cmd = ''
     for arg in args:
-        cmd += arg + ' '
+        cmd += '"' + arg + '" '
     log.info('MM:' + host + ' REXEC: ' + cmd)
     r = generic(host, 'REXEC', 'exec ' + cmd + '\n')
     if r is not None:
@@ -243,7 +254,7 @@ def router (args):
     del args[0]
     cmd = ''
     for arg in args:
-        cmd += arg + ' '
+        cmd += '"' + arg + '" '
     log.info('MM:' + host + ' ROUTER: ' + cmd)
     r = generic(host, 'ROUTER', 'router ' + cmd + '\n')
     if r is not None:
@@ -254,6 +265,10 @@ def router (args):
 # return '' if no data
 
 def generic (host, label, cmd):
+    if host in participants:
+        log.error('MM:' + host + ' ERROR: ' + label + ': Cannot send to a partipant: ' + host)
+        return None   
+        
     s = connect(host, label)
     if s == None:
         return None
@@ -278,13 +293,12 @@ def generic (host, label, cmd):
         return None
     return alldata
 
-# generic but no wait for response data and use Client/Listener pickles
+# generic and use Client/Listener pickles
 
 def genericObjNW (host, label, cmd):
     
-    # should be either a listener host or a router host (edge-router)
-    if host not in bgprouters and host not in hosts and host not in participants:
-            log.error('MM:' + host + ' ERROR: ' + label + ': Unknown host: ' + host)
+    if host not in participants:
+            log.error('MM:' + host + ' ERROR: ' + label + ': Can only send to a participant: ' + host)
             return None    
     try:
         hostdata = hosts[host]
@@ -650,6 +664,18 @@ def unflow (args):
 def terminate (args):
     log.info('MM:00 EXITING')
     os._exit(0)
+    
+def echo (args):
+    host = args[0]
+    del args[0]
+    all = ''
+    for arg in args:
+        all += ' ' + '"' + arg + '"'
+    log.info('MM:' + host + ' ECHO ' + all)
+    r = generic(host, 'ECHO', 'echo ' + all)
+    if r is not None:
+        log.info('MM:' + host + ' echo = ' + r.strip())
+    
 
 def usage (args):
     print (
