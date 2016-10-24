@@ -64,10 +64,10 @@ $ sudo python iSDX/examples/test-mt/mininet/simple_sdx.py
 ### Run everything else
 ```bash
 $ cd ~
-$ ./iSDX/launch.sh test-ms 3
+$ ./iSDX/launch.sh [--stats] test-ms 3
 ```
 
-This will start the following parts:
+This will start the following parts (and if `--stats` is specificed, it will also start the gauge.py Ryu app):
 
 #### RefMon (Fabric Manager)
 ```bash

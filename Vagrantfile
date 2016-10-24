@@ -18,13 +18,15 @@ Vagrant.configure("2") do |config|
   config.vm.network :private_network, ip: "172.28.128.3"
   #config.vm.network :private_network, type: "dhcp"
   #config.vm.network :private_network, ip: "192.168.0.300"
-  config.vm.network :forwarded_port, guest:6633, host:6637 # forwarding of port
+  config.vm.network :forwarded_port, guest:6633, host:6637 # open flow controller
+  config.vm.network :forwarded_port, guest:3000, host:3000 # grafana
 
   ## Provisioning
   config.vm.provision :shell, privileged: false, :path => "setup/basic-setup.sh"
   config.vm.provision :shell, privileged: false, :path => "setup/ovs-setup.sh"
   config.vm.provision :shell, privileged: false, :path => "setup/mininet-setup.sh"
   config.vm.provision :shell, privileged: false, :path => "setup/ryu-setup.sh"
+  config.vm.provision :shell, privileged: false, :path => "setup/grafana-setup.sh"
   config.vm.provision :shell, privileged: false, :path => "setup/sdx-setup.sh"
 
   ## SSH config
