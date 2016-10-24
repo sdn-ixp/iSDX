@@ -57,7 +57,12 @@ do
      export MININET_TCPDUMP=1
      ;;
    -r)
-     export REALNET=1
+     REALNET=1
+     ;;
+   -g)
+     export GAUGE_CONFIG=`readlink -f "$2"`
+     shift
+     STATS_APP=stats/gauge.py
      ;;
    -*)
      echo "Usage error.  Type just $0 for options" >&2
@@ -78,6 +83,7 @@ if [ "$#" -lt 1 ] ; then
   echo "    -t starts tcpdump on all routers and hosts in mininet." >&2
   echo "       Output is in /tmp/*.tcpdump and needs to be cleaned up manually" >&2
   echo "    -r is for running on a real network (no mininet)" >&2
+  echo "    -g <gauge.conf> is for enabling collection of stats used by Grafana" >&2
   exit 1
 fi
 
@@ -148,7 +154,9 @@ do
 
 		echo starting ryu
 		cd $BASE/flanc
-		ryu-manager ryu.app.ofctl_rest refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg 2> $LOG_DIR/refmon.$pcount.stderr &
+		echo GAUGE_CONFIG is $GAUGE_CONFIG
+		echo RUNNING ryu-manager ryu.app.ofctl_rest $STATS_APP refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg
+		 ryu-manager ryu.app.ofctl_rest $STATS_APP refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg 2> $LOG_DIR/refmon.$pcount.stderr &
 		sleep 5
 
 		echo starting xctrl
