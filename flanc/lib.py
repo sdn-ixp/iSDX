@@ -177,7 +177,7 @@ class MultiTableController(object):
             self.config.datapaths[fm.get_dst_dp()].send_msg(mod)
 
     def packet_in(self, ev):
-        self.logger.info("mt_ctrlr: packet in")
+        pass
 
     def is_ready(self):
         if len(self.config.datapaths) == len(self.config.dpids):
@@ -387,7 +387,7 @@ class OneSwitchController(object):
             dp.send_msg(flow_mod)
 
     def packet_in(self, ev):
-        self.logger.info("os_ctrlr: packet in")
+        pass
 
     def is_ready(self):
         if len(self.config.datapaths) == len(self.config.dpids) or self.config.always_ready:
