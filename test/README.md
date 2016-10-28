@@ -260,8 +260,8 @@ The additional arguments are:
   * one or more CIDR format network descriptions of the form a.b.c.d/prefix-bits. An interface on the corresponding quagga host will be created with the default address a.b.c.1.
   **NOTE:** If an announced network begins with a minus sign, a host will be created to represent that network, but a route to that network will not be announced to the world.
 - __flow__ defines an inbound or outbound flow rule.
-  * outbound rule: `flow source-AS-edge-router tcp_port >> destination_AS`
-  * inbound rule: `flow AS-edge-router << tcp_port`
+  * outbound rule: `flow source-AS-edge-router [ cookie ] tcp_port >> destination_AS`
+  * inbound rule: `flow AS-edge-router [ cookie ] << tcp_port`
 - __listener__ defines the listeners that will be created on each quagga host to receive data routed through the switching fabric.
 The additional arguments are:
   * host for this listener
@@ -269,35 +269,42 @@ The additional arguments are:
   * one or more tcp ports on which to listen
 - __test name { commands }__ defines a labeled group of torch commands that can be invoked as a whole. See the next section for a description of the command set.
 
+## Torch Usage
+The tnode and tmgr commands use the same configuration file to define host locationss and the predefined tests.
+(Tnode only uses the locations; all test details are sent by tmgr.)
+```
+python tnode.py torch.cfg hostname
+python tmgr.py torch.cfg [ command ... ]
+```
+For tmgr, each command line command is considered a line of input, so if multiple tokens are involved, use quotes (e.g., tmgr torch.cfg 'test xfer' 'withdraw b1 140.0.0.0/24').
+If no command line commands are given, tmgr will read standard input for commands.
+
 ## Torch Commands
 ```
-    listener anyhost bind port      # start a listener on the host to receive data
+    hosts                           # list known hosts, bgprouters and participants
+    listener host bind port         # start a listener on the host to receive data
     test test_name ...              # run a multi-command test
-    verify src_host dst_host port   # verify a data transfer - see below for details
-    announce bgprouter network ...  # advertise a BGP route
-    withdraw bgprouter network ...  # withdraw a BGP route
-    flow edge_router [cookie] port >> participant  # define a new outbound flow
-    flow edge_router << port        # define a new inbound flow
+    verify srchost dsthost tcpport  # verify a data transfer - see below for details
+    announce edgerouter network ... # advertise a BGP route
+    withdraw edgerouter network ... # withdraw a BGP route
+    outflow edgerouter [-c cookie] [-s srcaddr/prefix] [-d dstaddr/prefix] [-u udpport] [-t tcpport] > participant  # define a new outbound flow
+    inflow [-c cookie] [-s srcaddr/prefix] [-d dstaddr/prefix] [-u udpport] [-t tcpport] > edge_router              # define a new inbound flow
     unflow participant cookies ...  # remove participant flows
-    bgp bgprouter                   # show advertised bgp routes
+    bgp edgerouter                  # show advertised bgp routes - router password is hardcoded (ugh)
+    router edgerouter arg arg ...   # run arbitrary command on router - args will be surrounded by enable/quit
     delay seconds                   # pause for things to settle
-    exec anynode cmd arg arg        # execute cmd on node
+    exec host|edgerouter cmd arg ...# execute cmd on node
     local cmd arg arg               # execute cmd on local machine
-    pending anyhost                 # check if any pending or unclaimed data transfers are on host
+    pending host                    # check if any pending or unclaimed data transfers are on host
     send host bind daddr port       # send data xmit request to source node
-    comment commentary ...          # log a comment
-    reset anynode                   # reset (close) listeners - takes a few seconds to take effect
-    kill anynode                    # terminate a node, non recoverable
-    dump anynode                    # dump any messages from a node - mainly to see if nodes are on-line
+    comment commentary ...          # print a comment
+    reset host                      # reset (close) listeners - takes a few seconds to take effect
+    kill host                       # terminate a node, non recoverable
+    dump host                       # dump any messages from a node - mainly to see if nodes are on-line
     config                          # print result of spec file parsing
     help                            # print this message
+    echo host arg ...				# simple tnode echo-back
     quit                            # exit this manager; leaves nodes intact
-    
-    Where:
-    host = a single specified host or bgprouter
-    bgprouter = only a single bgp router node
-    anynode = host | "hosts" | bgprouter | "bgprouters"
-    anyhost = host | "hosts"
 ```        
 ##### More details on the verify command
   The traffic manager will coordinate with the traffic node on the source host to bind a socket to the appropriate interface and send data to the address implied by the destination host.

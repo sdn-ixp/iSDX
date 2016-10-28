@@ -105,7 +105,7 @@ if __name__ == "__main__":
     
     argc = len(sys.argv)
     if argc < 2 or argc > 4:
-        raise Exception('usage: sdx_mininet config.json [ path_to_tnode.py [ [ semaphore_name ]')
+        raise Exception('usage: sdx_mininet config.json [ "path_to_tnode.py torch.cfg" [ semaphore_name ] ]')
     config_file = sys.argv[1]
     configfd = open(config_file)
     config = yaml.safe_load(configfd)
@@ -133,7 +133,7 @@ if __name__ == "__main__":
         
         for host in net.hosts:
             if host.name in tnodenames:
-                host.cmd('python ' + tnode_file + ' ' + host.name + '&')
+                host.cmd('python ' + tnode_file + ' ' + host.name + ' &')
                 if 'MININET_TCPDUMP' in os.environ and host.name.find('_') == -1:
                     # tcpdump on routers, but not hosts
                     host.cmd('tcpdump -e -qnn > /tmp/' + host.name + '.tcpdump &')

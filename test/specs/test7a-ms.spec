@@ -47,15 +47,21 @@ test init {
 }
 
 test regress {
+	wait "type enter to begin"
 	comment b flows should go to d and f
 	test xfer
+	wait "type enter to remove b flows"
+	
+	
 	comment removing b flow rules
 	comment b flows should all default to c
 	unflow b 5 6 7 8
-	delay 5
+	delay 2
 	test xfer2
+	
+	wait "type enter to move b flows to d and e"
 	comment adding b flow rules to use d for 80 and e for 81 and 82
-	comment b flows should now go to d and e
+	
 	outflow b1 -c 5 -t 80 > d
 	outflow b1 -c 6 -t 81 > e
 	outflow b1 -c 7 -t 82 > e
@@ -64,17 +70,18 @@ test regress {
 	exec a1 ip -s -s neigh flush all
 	exec b1 ip -s -s neigh flush all
 	
-	delay 5
+	delay 2
 	test xfer3
 }
 
 test xfer {
-	verify a1_100 d1_140 80
-	verify a1_100 e2_140 81
-	verify a1_100 e3_140 82
-	verify a1_100 e1_140 83
-	verify a1_100 c1_140 88
+	#verify a1_100 d1_140 80
+	#verify a1_100 e2_140 81
+	#verify a1_100 e3_140 82
+	#verify a1_100 e1_140 83
+	#verify a1_100 c1_140 88
 	exec b1 arp
+	local ovs-ofctl dump-flows S3
 	verify b1_110 d1_140 80
 	verify b1_110 f2_140 81
 	verify b1_110 f3_140 82
@@ -83,12 +90,13 @@ test xfer {
 }
 
 test xfer2 {
-	verify a1_100 d1_140 80
-	verify a1_100 e2_140 81
-	verify a1_100 e3_140 82
-	verify a1_100 e1_140 83
-	verify a1_100 c1_140 88
+	#verify a1_100 d1_140 80
+	#verify a1_100 e2_140 81
+	#verify a1_100 e3_140 82
+	#verify a1_100 e1_140 83
+	#verify a1_100 c1_140 88
 	exec b1 arp
+	local ovs-ofctl dump-flows S3
 	verify b1_110 c1_140 80
 	verify b1_110 c1_140 81
 	verify b1_110 c1_140 82
@@ -97,12 +105,13 @@ test xfer2 {
 }
 
 test xfer3 {
-	verify a1_100 d1_140 80
-	verify a1_100 e2_140 81
-	verify a1_100 e3_140 82
-	verify a1_100 e1_140 83
-	verify a1_100 c1_140 88
+	#verify a1_100 d1_140 80
+	#verify a1_100 e2_140 81
+	#verify a1_100 e3_140 82
+	#verify a1_100 e1_140 83
+	#verify a1_100 c1_140 88
 	exec b1 arp
+	local ovs-ofctl dump-flows S3
 	verify b1_110 d1_140 80
 	verify b1_110 e2_140 81
 	verify b1_110 e3_140 82

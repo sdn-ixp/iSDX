@@ -3,6 +3,11 @@ Created on Mar 17, 2016
 
 @author: Marc Pucci
 '''
+# TODO
+# This library was initially common to gen_test and tmgr/tnode.
+# it split when I separated configuration from test
+# they need to become common again
+
 import json
 
 class parser:

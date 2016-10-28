@@ -134,7 +134,7 @@ do
 
 		    rm /var/run/quagga/*
 		    cd $EXAMPLES/$TEST/mininet
-		    cat $M0 | python ./sdx_mininet.py mininet.cfg $BASE/test/tnode.py $SYNC &
+		    cat $M0 | python ./sdx_mininet.py mininet.cfg "$BASE/test/tnode.py ../config/torch.cfg" $SYNC &
 		    M_PID=$!
 		    cat $SYNC
 
@@ -157,12 +157,12 @@ do
 		echo GAUGE_CONFIG is $GAUGE_CONFIG
 		echo RUNNING ryu-manager ryu.app.ofctl_rest $STATS_APP refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg
 		 ryu-manager ryu.app.ofctl_rest $STATS_APP refmon.py --refmon-config $EXAMPLES/$TEST/config/sdx_global.cfg 2> $LOG_DIR/refmon.$pcount.stderr &
-		sleep 5
+		sleep 10
 
 		echo starting xctrl
 		cd $BASE/xctrl/
 		python ./xctrl.py $EXAMPLES/$TEST/config/sdx_global.cfg
-		sleep 20
+		sleep 4
 		echo starting arp proxy
 		cd $BASE/arproxy/
 		python arproxy.py $TEST &
