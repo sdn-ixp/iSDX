@@ -333,14 +333,15 @@ class ParticipantController(object):
             return
 
         # First step towards a less brute force approach: Handle removals without having to remove everything
-        if 'removal_cookies' in change_info and not 'new_policies' in change_info:
+        if 'removal_cookies' in change_info:
             cookies = change_info['removal_cookies']
             removed_in_cookies = self.remove_policies_by_cookies(cookies, 'inbound')
             self.queue_flow_removals(removed_in_cookies, 'inbound')
             removed_out_cookies = self.remove_policies_by_cookies(cookies, 'outbound')
             self.queue_flow_removals(removed_out_cookies, 'outbound')
-            self.push_dp()
-            return
+            if not 'new_policies' in change_info:
+                self.push_dp()
+                return
 
         # Remainder of this method is brute force approach: wipe everything and re-do it
         # This should be replaced by a more fine grained approach
