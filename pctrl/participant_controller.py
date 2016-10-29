@@ -363,24 +363,11 @@ class ParticipantController(object):
         self.logger.debug("updated policies: " + json.dumps(self.policies))
         self.logger.debug("pre-recomputed supersets: " + json.dumps(self.supersets.supersets))
 
-        changes = self.supersets.initial_computation(self)
-        self.logger.debug("policy changes: " + json.dumps(changes))
-        self.logger.debug("post-recomputed supersets: " + json.dumps(self.supersets.supersets))
-
-        garp_required_vnhs = self.VNH_2_prefix.keys()
-        
-        if len(changes['changes']) > 0:
-            "Map the superset changes to a list of new flow rules."
-            flow_msgs = update_outbound_rules(changes, self.policies,
-                                              self.supersets, self.port0_mac)
-
-            self.logger.debug("Flow msgs: "+ json.dumps(flow_msgs))
-            "Dump the new rules into the dataplane queue."
-            self.dp_queued.extend(flow_msgs)
-
+        self.initialize_dataplane()
         self.push_dp()
 
         # Send gratuitous ARP responses for all
+        garp_required_vnhs = self.VNH_2_prefix.keys()
         for vnh in garp_required_vnhs:
             self.process_arp_request(None, vnh)
             
