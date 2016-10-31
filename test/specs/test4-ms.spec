@@ -28,14 +28,14 @@ announce 7 140.0.0.0/24
 announce 8 140.0.0.0/24 
 announce 9 140.0.0.0/24 
 
-flow a1 80 >> b
-flow a1 81 >> c
-flow a1 82 >> d
-flow a1 83 >> e
-flow a1 84 >> f
-flow a1 85 >> g
-flow a1 86 >> h
-flow a1 87 >> i
+outflow a1 -t  80 > b
+outflow a1 -t  81 > c
+outflow a1 -t  82 > d
+outflow a1 -t  83 > e
+outflow a1 -t  84 > f
+outflow a1 -t  85 > g
+outflow a1 -t  86 > h
+outflow a1 -t  87 > i
 
 listener AUTOGEN 77 80 81 82 83 84 85 86 87
 

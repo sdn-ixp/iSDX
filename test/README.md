@@ -1,6 +1,6 @@
 # Testing iSDX Behavior with Torch
 
-This directory includes the **T**raffic **Orch**estrator (torch) tools for the construction, launching and automated regression testing of an iSDX system configuration.
+This directory includes the **T**raffic **Orch**istrator (torch) tools for the construction, launching and automated regression testing of an iSDX system configuration.
 It is designed to work with both software defined environments based on mininet and on true hardware switch configurations.
 
 * Torch constructs and launches an iSDX configuration using a simplified network specification. The example below is equivalent to the test-ms configuration in the top-level examples directory. See the section on **Additional Examples** below for more sophisticated network configurations and policy variations.

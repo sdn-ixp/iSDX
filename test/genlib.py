@@ -9,6 +9,7 @@ Created on Mar 17, 2016
 # they need to become common again
 
 import json
+import traceback
 
 class parser:
     
@@ -51,6 +52,7 @@ class parser:
             try:
                 self._parse(line, gather)
             except Exception as err:
+                traceback.print_exc()
                 f.close()
                 raise Exception('Fatal error on line ' + str(lines) + ': ' + line + ' (' + str(err) + ')')
         f.close
@@ -69,6 +71,10 @@ class parser:
             self._do_participant(tokens)
         elif tokens[0] == 'flow':
             self._do_flow(tokens)
+        elif tokens[0] == 'inflow':
+            self._do_inflow(tokens)
+        elif tokens[0] == 'outflow':
+            self._do_outflow(tokens)
         elif tokens[0] == 'announce':
             self._do_announce(tokens)
         elif tokens[0] == 'peers':
@@ -91,6 +97,92 @@ class parser:
             self._get_policy(str(i))
         self.number_of_participants = int(number)
     
+    def _do_outflow (self, args):
+        n = len(args)
+        if n < 6 or n & 1 != 0 or args[n-2] != '>':
+            raise Exception('USAGE: outflow edgerouter [-c cookie] [-s srcaddr/prefix] [-d dstaddr/prefix] [-u udpport] [-t tcpport] > participant')
+        src = args[1]
+        dst = args[n-1]
+        sas, sasport = host2as_router(src)
+        das = dst  # destination is an AS not a host !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+        fwd = int(as2part(das))
+        policy = self._get_policy(as2part(sas))
+        tmp_policy, error = self.rules(args[2:n-2], fwd)
+        if error is not None:
+            raise Exception(error)
+        #print 'out:' + str(tmp_policy)
+        policy["outbound"].append(tmp_policy)
+    
+    def _do_inflow (self, args):
+        n = len(args)
+        if n < 5 or n & 1 != 1 or args[n-2] != '>':
+            raise Exception('USAGE: inflow [-c cookie] [-s srcaddr/prefix] [-d dstaddr/prefix] [-u udpport] [-t tcpport] > edge_router')
+        dst = args[n-1]
+        das, dasport = host2as_router(dst)        
+        policy = self._get_policy(as2part(das))
+        tmp_policy, error = self.rules(args[1:n-2], int(dasport))
+        if error is not None:
+            raise Exception(error)
+        #print 'in: ' + str(tmp_policy)
+        # Add this to participants' outbound policies
+        policy["inbound"].append(tmp_policy)
+    
+    def rules (self, args, fwd):
+        pset = False
+        cset = False
+        dset = False
+        sset = False
+        policy = {}
+        policy["action"] = {"fwd": fwd}
+        policy["match"] = {}
+        
+        for i in range(0, len(args)/2):
+            cmd = args[2*i]
+            arg = args[2*i+1]
+            if cmd == '-c':
+                cset = True
+                policy["cookie"] = int(arg)
+            elif cmd == '-s':
+                sset = True
+                addr_prefix = arg.split('/')
+                if len(addr_prefix) != 2:
+                    return None, 'bad addr/prefix: ' + arg
+                addr = addr_prefix[0]
+                prefix = int(addr_prefix[1])
+                prefix = '.'.join([str((0xffffffff << (32 - prefix) >> i) & 0xff)
+                        for i in [24, 16, 8, 0]])
+                policy["match"]["ipv4_src"] = [ addr, prefix]
+            elif cmd == '-d':
+                dset = True
+                addr_prefix = arg.split('/')
+                if len(addr_prefix) != 2:
+                    return None, 'bad addr/prefix: ' + arg
+                addr = addr_prefix[0]
+                prefix = int(addr_prefix[1])
+                prefix = '.'.join([str((0xffffffff << (32 - prefix) >> i) & 0xff)
+                        for i in [24, 16, 8, 0]])
+                policy["match"]["ipv4_dst"] = [ addr, prefix]
+            elif cmd == '-t':
+                if pset:
+                    return None, 'only one of -u and -t allowed'
+                pset = True
+                policy["match"]["tcp_dst"] = int(arg)
+            elif cmd == '-u':
+                if pset:
+                    return None, 'only one of -u and -t allowed'
+                pset = True
+                policy["match"]["udp_dst"] = int(arg)
+            else:
+                return None, 'unknown switch: ' + cmd
+        if not cset:
+            #return None, 'cookie must be set'
+            print 'using default cookie for rule'
+            policy["cookie"] = self.cookie_id
+            self.cookie_id += 1
+        if not sset and not dset and not pset:
+            return None, 'empty match conditions'
+        return policy, None
+
             
     def _do_flow (self, args):
         if len(args) == 6 and args[4] == '>>':
@@ -130,7 +222,7 @@ class parser:
         tmp_policy["match"] = {}
         tmp_policy["match"]["tcp_dst"] = int(port)
         tmp_policy["action"] = {"fwd": int(dasport)}
-    
+        print tmp_policy
         # Add this to participants' outbound policies
         policy["inbound"].append(tmp_policy)
             
@@ -154,7 +246,7 @@ class parser:
         tmp_policy["match"]["tcp_dst"] = int(port)
         # forward to participant number: convert name to assumed number (a=1)
         tmp_policy["action"] = {"fwd": int(as2part(das))}
-        
+        print tmp_policy
         policy["outbound"].append(tmp_policy)
     
     
@@ -407,18 +499,23 @@ class parser:
     # all successor cmds must not have occurred
     # return True if cmd has already been seen
     
-    cmdorder = [ 'mode', 'participants', 'peers', 'participant', 'host', 'announce', 'flow', 'listener', 'test']
-    cmdoptional = ['listener', 'test']
+    cmdorder = [ 'mode', 'participants', 'peers', 'participant', 'host', 'announce', 'listener', 'test']
+    cmdoptional = ['listener', 'test', 'inflow', 'outflow']
     cmdseen = {}
         
     def _seen (self, cmd):
-        if cmd not in self.cmdorder:
+        if cmd not in self.cmdorder and cmd not in self.cmdoptional:
             raise Exception('unknown command: ' + cmd)
         if cmd in self.cmdseen:
             already = True
         else:
             already = False
-        self.cmdseen[cmd] = True
+            
+        self.cmdseen[cmd] = True    
+        
+        return already # pucci - fix this
+    
+    
         match = False
         for i in self.cmdorder:
             if i == cmd:

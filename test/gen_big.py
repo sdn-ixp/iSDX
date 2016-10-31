@@ -68,7 +68,7 @@ def main (argv):
     listener = "listener AUTOGEN "   
     for i in range(2, limit + 1):
         listener += " " + str(p)
-        print "flow " + genlib.part_router2host(1, 0) + " " + str(p) + " >> " + genlib.part2as(i)
+        print "outflow " + genlib.part_router2host(1, 0) + " -t " + str(p) + " > " + genlib.part2as(i)
         p += 1
     print
     print listener
