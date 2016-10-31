@@ -46,7 +46,7 @@ sed -e 's/\#.*//' -e '/^[ \t]*$/d' $CONTAINERS |
 	    echo "No such device: $DEV"
 	    exit 1
 	fi
-	sudo docker exec -d $NAME python /tmp/share/tnode.py $NAME /tmp/share/tnode.cfg
+	sudo docker exec -d $NAME python /tmp/share/tnode.py /tmp/share/torch.cfg local_${NAME}
 	perl -ne 'chomp; if (/network\s+(\d+\.\d+\.\d+\.\S+)/) {++$i; print "$1 $i\n"}' $DIR/bgpd.conf | \
 	    while read ADDR INDEX; do
 		sudo docker exec $NAME ifconfig lo:$INDEX $ADDR
