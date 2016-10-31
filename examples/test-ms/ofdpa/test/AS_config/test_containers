@@ -1,8 +1,8 @@
 # This file contains one line per edge router in the physical test network.
 # Currently host field is ignored and localhost is assumed.
 
-#	Config	Host		Dev	MAC
-	a1	localhost	em1	08:00:27:89:3b:9f
-	b1	localhost	em2	08:00:27:92:18:1f
-	c1	localhost	dev8	08:00:27:54:56:ea
-	c2	localhost	p1p2	08:00:27:bd:f8:b2
+#	Config	Host		Dev	MAC			TNODE_PORT
+	a1	localhost	em1	08:00:27:89:3b:9f	4401
+	b1	localhost	em2	08:00:27:92:18:1f	4402
+	c1	localhost	dev8	08:00:27:54:56:ea	4403
+	c2	localhost	p1p2	08:00:27:bd:f8:b2	4404
