@@ -1,3 +1,8 @@
+if [ $1 = '--stats' ]; then
+    shift
+    STATS=1
+fi
+
 RUN_DIR=~/iSDX
 RIBS_DIR=$RUN_DIR/xrs/ribs
 #TEST_DIR=test-ms/ofdpa/test
@@ -22,7 +27,11 @@ case $1 in
 
     (3)
         cd $RUN_DIR/flanc
-        ryu-manager ryu.app.ofctl_rest refmon.py --refmon-config $RUN_DIR/examples/$TEST_DIR/config/sdx_global.cfg &
+		if [ -n "$STATS" ]; then
+	    	export GAUGE_CONFIG=$RUN_DIR/examples/test0-os-lts/config/gauge.conf
+	    	STATS_APP=stats/gauge.py
+		fi
+        ryu-manager $STATS_APP ryu.app.ofctl_rest refmon.py --refmon-config $RUN_DIR/examples/$TEST_DIR/config/sdx_global.cfg &
         sleep 1
 
         cd $RUN_DIR/xctrl
