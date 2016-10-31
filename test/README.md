@@ -259,9 +259,10 @@ The additional arguments are:
   * participant number for these announcements
   * one or more CIDR format network descriptions of the form a.b.c.d/prefix-bits. An interface on the corresponding quagga host will be created with the default address a.b.c.1.
   **NOTE:** If an announced network begins with a minus sign, a host will be created to represent that network, but a route to that network will not be announced to the world.
-- __flow__ defines an inbound or outbound flow rule.
-  * outbound rule: `flow source-AS-edge-router [ cookie ] tcp_port >> destination_AS`
-  * inbound rule: `flow AS-edge-router [ cookie ] << tcp_port`
+- __outflow__ defines an outbound flow rule. **NOTE:** If no inbound or outbound flow rules are defined statically, dynamic flows in that direction will not work.
+  * `outflow edgerouter [-c cookie] [-s srcaddr/prefix] [-d dstaddr/prefix] [-u udpport] [-t tcpport] > participant`
+- __inflow__ defines an inbound flow rule. **NOTE:** If no inbound or outbound flow rules are defined statically, dynamic flows in that direction will not work.
+  * `inflow [-c cookie] [-s srcaddr/prefix] [-d dstaddr/prefix] [-u udpport] [-t tcpport] > edge_router`
 - __listener__ defines the listeners that will be created on each quagga host to receive data routed through the switching fabric.
 The additional arguments are:
   * host for this listener
