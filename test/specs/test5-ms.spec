@@ -14,15 +14,15 @@ host AS ROUTER _ IP           # host names of form a1_100 a1_110
 announce 1 100.0.0.0/24 
 announce 2 140.0.0.0/24 
 
-flow b1 << 80
-flow b2 << 81
-flow b3 << 82
-flow b4 << 83
-flow b5 << 84
-flow b6 << 85
-flow b7 << 86
-flow b8 << 87
-flow b9 << 88
+inflow -t 80 > b1
+inflow -t 81 > b2
+inflow -t 82 > b3
+inflow -t 83 > b4
+inflow -t 84 > b5
+inflow -t 85 > b6
+inflow -t 86 > b7
+inflow -t 87 > b8
+inflow -t 88 > b9
 
 listener AUTOGEN 77 80 81 82 83 84 85 86 87 88
 

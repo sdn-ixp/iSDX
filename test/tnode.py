@@ -77,7 +77,7 @@ def create_command_listener (baddr, port):
             s.bind(baddr)
         else:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind((baddr, port))
+            s.bind((baddr, int(port)))
     except socket.error , msg:
         print 'Bind failed on command interface ' + baddr + ' port ' + str(port) + ' Error Code : ' + str(msg[0]) + ' Message ' + msg[1] + '\n'
         return

@@ -40,29 +40,29 @@ announce 10 103.0.0.0/24
 announce 11 140.0.0.0/24 
 announce 12 140.0.0.0/24 
 
-flow a1 80 >> b
-flow a1 4321 >> c
-flow a1 4322 >> c
-flow c1 << 4321
-flow c2 << 4322
+outflow a1 -t 80 > b
+outflow a1 -t 4321 > c
+outflow a1 -t 4322 > c
+inflow -t 4321 > c1
+inflow -t 4322 > c2
 
-flow d1 80 >> e
-flow d1 4321 >> f
-flow d1 4322 >> f
-flow f1 << 4321
-flow f2 << 4322
+outflow d1 -t 80 > e
+outflow d1 -t 4321 > f
+outflow d1 -t 4322 > f
+inflow -t 4321 > f1
+inflow -t 4322 > f2
 
-flow g1 80 >> h
-flow g1 4321 >> i
-flow g1 4322 >> i
-flow i1 << 4321
-flow i2 << 4322
+outflow g1 -t 80 > h
+outflow g1 -t 4321 > i
+outflow g1 -t 4322 > i
+inflow -t 4321 > i1
+inflow -t 4322 > i2
 
-flow j1 80 >> k
-flow j1 4321 >> l
-flow j1 4322 >> l
-flow l1 << 4321
-flow l2 << 4322
+outflow j1 -t 80 > k
+outflow j1 -t 4321 > l
+outflow j1 -t 4322 > l
+inflow -t 4321 > l1
+inflow -t 4322 > l2
 
 listener AUTOGEN 80 4321 4322 8888
 

@@ -17,11 +17,12 @@ announce 1 100.0.0.0/24 110.0.0.0/24
 announce 2 140.0.0.0/24 150.0.0.0/24
 announce 3 140.0.0.0/24 150.0.0.0/24
 
-flow a1 80 >> b
-flow a1 4321 >> c
-flow a1 4322 >> c
-flow c1 << 4321
-flow c2 << 4322
+outflow a1 -t 80 > b
+outflow a1 -t 4321 > c
+outflow a1 -t 4322 > c
+
+inflow -t 4321 > c1
+inflow -t 4322 > c2
 
 listener AUTOGEN 80 4321 4322 8888
 

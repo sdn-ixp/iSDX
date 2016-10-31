@@ -25,20 +25,20 @@ announce 4 140.0.0.0/24
 announce 5 140.0.0.0/24
 announce 6 140.0.0.0/24 
 
-flow a1 1 80 >> d
-flow a1 2 81 >> e
-flow a1 3 82 >> e
-flow a1 4 83 >> e
+outflow a1 -c 1 -t 80 > d
+outflow a1 -c 2 -t 81 > e
+outflow a1 -c 3 -t 82 > e
+outflow a1 -c 4 -t 83 > e
 
-flow b1 5 80 >> d
-flow b1 6 81 >> f
-flow b1 7 82 >> f
-flow b1 8 83 >> f
+outflow b1 -c 5 -t 80 > d
+outflow b1 -c 6 -t 81 > f
+outflow b1 -c 7 -t 82 > f
+outflow b1 -c 8 -t 83 > f
 
-flow e2 9 << 81
-flow e3 10 << 82
-flow f2 11 << 81
-flow f3 12 << 82
+inflow -c 9 -t 81 > e2
+inflow -c 10 -t 82 > e3
+inflow -c 11 -t 81 > f2
+inflow -c 12 -t 82 > f3
 
 listener AUTOGEN 80 81 82 83 88
 

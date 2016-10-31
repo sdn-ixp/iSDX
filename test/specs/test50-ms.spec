@@ -80,88 +80,87 @@ announce 22 140.0.0.0/24
 announce 23 140.0.0.0/24
 announce 24 140.0.0.0/24
 announce 25 140.0.0.0/24
-announce 26 150.0.0.0/24
-announce 27 150.0.0.0/24
-announce 28 150.0.0.0/24
-announce 29 150.0.0.0/24
-announce 30 150.0.0.0/24
-announce 31 150.0.0.0/24
-announce 32 150.0.0.0/24
-announce 33 150.0.0.0/24
-announce 34 150.0.0.0/24
-announce 35 150.0.0.0/24
-announce 36 150.0.0.0/24
-announce 37 150.0.0.0/24
-announce 38 150.0.0.0/24
-announce 39 150.0.0.0/24
-announce 40 150.0.0.0/24
-announce 41 150.0.0.0/24
-announce 42 150.0.0.0/24
-announce 43 150.0.0.0/24
-announce 44 150.0.0.0/24
-announce 45 150.0.0.0/24
-announce 46 150.0.0.0/24
-announce 47 150.0.0.0/24
-announce 48 150.0.0.0/24
-announce 49 150.0.0.0/24
-announce 50 150.0.0.0/24
+announce 26 141.0.0.0/24
+announce 27 141.0.0.0/24
+announce 28 141.0.0.0/24
+announce 29 141.0.0.0/24
+announce 30 141.0.0.0/24
+announce 31 141.0.0.0/24
+announce 32 141.0.0.0/24
+announce 33 141.0.0.0/24
+announce 34 141.0.0.0/24
+announce 35 141.0.0.0/24
+announce 36 141.0.0.0/24
+announce 37 141.0.0.0/24
+announce 38 141.0.0.0/24
+announce 39 141.0.0.0/24
+announce 40 141.0.0.0/24
+announce 41 141.0.0.0/24
+announce 42 141.0.0.0/24
+announce 43 141.0.0.0/24
+announce 44 141.0.0.0/24
+announce 45 141.0.0.0/24
+announce 46 141.0.0.0/24
+announce 47 141.0.0.0/24
+announce 48 141.0.0.0/24
+announce 49 141.0.0.0/24
+announce 50 141.0.0.0/24
 
-flow a1 80 >> b
-flow a1 81 >> c
-flow a1 82 >> d
-flow a1 83 >> e
-flow a1 84 >> f
-flow a1 85 >> g
-flow a1 86 >> h
-flow a1 87 >> i
-flow a1 88 >> j
-flow a1 89 >> k
-flow a1 90 >> l
-flow a1 91 >> m
-flow a1 92 >> n
-flow a1 93 >> o
-flow a1 94 >> p
-flow a1 95 >> q
-flow a1 96 >> r
-flow a1 97 >> s
-flow a1 98 >> t
-flow a1 99 >> u
-flow a1 100 >> v
-flow a1 101 >> w
-flow a1 102 >> x
-flow a1 103 >> y
-flow a1 104 >> z
-flow a1 105 >> aa
-flow a1 106 >> ab
-flow a1 107 >> ac
-flow a1 108 >> ad
-flow a1 109 >> ae
-flow a1 110 >> af
-flow a1 111 >> ag
-flow a1 112 >> ah
-flow a1 113 >> ai
-flow a1 114 >> aj
-flow a1 115 >> ak
-flow a1 116 >> al
-flow a1 117 >> am
-flow a1 118 >> an
-flow a1 119 >> ao
-flow a1 120 >> ap
-flow a1 121 >> aq
-flow a1 122 >> ar
-flow a1 123 >> as
-flow a1 124 >> at
-flow a1 125 >> au
-flow a1 126 >> av
-flow a1 127 >> aw
-flow a1 128 >> ax
+outflow a1 -t 80 > b
+outflow a1 -t 81 > c
+outflow a1 -t 82 > d
+outflow a1 -t 83 > e
+outflow a1 -t 84 > f
+outflow a1 -t 85 > g
+outflow a1 -t 86 > h
+outflow a1 -t 87 > i
+outflow a1 -t 88 > j
+outflow a1 -t 89 > k
+outflow a1 -t 90 > l
+outflow a1 -t 91 > m
+outflow a1 -t 92 > n
+outflow a1 -t 93 > o
+outflow a1 -t 94 > p
+outflow a1 -t 95 > q
+outflow a1 -t 96 > r
+outflow a1 -t 97 > s
+outflow a1 -t 98 > t
+outflow a1 -t 99 > u
+outflow a1 -t 100 > v
+outflow a1 -t 101 > w
+outflow a1 -t 102 > x
+outflow a1 -t 103 > y
+outflow a1 -t 104 > z
+outflow a1 -t 105 > aa
+outflow a1 -t 106 > ab
+outflow a1 -t 107 > ac
+outflow a1 -t 108 > ad
+outflow a1 -t 109 > ae
+outflow a1 -t 110 > af
+outflow a1 -t 111 > ag
+outflow a1 -t 112 > ah
+outflow a1 -t 113 > ai
+outflow a1 -t 114 > aj
+outflow a1 -t 115 > ak
+outflow a1 -t 116 > al
+outflow a1 -t 117 > am
+outflow a1 -t 118 > an
+outflow a1 -t 119 > ao
+outflow a1 -t 120 > ap
+outflow a1 -t 121 > aq
+outflow a1 -t 122 > ar
+outflow a1 -t 123 > as
+outflow a1 -t 124 > at
+outflow a1 -t 125 > au
+outflow a1 -t 126 > av
+outflow a1 -t 127 > aw
+outflow a1 -t 128 > ax
 
 listener AUTOGEN  80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127 128
 
 test regress {
-	exec a1 arp
+	exec a1 sleep 16
 	test xfer
-	exec a1 arp
 }
 
 test init {
@@ -193,34 +192,43 @@ test xfer {
 	verify a1_100 w1_140 101
 	verify a1_100 x1_140 102
 	verify a1_100 y1_140 103
-	verify a1_100 z1_150 104
-	verify a1_100 aa1_150 105
-	verify a1_100 ab1_150 106
-	verify a1_100 ac1_150 107
-	verify a1_100 ad1_150 108
-	verify a1_100 ae1_150 109
-	verify a1_100 af1_150 110
-	verify a1_100 ag1_150 111
-	verify a1_100 ah1_150 112
-	verify a1_100 ai1_150 113
-	verify a1_100 aj1_150 114
-	verify a1_100 ak1_150 115
-	verify a1_100 al1_150 116
-	verify a1_100 am1_150 117
-	verify a1_100 an1_150 118
-	verify a1_100 ao1_150 119
-	verify a1_100 ap1_150 120
-	verify a1_100 aq1_150 121
-	verify a1_100 ar1_150 122
-	verify a1_100 as1_150 123
-	verify a1_100 at1_150 124
-	verify a1_100 au1_150 125
-	verify a1_100 av1_150 126
-	verify a1_100 aw1_150 127
-	verify a1_100 ax1_150 128
+	verify a1_100 z1_141 104
+	verify a1_100 aa1_141 105
+	verify a1_100 ab1_141 106
+	verify a1_100 ac1_141 107
+	verify a1_100 ad1_141 108
+	verify a1_100 ae1_141 109
+	verify a1_100 af1_141 110
+	verify a1_100 ag1_141 111
+	verify a1_100 ah1_141 112
+	verify a1_100 ai1_141 113
+	verify a1_100 aj1_141 114
+	verify a1_100 ak1_141 115
+	verify a1_100 al1_141 116
+	verify a1_100 am1_141 117
+	verify a1_100 an1_141 118
+	verify a1_100 ao1_141 119
+	verify a1_100 ap1_141 120
+	verify a1_100 aq1_141 121
+	verify a1_100 ar1_141 122
+	verify a1_100 as1_141 123
+	verify a1_100 at1_141 124
+	verify a1_100 au1_141 125
+	verify a1_100 av1_141 126
+	verify a1_100 aw1_141 127
+	verify a1_100 ax1_141 128
 }
 
 test info {
+	local ovs-ofctl dump-flows S1
+	local ovs-ofctl dump-flows S2
+	local ovs-ofctl dump-flows S3
+	local ovs-ofctl dump-flows S4
+	exec a1 ip route
+	bgp a1
+	exec b1 ip route
+	bgp b1
+	exec c1 ip route
 	bgp c1
 }
 

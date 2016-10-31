@@ -79,7 +79,6 @@ def main (argv):
         'verify': verify, 'v': verify,
         'announce': announce, 'a': announce, 
         'withdraw': withdraw, 'w': withdraw,
-        'flow' : flow,
         'inflow' : inflow,
         'outflow' : outflow,
         'unflow' : unflow,
@@ -112,11 +111,15 @@ def main (argv):
                 continue
             except Exception, e:
                 log.error('MM:00 ERROR: ' + repr(e))
-                traceback.print_exc(file=sys.stdout)
-                break
+                #traceback.print_exc(file=sys.stdout)
+                continue
     else:
         for i in range(2, len(argv)):
-            parse(argv[i])
+            try:
+                parse(argv[i])
+            except Exception, e:
+                log.error('MM:00 ERROR on arg:' + str(i-1) + ': ' + repr(e))
+                    
         
     log.info('MM:00 INFO: BYE')
 
@@ -372,6 +375,8 @@ def verify (args):
     
     for _ in range(5):
         result = generic(xdst, 'RESULT', 'result ' + rand + '\n')
+        if result is None:
+            return
         tokens = result.split()
         # possible return codes are:
         # COMPLETE - transfer is done
@@ -392,6 +397,8 @@ def verify (args):
             log.error('MM:' + xdst + ' TEST FAILED - DATA NOT FOUND ON EXPECTED HOST (' + xdst + ') - checking all hosts')
             for h in sorted(hosts):
                 p = generic(h, 'RESULT', 'result ' + rand + '\n')
+                if p is None:
+                    return
                 if p.find('COMPLETE') >= 0:
                     log.error('MM:' + h + ' TEST MISDIRECTED ' + rand + ' to ' + p.strip())
                     return
@@ -571,81 +578,6 @@ def bgp (args):
     if r is not None and len(r) > 0:
         log.info('MM:' + host + ' BGP: ' + r.strip())
     
-# create a dynamic flow
-def flow (args):
-    #print('flow: ' + str(args))
-    if len(args) == 5 and args[3] == '>>':
-        _outbound(args[0], args[1], args[2], args[4])
-    elif len(args) == 4 and args[2] == '<<':
-        _inbound(args[0], args[1], args[3])
-    else:
-        log.error('MM:XX' + ' ERROR: usage: bad flow format')
-               
-def _inbound (dst, cookie, port):
-    asys, router = tlib.host2as_router(dst)
-    if asys is None or asys not in participants:
-        log.error('MM:XX' + ' ERROR: inbound flow has bad destination')
-        return 
-    if dst not in bgprouters:
-        log.error('MM:XX' + ' ERROR: inbound flow has bad destination')
-        return        
-    #print 'inbound: dst=' + dst + ' port=' + port
-    das, dasport = tlib.host2as_router(dst)
-    if das is None:
-        log.error('MM:XX' + ' ERROR: inbound flow has bad destination')
-        return
-    if tlib.as2part(das) is None:
-        log.error('MM:XX' + ' ERROR: inbound flow has bad participant')
-        return
-    
-    message = {}   
-    policy = {}
-    policies = []
-    message['new_policies'] = {}
-    message['new_policies']['inbound'] = policies
-    policies.append(policy)
-    policy["cookie"] = int(cookie)
-    policy["match"] = {}
-    policy["match"]["tcp_dst"] = int(port)
-    policy["action"] = {"fwd": int(dasport)}
-    #print json.dumps(message, indent=4, sort_keys=True)
-    genericObjNW(asys, 'FLOW', json.dumps(message))     
-    
-def _outbound (src, cookie, port, dst):        
-    #print 'outbound: src=' + src + ' port=' + port + ' dst=' + dst
-    if src not in bgprouters:
-        log.error('MM:XX' + ' ERROR: outbound flow has bad source')
-        return
-    if dst not in participants:
-        log.error('MM:XX' + ' ERROR: outbound flow has bad destination')
-        return
-    sas, sasport = tlib.host2as_router(src)
-    if sas is None:
-        log.error('MM:XX' + ' ERROR: outbound flow has bad source')
-        return
-    das = dst  # destination is an AS not a host !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-    #print 'sas=' + sas + ' sasport=' + sasport + ' das=' + das
-        
-    if tlib.as2part(sas) is None:
-        log.error('MM:XX' + ' ERROR: outbound flow has bad participant')
-        return
-    
-    message = {}   
-    policy = {}
-    policies = []
-    message['new_policies'] = {}
-    message['new_policies']['outbound'] = policies
-    policies.append(policy)
-    policy["cookie"] = int(cookie)
-    policy["match"] = {}
-    policy["match"]["tcp_dst"] = int(port)
-    if tlib.as2part(das) is None:
-        log.error('MM:XX' + ' ERROR: outbound flow has bad destination')
-        return
-    policy["action"] = {"fwd": int(tlib.as2part(das))}
-    #print json.dumps(message, indent=4, sort_keys=True)  
-    genericObjNW(sas, 'FLOW', json.dumps(message))       
-
 # create inbound flow rule
 def inflow (args):
     n = len(args)
