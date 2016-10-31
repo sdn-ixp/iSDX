@@ -42,3 +42,27 @@ The provisioning scripts will install all the required software (and their depen
 
 ## Usage
 Run the different setups provided in the examples directory. Check out the [`test-ms`](https://github.com/sdn-ixp/iSDX/tree/master/examples/test-ms) example for a simple case with three IXP participants.
+Or, look at the [`test`](https://github.com/sdn-ixp/iSDX/tree/master/test) directory to experiment with the testing framework.
+
+## Directory Structure
+
+The top level directories are:
+* Source code:
+ * [`pctrl`](https://github.com/sdn-ixp/iSDX/tree/master/pctrl) - Participant Controller component
+ * [`xctrl`](https://github.com/sdn-ixp/iSDX/tree/master/xctrl) - Central Controller component (runs at startup to load initial switch rules)
+ * [`arproxy`](https://github.com/sdn-ixp/iSDX/tree/master/arproxy) - ARP Relay component
+ * [`xrs`](https://github.com/sdn-ixp/iSDX/tree/master/xrs) - BGP Relay component
+ * [`flanc`](https://github.com/sdn-ixp/iSDX/tree/master/flanc) - Fabric Manager component (a.k.a. 'refmon')
+ * [`util`](https://github.com/sdn-ixp/iSDX/tree/master/util) - Common code
+* [`examples`](https://github.com/sdn-ixp/iSDX/tree/master/examples) - Working examples
+* [`test`](https://github.com/sdn-ixp/iSDX/tree/master/test) - Test Framework and example tests
+* [`visualization`](https://github.com/sdn-ixp/iSDX/tree/master/visualization) - Tools for visualizing iSDX flows
+* [`setup`](https://github.com/sdn-ixp/iSDX/tree/master/setup) - Scripts run from the Vagrantfile when the VM is created
+* [`bin`](https://github.com/sdn-ixp/iSDX/tree/master/bin) - Utility scripts
+
+## Running iSDX with Hardware Switches
+
+Most of the examples on this site use [Mininet](http://mininet.org/) as the underlying network.
+
+[Here](https://github.com/sdn-ixp/iSDX/tree/master/examples/test-ms/ofdpa)
+is an example of iSDX running on hardware switches.
