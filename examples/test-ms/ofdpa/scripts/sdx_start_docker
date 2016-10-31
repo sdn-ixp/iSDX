@@ -23,7 +23,11 @@ if [ ! -f $CONTAINERS ]; then
 fi
 
 sed -e 's/\#.*//' -e '/^[ \t]*$/d' $CONTAINERS |
-    while read NAME HOST DEV MAC; do
+    while read NAME HOST DEV MAC TNODE_PORT; do
+	if [ -z "$TNODE_PORT" ]; then
+	    echo "TNODE_PORT not specified in containers file.  Update file"
+            exit 1
+	fi
 	DIR="$PARENT_DIR/$NAME"
 	if [ ! -d $DIR ]; then
 	    echo "No such directory: $DIR"
@@ -36,11 +40,13 @@ sed -e 's/\#.*//' -e '/^[ \t]*$/d' $CONTAINERS |
 	    echo "Failed to get IP from $DIR.  Exiting."
 	    exit 1
 	fi
-	sudo docker run --net=none -d -v /tmp/share:/tmp/share -v $DIR:/etc/quagga --privileged --name $NAME bgp-tst
+	#sudo docker run --net=none -d -v /tmp/share:/tmp/share -v $DIR:/etc/quagga --privileged --name $NAME bgp-tst
+	sudo docker run -p ${TNODE_PORT}:${TNODE_PORT} -d -v /tmp/share:/tmp/share -v $DIR:/etc/quagga --privileged --name $NAME bgp-tst
 	if ! ifconfig -a|grep $DEV; then
 	    echo "No such device: $DEV"
 	    exit 1
 	fi
+	sudo docker exec -d $NAME python /tmp/share/tnode.py $NAME /tmp/share/tnode.cfg
 	perl -ne 'chomp; if (/network\s+(\d+\.\d+\.\d+\.\S+)/) {++$i; print "$1 $i\n"}' $DIR/bgpd.conf | \
 	    while read ADDR INDEX; do
 		sudo docker exec $NAME ifconfig lo:$INDEX $ADDR
