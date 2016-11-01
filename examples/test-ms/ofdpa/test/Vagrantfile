@@ -26,8 +26,7 @@ Vagrant.configure("2") do |config|
 #  config.vm.provision :shell, privileged: false, :path => "../../../../setup/mininet-setup.sh"
   config.vm.provision :shell, privileged: false, :path => "../../../../setup/ryu-setup.sh"
   config.vm.provision :shell, privileged: false, :path => "../../../../setup/sdx-setup.sh", :args => "--no-mininet"
-  config.vm.provision :shell, privileged: false, :path => "./init_arp_switch.sh"
-  config.vm.provision :shell, privileged: false, :path => "./init_arp_switch_on_boot.sh"
+  config.vm.provision :shell, privileged: false, :path => "./init_arp_switch.sh", run: "always"
 
   ## SSH config
   config.ssh.forward_x11 = true
