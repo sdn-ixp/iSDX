@@ -19,12 +19,14 @@ Vagrant.configure("2") do |config|
   config.vm.network :public_network, ip: "10.0.0.100", :bridge => 'sdn-cntr-br'
   config.vm.network :public_network, :bridge => 'p1p1', auto_config: false # ARP
   config.vm.network :public_network, ip: "172.0.255.254", :netmask => "255.255.0.0", :bridge => 'p1p2', :mac => "080027893BFF" # BGP
+  config.vm.network :forwarded_port, guest:3000, host:3000 # grafana
 
   ## Provisioning
   config.vm.provision :shell, privileged: false, :path => "../../../../setup/basic-setup.sh", :args => "--no-mininet"
   config.vm.provision :shell, privileged: false, :path => "../../../../setup/ovs-setup.sh"
 #  config.vm.provision :shell, privileged: false, :path => "../../../../setup/mininet-setup.sh"
   config.vm.provision :shell, privileged: false, :path => "../../../../setup/ryu-setup.sh"
+  config.vm.provision :shell, privileged: false, :path => "../../../../setup/grafana-setup.sh"
   config.vm.provision :shell, privileged: false, :path => "../../../../setup/sdx-setup.sh", :args => "--no-mininet"
   config.vm.provision :shell, privileged: false, :path => "./init_arp_switch.sh", run: "always"
 
