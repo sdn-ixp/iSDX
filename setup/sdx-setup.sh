@@ -22,3 +22,6 @@ sudo chmod 755 xrs/client.py xrs/route_server.py
 mkdir xrs/ribs
 dos2unix launch.sh xrs/client.py pctrl/clean.sh
 cd ~
+
+sudo mkdir -p /var/log/sdx
+sudo chown vagrant:vagrant /var/log/sdx
